@@ -1,0 +1,21 @@
+# build artefacts
+/target/
+**/*.rs.bk
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# EverOS sidecar
+everos_data/

@@ -1,0 +1,25 @@
+[package]
+name        = "g10kz-engine"
+description = "Per-turn state machine — integrates all L1/L2 crates. L3"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+g10kz-config  = { workspace = true }
+g10kz-kernel  = { workspace = true }
+g10kz-llm     = { workspace = true }
+g10kz-everos  = { workspace = true }
+g10kz-tools   = { workspace = true }
+anyhow        = { workspace = true }
+thiserror     = { workspace = true }
+serde         = { workspace = true }
+serde_json    = { workspace = true }
+tokio         = { workspace = true }
+tracing       = { workspace = true }
+futures       = { workspace = true }
+tokio-util    = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }

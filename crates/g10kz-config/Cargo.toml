@@ -1,0 +1,13 @@
+[package]
+name        = "g10kz-config"
+description = "Typed configuration loaded from environment — L0"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow  = { workspace = true }
+dotenvy = { workspace = true }
+serde   = { workspace = true }
+tracing = { workspace = true }

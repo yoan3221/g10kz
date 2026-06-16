@@ -1,0 +1,35 @@
+# g10kz v5 — docker-compose for local dev and production
+# Usage:
+#   docker compose up -d          # start all services
+#   docker compose logs -f bot    # tail bot logs
+#   docker compose down           # stop all
+
+services:
+  # ── EverOS memory sidecar ───────────────────────────────────────────────────
+  everos:
+    image: ghcr.io/evermind-ai/everos:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - everos_data:/data
+    environment:
+      - RUST_LOG=info
+
+  # ── g10kz bot ───────────────────────────────────────────────────────────────
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - everos
+    env_file:
+      - .env
+    environment:
+      # Override everos URL to use compose service name
+      - EVEROS_URL=http://everos:8000
+    command: daemon
+
+volumes:
+  everos_data:

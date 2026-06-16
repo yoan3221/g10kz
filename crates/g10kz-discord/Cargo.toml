@@ -1,0 +1,24 @@
+[package]
+name        = "g10kz-discord"
+description = "serenity gateway handler — streaming edits, slash commands. L4"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+g10kz-config = { workspace = true }
+g10kz-engine = { workspace = true }
+anyhow       = { workspace = true }
+tokio        = { workspace = true }
+tracing      = { workspace = true }
+
+# serenity added in P7 to avoid compiling it until needed
+serenity     = { workspace = true }
+
+g10kz-kernel  = { workspace = true }
+g10kz-llm     = { workspace = true }
+g10kz-everos  = { workspace = true }
+g10kz-tools   = { workspace = true }
+tokio-util    = { workspace = true }
+serde_json    = { workspace = true }

@@ -1,0 +1,74 @@
+[workspace]
+members = [
+    "crates/g10kz-config",
+    "crates/g10kz-kernel",
+    "crates/g10kz-llm",
+    "crates/g10kz-everos",
+    "crates/g10kz-tools",
+    "crates/g10kz-engine",
+    "crates/g10kz-discord",
+    "crates/g10kz-bot",
+]
+resolver = "2"
+
+[workspace.package]
+version      = "0.5.0"
+edition      = "2021"
+authors      = ["g10kz"]
+license      = "MIT"
+rust-version = "1.82"      # MSRV: async fn in trait (stable 1.75+), RPITIT stable
+
+# ─── shared dependency versions ────────────────────────────────────────────────
+[workspace.dependencies]
+
+# async runtime
+tokio        = { version = "1",    features = ["full"] }
+tokio-util   = { version = "0.7",  features = ["rt", "codec"] }
+tokio-test   = "0.4"
+
+# serialisation
+serde        = { version = "1",    features = ["derive"] }
+serde_json   = "1"
+
+# http client
+reqwest      = { version = "0.12", default-features = false,
+                 features = ["json", "stream", "rustls-tls", "multipart"] }
+
+# error handling
+anyhow       = "1"
+thiserror    = "2"
+
+# observability
+tracing             = "0.1"
+tracing-subscriber  = { version = "0.3", features = ["env-filter", "json"] }
+
+# discord (added to crate Cargo.toml in P7)
+serenity     = { version = "0.12", default-features = false,
+                 features = ["client", "gateway", "model", "cache", "rustls_backend"] }
+
+# async utilities
+futures      = "0.3"
+
+# config / env
+dotenvy      = "0.15"
+
+# unicode / text
+unicode-normalization = "0.1"
+
+# date/time
+chrono         = { version = "0.4", features = ["serde"] }
+
+# encoding
+base64         = "0.22"
+
+# property-based testing
+proptest     = "1"
+
+# ─── internal crates (opt-in per member) ───────────────────────────────────────
+g10kz-config  = { path = "crates/g10kz-config" }
+g10kz-kernel  = { path = "crates/g10kz-kernel" }
+g10kz-llm     = { path = "crates/g10kz-llm" }
+g10kz-everos  = { path = "crates/g10kz-everos" }
+g10kz-tools   = { path = "crates/g10kz-tools" }
+g10kz-engine  = { path = "crates/g10kz-engine" }
+g10kz-discord = { path = "crates/g10kz-discord" }

@@ -1,0 +1,24 @@
+[package]
+name        = "g10kz-bot"
+description = "g10kz v5 binary — daemon / once / proactive entry points. L5"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "g10kz-bot"
+path = "src/main.rs"
+
+[dependencies]
+g10kz-config  = { workspace = true }
+g10kz-kernel  = { workspace = true }
+g10kz-llm     = { workspace = true }
+g10kz-everos  = { workspace = true }
+g10kz-tools   = { workspace = true }
+g10kz-engine  = { workspace = true }
+g10kz-discord = { workspace = true }
+anyhow        = { workspace = true }
+tokio         = { workspace = true }
+tracing       = { workspace = true }
+tracing-subscriber = { workspace = true }
