@@ -16,8 +16,12 @@ use g10kz_engine::turn::{run_turn, TurnInput};
 use crate::{
     commands::{global_commands, handle_command},
     state::{BotState, ContextEntry, RING_SIZE},
+    transcript::{fetch_channel_history, reply_snippet, resolve_mentions},
     util::{build_history, now_unix, split_message, spawn_typing_task},
 };
+
+/// How many recent channel messages to pull for group-channel context.
+const HISTORY_FETCH_LIMIT: u8 = 15;
 
 pub struct Handler {
     pub state: Arc<BotState>,
@@ -66,22 +70,15 @@ impl EventHandler for Handler {
             in_flight.insert(msg_id);
         }
 
-        // Strip @mention from content
-        let mention = format!("<@{}>", bot_id);
-        let mention_nick = format!("<@!{}>", bot_id);
-        let clean_text = msg
-            .content
-            .replace(&mention, "")
-            .replace(&mention_nick, "")
-            .trim()
-            .to_owned();
+        // Resolve all mention tokens to readable names; strip the bot's own.
+        let clean_text = resolve_mentions(&msg, bot_id, &ctx.cache);
 
         if clean_text.is_empty() && msg.attachments.is_empty() {
             self.state.in_flight.lock().await.remove(&msg_id);
             return;
         }
 
-        // Resolve the display name: guild nick > global display name > username.
+        // Display name: guild nick > global display name > username.
         let display_name = msg
             .member
             .as_ref()
@@ -89,14 +86,46 @@ impl EventHandler for Handler {
             .or_else(|| msg.author.global_name.clone())
             .unwrap_or_else(|| msg.author.name.clone());
 
+        // Reply context (group channels only).
+        let reply_context = if is_dm {
+            None
+        } else {
+            msg.referenced_message
+                .as_ref()
+                .map(|rm| reply_snippet(rm, bot_id))
+        };
+
         self.state.last_seen.lock().await.insert(channel_id, now_unix());
 
-        let history = {
+        // History source:
+        //  - group: live channel transcript (includes other users' messages)
+        //  - DM:    per-channel ring buffer
+        let history = if is_dm {
             let ctx_map = self.state.channel_ctx.lock().await;
             ctx_map
                 .get(&channel_id)
-                .map(|ring| build_history(ring))
+                .map(|ring| build_history(ring, true))
                 .unwrap_or_default()
+        } else {
+            let fetched = fetch_channel_history(
+                &ctx.http,
+                &ctx.cache,
+                channel_id,
+                msg_id,
+                bot_id,
+                HISTORY_FETCH_LIMIT,
+            )
+            .await;
+            if fetched.is_empty() {
+                // Fetch failed — fall back to the ring buffer.
+                let ctx_map = self.state.channel_ctx.lock().await;
+                ctx_map
+                    .get(&channel_id)
+                    .map(|ring| build_history(ring, false))
+                    .unwrap_or_default()
+            } else {
+                fetched
+            }
         };
 
         let (has_attachment, attachment_url) = msg
@@ -125,6 +154,8 @@ impl EventHandler for Handler {
             clean_text.clone(),
         );
         turn_input.user_name = display_name.clone();
+        turn_input.is_dm = is_dm;
+        turn_input.reply_context = reply_context.clone();
         turn_input.history = history;
         turn_input.has_attachment = has_attachment;
         turn_input.attachment_url = attachment_url;
@@ -161,6 +192,7 @@ impl EventHandler for Handler {
             ring.push_back(ContextEntry {
                 user_id: msg.author.id.get(),
                 user_name: display_name.clone(),
+                reply_to: reply_context.clone(),
                 user_text: clean_text,
                 bot_reply: Some(reply_text.clone()),
             });

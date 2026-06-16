@@ -31,7 +31,7 @@ pub mod turn;
 
 pub use embed_router::EmbeddingRouter;
 pub use stage::Stage;
-pub use turn::{run_turn, TurnInput, TurnOutput};
+pub use turn::{run_turn, serialize_user_line, TurnInput, TurnOutput};
 
 // ─── error type ──────────────────────────────────────────────────────────────
 

@@ -20,6 +20,8 @@ pub struct ContextEntry {
     pub user_id: u64,
     /// Discord display name at message time (guild nick > global name > username).
     pub user_name: String,
+    /// Reply context (`Alice「…」`) if this message replied to another. Group only.
+    pub reply_to: Option<String>,
     pub user_text: String,
     pub bot_reply: Option<String>,
 }

@@ -8,6 +8,7 @@
 
 mod commands;
 mod handler;
+mod transcript;
 pub mod state;
 mod util;
 
@@ -34,7 +35,8 @@ use crate::util::now_unix;
 pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
     let state = build_state(config);
 
-    let intents = GatewayIntents::GUILD_MESSAGES
+    let intents = GatewayIntents::GUILDS
+        | GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 

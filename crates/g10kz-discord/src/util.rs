@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio_util::sync::CancellationToken;
+use g10kz_engine::serialize_user_line;
 use g10kz_llm::{Message, Role};
 use crate::state::ContextEntry;
 
@@ -32,13 +33,18 @@ pub fn split_message(text: &str) -> Vec<String> {
 
 /// Convert the channel ring buffer into LLM history messages (oldest first).
 ///
-/// Each user message is prefixed with `[name]` so the LLM can tell
-/// different participants apart in group channels.
-pub fn build_history(ring: &VecDeque<ContextEntry>) -> Vec<Message> {
+/// Used for DMs (and as a group fallback when the live fetch fails). Group
+/// messages are labeled with the speaker; DM messages are left unlabeled.
+pub fn build_history(ring: &VecDeque<ContextEntry>, is_dm: bool) -> Vec<Message> {
     let mut msgs = Vec::new();
     for entry in ring {
-        let labeled = format!("[{}] {}", entry.user_name, entry.user_text);
-        msgs.push(Message::text(Role::User, &labeled));
+        let line = serialize_user_line(
+            !is_dm,
+            &entry.user_name,
+            entry.reply_to.as_deref(),
+            &entry.user_text,
+        );
+        msgs.push(Message::text(Role::User, &line));
         if let Some(bot_reply) = &entry.bot_reply {
             msgs.push(Message::text(Role::Assistant, bot_reply));
         }
