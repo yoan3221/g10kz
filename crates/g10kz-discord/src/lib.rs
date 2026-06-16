@@ -18,11 +18,11 @@ use serenity::prelude::GatewayIntents;
 use tracing::{info, warn};
 
 use g10kz_config::Config;
+use g10kz_engine::{turn::{run_turn, TurnInput}, EmbeddingRouter};
 use g10kz_everos::{EverosMemory, NullMemory};
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::OpenRouterProvider;
 use g10kz_tools::{EscalateTool, TimeTool, ToolBox, TwStockTool, WebSearchTool};
-use g10kz_engine::turn::{run_turn, TurnInput};
 
 use crate::handler::Handler;
 use crate::state::BotState;
@@ -73,11 +73,20 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
             PersonaCard::stub()
         });
 
+    // Build semantic router and warm up centroids in background.
+    // If ollama_base_url is empty, router is created but warmup will fail
+    // gracefully — all refine() calls return None (keyword routing only).
+    let embed_router = EmbeddingRouter::new(&config.ollama_base_url);
+    if !config.ollama_base_url.is_empty() {
+        embed_router.spawn_warmup();
+        info!(url = %config.ollama_base_url, "embedding router warmup spawned");
+    }
+
     if config.everos_url.is_empty() {
-        BotState::new(config.clone(), provider, NullMemory, toolbox, persona)
+        BotState::new(config.clone(), provider, NullMemory, toolbox, persona, embed_router)
     } else {
         let memory = EverosMemory::from_config(config);
-        BotState::new(config.clone(), provider, memory, toolbox, persona)
+        BotState::new(config.clone(), provider, memory, toolbox, persona, embed_router)
     }
 }
 

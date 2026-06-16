@@ -120,6 +120,7 @@ impl EventHandler for Handler {
         turn_input.has_attachment = has_attachment;
         turn_input.attachment_url = attachment_url;
         turn_input.cancel = cancel.clone();
+        turn_input.embed_router = Some(self.state.embed_router.clone());
 
         let result = run_turn(turn_input).await;
 

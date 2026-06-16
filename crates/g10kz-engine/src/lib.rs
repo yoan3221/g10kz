@@ -3,9 +3,10 @@
 //! L3 — integrates g10kz-kernel, g10kz-llm, g10kz-everos, g10kz-tools.
 //!
 //! # Modules
-//! - [`turn`]   — `TurnInput`, `TurnOutput`, `run_turn` entry point
-//! - [`stage`]  — `Stage` enum (state machine nodes)
-//! - [`tracer`] — per-turn structured tracing span
+//! - [`turn`]         — `TurnInput`, `TurnOutput`, `run_turn` entry point
+//! - [`embed_router`] — semantic route refinement via Ollama embeddings
+//! - [`stage`]        — `Stage` enum (state machine nodes)
+//! - [`tracer`]       — per-turn structured tracing span
 //!
 //! # Turn flow (see DECISIONS.md §Data flow per turn)
 //! ```text
@@ -13,6 +14,7 @@
 //!   → guard  (pure, fast)
 //!   → normalize
 //!   → route  (pure predicates)
+//!   → embed_router.refine()  [Social only, async, graceful fallback]
 //!   ↓
 //!   social path  →  [1 LLM call, streamed]
 //!   search path  →  search tool → social reply
@@ -22,10 +24,12 @@
 //! sanitize → render → persist (background)
 //! ```
 
+pub mod embed_router;
 pub mod stage;
 pub mod tracer;
 pub mod turn;
 
+pub use embed_router::EmbeddingRouter;
 pub use stage::Stage;
 pub use turn::{run_turn, TurnInput, TurnOutput};
 

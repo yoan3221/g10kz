@@ -10,6 +10,7 @@ use g10kz_everos::Memory;
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::Provider;
 use g10kz_tools::ToolBox;
+use g10kz_engine::EmbeddingRouter;
 
 /// Maximum conversation exchanges per channel kept in the ring buffer.
 pub const RING_SIZE: usize = 30;
@@ -28,6 +29,8 @@ pub struct BotState {
     pub memory: Arc<dyn Memory>,
     pub toolbox: Arc<ToolBox>,
     pub persona: Arc<RwLock<PersonaCard>>,
+    /// Semantic route refinement router (warmed up at startup).
+    pub embed_router: Arc<EmbeddingRouter>,
     /// Per-channel conversation ring buffer (last RING_SIZE exchanges).
     pub channel_ctx: Mutex<HashMap<ChannelId, VecDeque<ContextEntry>>>,
     /// In-flight message IDs — prevents double-processing on reshard.
@@ -47,6 +50,7 @@ impl BotState {
         memory: impl Memory + 'static,
         toolbox: ToolBox,
         persona: PersonaCard,
+        embed_router: EmbeddingRouter,
     ) -> Arc<Self> {
         Arc::new(Self {
             config: Arc::new(config),
@@ -54,6 +58,7 @@ impl BotState {
             memory: Arc::new(memory),
             toolbox: Arc::new(toolbox),
             persona: Arc::new(RwLock::new(persona)),
+            embed_router: Arc::new(embed_router),
             channel_ctx: Mutex::new(HashMap::new()),
             in_flight: Mutex::new(HashSet::new()),
             cancel_map: Mutex::new(HashMap::new()),

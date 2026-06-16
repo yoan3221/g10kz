@@ -9,6 +9,8 @@
 //! | Reason  | N (tool loop) + judge | yes  | all |
 //! | Command | 0 | skip | none |
 
+use std::sync::Arc;
+
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, instrument, warn};
 
@@ -27,7 +29,7 @@ use g10kz_tools::{
     media, run_tool_loop, tool_schema_snippet, ToolBox, ToolCall,
 };
 
-use crate::{stage::Stage, tracer::TurnTracer, EngineError};
+use crate::{embed_router::EmbeddingRouter, stage::Stage, tracer::TurnTracer, EngineError};
 
 // ─── TurnInput ───────────────────────────────────────────────────────────────
 
@@ -52,10 +54,15 @@ pub struct TurnInput<'a> {
     pub history: Vec<Message>,
     /// Cancellation token — cancel to abort mid-turn.
     pub cancel: CancellationToken,
+    /// Optional semantic router. When present and warmed up, upgrades
+    /// `Social` decisions to `Search` or `Reason` based on cosine similarity.
+    /// `None` disables semantic routing (offline tests, once-mode).
+    pub embed_router: Option<Arc<EmbeddingRouter>>,
 }
 
 impl<'a> TurnInput<'a> {
     /// Convenience constructor with sensible defaults.
+    /// `embed_router` is `None` — set it afterwards for semantic routing.
     pub fn new(
         config: &'a Config,
         persona: &'a PersonaCard,
@@ -77,6 +84,7 @@ impl<'a> TurnInput<'a> {
             attachment_url: None,
             history: vec![],
             cancel: CancellationToken::new(),
+            embed_router: None,
         }
     }
 }
@@ -117,9 +125,23 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
     tracer.enter_stage(&Stage::Normalize);
     let display_text = normalize_input(&input.text);
 
-    // ── Route ────────────────────────────────────────────────────────────────
+    // ── Route (pure predicates) ──────────────────────────────────────────────
     tracer.enter_stage(&Stage::Route);
-    let decision = route(input.config, &display_text, input.has_attachment);
+    let mut decision = route(input.config, &display_text, input.has_attachment);
+
+    // ── Semantic refinement (embedding router) ───────────────────────────────
+    // Only consulted when the keyword router falls through to Social.
+    // Command and Media have hard signals — skip embedding entirely.
+    // Graceful: None return keeps Social unchanged.
+    if matches!(decision, RouteDecision::Social) {
+        if let Some(router) = &input.embed_router {
+            if let Some(refined) = router.refine(&display_text).await {
+                debug!(?refined, "embed_router upgraded route from Social");
+                decision = refined;
+            }
+        }
+    }
+
     tracer.trace.path = format!("{decision:?}");
     debug!(?decision, restricted, "routed");
 
@@ -430,6 +452,7 @@ mod tests {
             attachment_url: None,
             history: vec![],
             cancel: CancellationToken::new(),
+            embed_router: None,
         };
         // route() will determine the path — if "搜尋" triggers Search route
         let out = run_turn(input).await.unwrap();
@@ -454,6 +477,7 @@ mod tests {
             attachment_url: Some("https://example.com/img.png".into()),
             history: vec![],
             cancel: CancellationToken::new(),
+            embed_router: None,
         };
         let out = run_turn(input).await.unwrap();
         assert!(!out.reply.is_empty());
@@ -478,6 +502,7 @@ mod tests {
             attachment_url: None,
             history: vec![],
             cancel: CancellationToken::new(),
+            embed_router: None,
         };
         let out = run_turn(input).await.unwrap();
         assert!(!out.reply.is_empty());
