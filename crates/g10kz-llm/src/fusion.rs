@@ -113,7 +113,7 @@ pub async fn fusion_complete(
     let drafter_params: Vec<CompletionParams> = fusion
         .drafter_models
         .iter()
-        .map(|m| CompletionParams::reason(m))
+        .map(CompletionParams::reason)
         .collect();
     let mut futs: FuturesUnordered<_> = drafter_params
         .iter()

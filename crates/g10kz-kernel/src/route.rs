@@ -42,13 +42,9 @@ static KNOWN_COMMANDS: &[&str] = &[
 /// Detect a `/cmd` or `!cmd` command.  Returns `Some(name)` if matched.
 pub fn detect_command(text: &str) -> Option<String> {
     let trimmed = text.trim();
-    let after_prefix = if trimmed.starts_with('/') {
-        &trimmed[1..]
-    } else if trimmed.starts_with('!') {
-        &trimmed[1..]
-    } else {
-        return None;
-    };
+    let after_prefix = trimmed
+        .strip_prefix('/')
+        .or_else(|| trimmed.strip_prefix('!'))?;
 
     // Command name is the first whitespace-delimited token.
     let name = after_prefix.split_whitespace().next()?.to_lowercase();
