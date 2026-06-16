@@ -1,35 +1,25 @@
-# g10kz v5 — docker-compose for local dev and production
+# g10kz v5 — docker-compose for production (.94)
 # Usage:
-#   docker compose up -d          # start all services
+#   docker compose up -d          # start bot
 #   docker compose logs -f bot    # tail bot logs
-#   docker compose down           # stop all
+#   docker compose down           # stop
+#
+# Networking: host mode so the bot reaches the co-located new-api gateway
+# (localhost:3000) and the EverOS memory sidecar (localhost:8000) directly.
+# EverOS runs as a separate stack; this compose only manages the bot.
 
 services:
-  # ── EverOS memory sidecar ───────────────────────────────────────────────────
-  everos:
-    image: ghcr.io/evermind-ai/everos:latest
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - everos_data:/data
-    environment:
-      - RUST_LOG=info
-
-  # ── g10kz bot ───────────────────────────────────────────────────────────────
   bot:
     build:
       context: .
       dockerfile: Dockerfile
+    image: g10kz-bot:latest
+    container_name: g10kz-bot
     restart: unless-stopped
-    depends_on:
-      - everos
+    network_mode: host
     env_file:
       - .env
-    environment:
-      # Override everos URL to use compose service name
-      - EVEROS_URL=http://everos:8000
+    volumes:
+      # SillyTavern V2 character card, read-only
+      - ./persona:/persona:ro
     command: daemon
-
-volumes:
-  everos_data:
