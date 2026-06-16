@@ -56,9 +56,10 @@ pub struct Config {
     /// Falls back to built-in stub when empty or file not found.
     pub persona_card_path: String,
 
-    /// Ollama base URL for local embedding model (semantic routing).
-    /// Default: `http://localhost:11434`.
-    pub ollama_base_url: String,
+    /// Base URL for the llama.cpp embedding server (OpenAI-compat `/v1/embeddings`).
+    /// Default: `http://localhost:8082`.
+    /// Set to empty string to disable semantic routing (keyword routing only).
+    pub embed_server_url: String,
 }
 
 impl Config {
@@ -114,8 +115,8 @@ impl Config {
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(86400),
             persona_card_path: std::env::var("PERSONA_CARD_PATH").unwrap_or_default(),
-            ollama_base_url: std::env::var("OLLAMA_BASE_URL")
-                .unwrap_or_else(|_| "http://localhost:11434".into()),
+            embed_server_url: std::env::var("EMBED_SERVER_URL")
+                .unwrap_or_else(|_| "http://localhost:8082".into()),
         })
     }
 
@@ -137,7 +138,7 @@ impl Config {
             blacklisted_users: vec![],
             proactive_inactive_secs: 86400,
             persona_card_path: String::new(),
-            ollama_base_url: String::new(), // disabled in tests
+            embed_server_url: String::new(),  // disabled in tests
         }
     }
 }
@@ -158,5 +159,11 @@ mod tests {
     fn mock_default_has_two_fusion_drafters() {
         let cfg = Config::mock_default();
         assert_eq!(cfg.llm_fusion_drafters.len(), 2);
+    }
+
+    #[test]
+    fn mock_default_embed_server_url_empty() {
+        let cfg = Config::mock_default();
+        assert!(cfg.embed_server_url.is_empty());
     }
 }

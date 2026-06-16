@@ -74,12 +74,12 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
         });
 
     // Build semantic router and warm up centroids in background.
-    // If ollama_base_url is empty, router is created but warmup will fail
-    // gracefully — all refine() calls return None (keyword routing only).
-    let embed_router = EmbeddingRouter::new(&config.ollama_base_url);
-    if !config.ollama_base_url.is_empty() {
+    // If embed_server_url is empty, warmup will fail gracefully and
+    // all refine() calls return None (keyword routing only).
+    let embed_router = EmbeddingRouter::new(&config.embed_server_url);
+    if !config.embed_server_url.is_empty() {
         embed_router.spawn_warmup();
-        info!(url = %config.ollama_base_url, "embedding router warmup spawned");
+        info!(url = %config.embed_server_url, "embedding router warmup spawned");
     }
 
     if config.everos_url.is_empty() {
