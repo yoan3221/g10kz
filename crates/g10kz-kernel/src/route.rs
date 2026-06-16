@@ -35,8 +35,7 @@ pub enum RouteDecision {
 
 /// All recognised bot commands (without prefix).
 static KNOWN_COMMANDS: &[&str] = &[
-    "reset", "stop", "search", "memory", "persona", "trace", "help",
-    // Aliases
+    "reset", "stop", "search", "memory", "persona", "trace", "help", // Aliases
     "r", "s", "m",
 ];
 
@@ -67,17 +66,46 @@ pub fn detect_command(text: &str) -> Option<String> {
 /// Matched against the SCAN-normalised lowercase text.
 static SEARCH_TRIGGERS: &[&str] = &[
     // Explicit requests
-    "搜尋", "搜索", "幫我查", "幫我找", "查一下", "找一下",
-    "google一下", "google 一下",
-    "search for", "look up", "find me", "search me",
+    "搜尋",
+    "搜索",
+    "幫我查",
+    "幫我找",
+    "查一下",
+    "找一下",
+    "google一下",
+    "google 一下",
+    "search for",
+    "look up",
+    "find me",
+    "search me",
     // Recency signals (require current data)
-    "最新消息", "最新的", "今天的新聞", "今天發生", "最近發生",
-    "現在幾點", "今天幾號", "今天日期", "現在的價格", "現在多少",
-    "今日股價", "台積電現在", "比特幣現在", "美元匯率",
-    "latest news", "current price", "today's news", "right now",
-    "live score", "breaking news", "real-time",
+    "最新消息",
+    "最新的",
+    "今天的新聞",
+    "今天發生",
+    "最近發生",
+    "現在幾點",
+    "今天幾號",
+    "今天日期",
+    "現在的價格",
+    "現在多少",
+    "今日股價",
+    "台積電現在",
+    "比特幣現在",
+    "美元匯率",
+    "latest news",
+    "current price",
+    "today's news",
+    "right now",
+    "live score",
+    "breaking news",
+    "real-time",
     // Explicit fact queries that need fresh data
-    "股價", "匯率", "天氣", "氣溫", "降雨",
+    "股價",
+    "匯率",
+    "天氣",
+    "氣溫",
+    "降雨",
 ];
 
 /// Returns `true` if text contains a search trigger.
@@ -97,14 +125,36 @@ const MULTI_QUESTION_THRESHOLD: usize = 3;
 /// Analytical keywords that suggest the reason path.
 static ANALYTICAL_KEYWORDS: &[&str] = &[
     // Chinese
-    "分析", "解釋", "比較", "評估", "推理", "論述", "說明為何",
-    "如何理解", "機制是什麼", "邏輯是",
-    "寫一篇", "寫一段", "寫程式", "幫我寫",
+    "分析",
+    "解釋",
+    "比較",
+    "評估",
+    "推理",
+    "論述",
+    "說明為何",
+    "如何理解",
+    "機制是什麼",
+    "邏輯是",
+    "寫一篇",
+    "寫一段",
+    "寫程式",
+    "幫我寫",
     // English
-    "analyze", "analyse", "explain why", "compare", "evaluate",
-    "reason about", "step by step", "write a", "write me",
-    "pros and cons", "trade-offs", "tradeoffs",
-    "debug", "refactor", "implement",
+    "analyze",
+    "analyse",
+    "explain why",
+    "compare",
+    "evaluate",
+    "reason about",
+    "step by step",
+    "write a",
+    "write me",
+    "pros and cons",
+    "trade-offs",
+    "tradeoffs",
+    "debug",
+    "refactor",
+    "implement",
 ];
 
 /// Returns `true` if text exhibits complexity signals warranting the reason path.
@@ -200,7 +250,12 @@ mod tests {
     fn attachment_with_command_still_routes_command() {
         // Commands take priority over media.
         let r = route(&cfg(), "/reset", true);
-        assert_eq!(r, RouteDecision::Command { name: "reset".into() });
+        assert_eq!(
+            r,
+            RouteDecision::Command {
+                name: "reset".into()
+            }
+        );
     }
 
     // ── commands ──────────────────────────────────────────────────────────────
@@ -209,7 +264,9 @@ mod tests {
     fn slash_reset_is_command() {
         assert_eq!(
             route(&cfg(), "/reset", false),
-            RouteDecision::Command { name: "reset".into() }
+            RouteDecision::Command {
+                name: "reset".into()
+            }
         );
     }
 
@@ -217,7 +274,9 @@ mod tests {
     fn exclaim_stop_is_command() {
         assert_eq!(
             route(&cfg(), "!stop", false),
-            RouteDecision::Command { name: "stop".into() }
+            RouteDecision::Command {
+                name: "stop".into()
+            }
         );
     }
 
@@ -225,7 +284,9 @@ mod tests {
     fn slash_memory_is_command() {
         assert_eq!(
             route(&cfg(), "/memory show", false),
-            RouteDecision::Command { name: "memory".into() }
+            RouteDecision::Command {
+                name: "memory".into()
+            }
         );
     }
 
@@ -233,7 +294,9 @@ mod tests {
     fn slash_trace_is_command() {
         assert_eq!(
             route(&cfg(), "/trace", false),
-            RouteDecision::Command { name: "trace".into() }
+            RouteDecision::Command {
+                name: "trace".into()
+            }
         );
     }
 
@@ -247,12 +310,18 @@ mod tests {
 
     #[test]
     fn search_trigger_zh_search() {
-        assert_eq!(route(&cfg(), "幫我搜尋最新的AI新聞", false), RouteDecision::Search);
+        assert_eq!(
+            route(&cfg(), "幫我搜尋最新的AI新聞", false),
+            RouteDecision::Search
+        );
     }
 
     #[test]
     fn search_trigger_zh_query() {
-        assert_eq!(route(&cfg(), "幫我查一下台積電股價", false), RouteDecision::Search);
+        assert_eq!(
+            route(&cfg(), "幫我查一下台積電股價", false),
+            RouteDecision::Search
+        );
     }
 
     #[test]
@@ -265,7 +334,10 @@ mod tests {
 
     #[test]
     fn search_trigger_stock_price() {
-        assert_eq!(route(&cfg(), "今日股價怎麼樣", false), RouteDecision::Search);
+        assert_eq!(
+            route(&cfg(), "今日股價怎麼樣", false),
+            RouteDecision::Search
+        );
     }
 
     #[test]
@@ -326,7 +398,10 @@ mod tests {
     #[test]
     fn casual_zh_no_false_search() {
         // "最近" in casual context vs "最近發生" search trigger
-        assert_eq!(route(&cfg(), "你最近怎麼樣？", false), RouteDecision::Social);
+        assert_eq!(
+            route(&cfg(), "你最近怎麼樣？", false),
+            RouteDecision::Social
+        );
     }
 
     #[test]

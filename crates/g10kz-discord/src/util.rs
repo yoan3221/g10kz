@@ -1,11 +1,11 @@
 //! Discord-layer utility helpers.
 
+use crate::state::ContextEntry;
+use g10kz_llm::{Message, Role};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio_util::sync::CancellationToken;
-use g10kz_llm::{Message, Role};
-use crate::state::ContextEntry;
 
 /// Split reply at natural boundaries so each chunk fits Discord's 2000-char limit.
 /// Uses a 1900-char target to leave room for metadata.

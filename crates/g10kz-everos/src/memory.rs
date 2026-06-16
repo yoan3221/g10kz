@@ -37,7 +37,11 @@ pub struct MemoryEntry {
 
 impl MemoryEntry {
     pub fn new(text: impl Into<String>) -> Self {
-        Self { text: text.into(), score: 0.0, tag: None }
+        Self {
+            text: text.into(),
+            score: 0.0,
+            tag: None,
+        }
     }
 
     pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
@@ -54,7 +58,12 @@ pub type MemoryResult = Vec<MemoryEntry>;
 pub struct NullMemory;
 
 impl Memory for NullMemory {
-    fn search<'a>(&'a self, _uid: u64, _q: &'a str, _lim: usize) -> BoxFuture<'a, Vec<MemoryEntry>> {
+    fn search<'a>(
+        &'a self,
+        _uid: u64,
+        _q: &'a str,
+        _lim: usize,
+    ) -> BoxFuture<'a, Vec<MemoryEntry>> {
         Box::pin(async { vec![] })
     }
     fn add<'a>(&'a self, _uid: u64, _e: MemoryEntry) -> BoxFuture<'a, ()> {
@@ -117,7 +126,9 @@ impl EverosMemory {
 
     pub fn circuit_open(&self) -> bool {
         let f = self.failures.load(Ordering::Relaxed);
-        if f < CIRCUIT_OPEN_THRESHOLD { return false; }
+        if f < CIRCUIT_OPEN_THRESHOLD {
+            return false;
+        }
         let last = self.last_failure_ts.load(Ordering::Relaxed) as u64;
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -126,7 +137,9 @@ impl EverosMemory {
         now.saturating_sub(last) < CIRCUIT_RESET_SECS
     }
 
-    fn record_success(&self) { self.failures.store(0, Ordering::Relaxed); }
+    fn record_success(&self) {
+        self.failures.store(0, Ordering::Relaxed);
+    }
 
     fn record_failure(&self) {
         self.failures.fetch_add(1, Ordering::Relaxed);
@@ -143,7 +156,9 @@ impl EverosMemory {
             let mut buf = self.write_buf.lock().unwrap();
             std::mem::take(&mut *buf)
         };
-        if items.is_empty() { return 0; }
+        if items.is_empty() {
+            return 0;
+        }
         let n = items.len();
         flush_batch(self.client.clone(), self.base_url.clone(), items).await;
         n
@@ -240,8 +255,13 @@ impl Memory for EverosMemory {
                     self.record_success();
                     let results = sr.memories;
                     let expires = Instant::now() + Duration::from_secs(CACHE_TTL_SECS);
-                    self.cache.lock().unwrap()
-                        .insert(key, CacheEntry { results: results.clone(), expires });
+                    self.cache.lock().unwrap().insert(
+                        key,
+                        CacheEntry {
+                            results: results.clone(),
+                            expires,
+                        },
+                    );
                     results
                 }
                 Err(e) => {
@@ -318,7 +338,9 @@ mod tests {
     #[test]
     fn circuit_closes_after_success() {
         let m = make_everos();
-        for _ in 0..CIRCUIT_OPEN_THRESHOLD { m.record_failure(); }
+        for _ in 0..CIRCUIT_OPEN_THRESHOLD {
+            m.record_failure();
+        }
         m.record_success();
         assert!(!m.circuit_open());
     }
@@ -330,13 +352,18 @@ mod tests {
         let m = make_everos();
         let r = m.search(1, "test query", 5).await;
         assert!(r.is_empty());
-        assert!(m.failures.load(Ordering::Relaxed) > 0, "should have recorded failure");
+        assert!(
+            m.failures.load(Ordering::Relaxed) > 0,
+            "should have recorded failure"
+        );
     }
 
     #[tokio::test]
     async fn search_returns_empty_when_circuit_open() {
         let m = make_everos();
-        for _ in 0..CIRCUIT_OPEN_THRESHOLD { m.record_failure(); }
+        for _ in 0..CIRCUIT_OPEN_THRESHOLD {
+            m.record_failure();
+        }
         assert!(m.circuit_open());
         let r = m.search(1, "test", 5).await;
         assert!(r.is_empty());
@@ -375,7 +402,11 @@ mod tests {
 
     #[test]
     fn memory_entry_serde_roundtrip() {
-        let e = MemoryEntry { text: "abc".into(), score: 0.9, tag: Some("event".into()) };
+        let e = MemoryEntry {
+            text: "abc".into(),
+            score: 0.9,
+            tag: Some("event".into()),
+        };
         let json = serde_json::to_string(&e).unwrap();
         let e2: MemoryEntry = serde_json::from_str(&json).unwrap();
         assert_eq!(e2.text, "abc");

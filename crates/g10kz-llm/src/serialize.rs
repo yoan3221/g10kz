@@ -46,9 +46,7 @@ pub fn build_request(
 
     // Merge any extra fields (e.g. Fusion plugin, tools array).
     if let Some(extra) = extra_fields {
-        if let (Some(map), Some(extra_map)) =
-            (body.as_object_mut(), extra.as_object())
-        {
+        if let (Some(map), Some(extra_map)) = (body.as_object_mut(), extra.as_object()) {
             for (k, v) in extra_map {
                 map.insert(k.clone(), v.clone());
             }
@@ -61,10 +59,10 @@ pub fn build_request(
 /// Serialise a single [`Message`] to OpenAI JSON.
 fn serialise_message(msg: &Message, mark_cache_on_first: bool, _idx: usize) -> Value {
     let role = match msg.role {
-        Role::System    => "system",
-        Role::User      => "user",
+        Role::System => "system",
+        Role::User => "user",
         Role::Assistant => "assistant",
-        Role::Tool      => "tool",
+        Role::Tool => "tool",
     };
 
     let parts: Vec<Value> = msg
@@ -141,17 +139,17 @@ pub fn extract_reply(resp: CompletionResponse) -> anyhow::Result<(String, Usage)
         .next()
         .ok_or_else(|| anyhow::anyhow!("no choices in completion response"))?;
 
-    let text = choice
-        .message
-        .content
-        .unwrap_or_default();
+    let text = choice.message.content.unwrap_or_default();
 
-    let usage = resp.usage.map(|u| Usage {
-        prompt_tokens: u.prompt_tokens,
-        completion_tokens: u.completion_tokens,
-        cost_usd: u.cost.unwrap_or(0.0),
-        cached: false, // updated by caller if cache-hit header present
-    }).unwrap_or_default();
+    let usage = resp
+        .usage
+        .map(|u| Usage {
+            prompt_tokens: u.prompt_tokens,
+            completion_tokens: u.completion_tokens,
+            cost_usd: u.cost.unwrap_or(0.0),
+            cached: false, // updated by caller if cache-hit header present
+        })
+        .unwrap_or_default();
 
     Ok((text, usage))
 }
@@ -213,8 +211,12 @@ mod tests {
         let msg = Message {
             role: Role::User,
             parts: vec![
-                Part::Text { text: "describe this".into() },
-                Part::ImageUrl { url: "https://example.com/img.jpg".into() },
+                Part::Text {
+                    text: "describe this".into(),
+                },
+                Part::ImageUrl {
+                    url: "https://example.com/img.jpg".into(),
+                },
             ],
         };
         let body = build_request(&[msg], &CompletionParams::social("m"), None);
@@ -228,7 +230,9 @@ mod tests {
     fn audio_transcript_serialises_as_text() {
         let msg = Message {
             role: Role::User,
-            parts: vec![Part::AudioTranscript { text: "hello".into() }],
+            parts: vec![Part::AudioTranscript {
+                text: "hello".into(),
+            }],
         };
         let body = build_request(&[msg], &CompletionParams::social("m"), None);
         let part = &body["messages"][0]["content"][0];

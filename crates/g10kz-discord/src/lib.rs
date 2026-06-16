@@ -18,11 +18,11 @@ use serenity::prelude::GatewayIntents;
 use tracing::{info, warn};
 
 use g10kz_config::Config;
+use g10kz_engine::turn::{run_turn, TurnInput};
 use g10kz_everos::{EverosMemory, NullMemory};
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::OpenRouterProvider;
 use g10kz_tools::{EscalateTool, TimeTool, ToolBox, TwStockTool, WebSearchTool};
-use g10kz_engine::turn::{run_turn, TurnInput};
 
 use crate::handler::Handler;
 use crate::state::BotState;
@@ -39,7 +39,9 @@ pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
         | GatewayIntents::MESSAGE_CONTENT;
 
     let mut client = serenity::Client::builder(&config.discord_token, intents)
-        .event_handler(Handler { state: state.clone() })
+        .event_handler(Handler {
+            state: state.clone(),
+        })
         .await?;
 
     // Spawn proactive background loop before blocking on start().
@@ -64,7 +66,10 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
     let mut toolbox = ToolBox::new();
     toolbox.register(TimeTool);
     toolbox.register(TwStockTool::new());
-    toolbox.register(WebSearchTool::new(&config.cf_account_id, &config.cf_api_token));
+    toolbox.register(WebSearchTool::new(
+        &config.cf_account_id,
+        &config.cf_api_token,
+    ));
     toolbox.register(EscalateTool);
 
     let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
@@ -84,11 +89,7 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
 // ─── proactive_loop ───────────────────────────────────────────────────────────
 
 /// Background task: every 60 s, send to channels silent for > inactive_secs.
-async fn proactive_loop(
-    state: Arc<BotState>,
-    http: Arc<serenity::http::Http>,
-    inactive_secs: u64,
-) {
+async fn proactive_loop(state: Arc<BotState>, http: Arc<serenity::http::Http>, inactive_secs: u64) {
     loop {
         tokio::time::sleep(Duration::from_secs(60)).await;
         let now = now_unix();
