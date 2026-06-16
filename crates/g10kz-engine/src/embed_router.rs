@@ -14,7 +14,13 @@
 //! Call [`EmbeddingRouter::spawn_warmup`] once at startup.  It spawns a
 //! background task that embeds a small set of labelled examples and averages
 //! them into per-class centroids.  Until warmup completes, `refine()` is
-//! a no-op (returns `None`).  Typical warmup time: ~100 ms.
+//! a no-op (returns `None`).
+//!
+//! Two separate HTTP clients are used:
+//! - `warmup_client`: 60 s timeout — handles the first embedding call which
+//!   may trigger model loading from disk onto GPU.
+//! - `client`: 8 s timeout — used for per-message `refine()` calls where
+//!   the model is already hot in VRAM.
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -95,7 +101,10 @@ struct Centroids {
 /// Clone is cheap (`Arc` inside).
 #[derive(Clone)]
 pub struct EmbeddingRouter {
+    /// Per-message client: 8 s timeout — model already warm in VRAM.
     client: reqwest::Client,
+    /// Warmup client: 60 s timeout — first call may trigger GPU model load.
+    warmup_client: reqwest::Client,
     embed_url: String,
     centroids: Arc<RwLock<Option<Centroids>>>,
 }
@@ -107,7 +116,11 @@ impl EmbeddingRouter {
         let embed_url = format!("{ollama_base}/api/embeddings");
         Self {
             client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(10))
+                .timeout(std::time::Duration::from_secs(8))
+                .build()
+                .unwrap(),
+            warmup_client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(60))
                 .build()
                 .unwrap(),
             embed_url,
@@ -143,10 +156,11 @@ impl EmbeddingRouter {
     }
 
     /// Average the embeddings of all `examples` into one centroid vector.
+    /// Uses the warmup client (60 s timeout) — the first call may load the model.
     async fn centroid(&self, examples: &[&str]) -> anyhow::Result<Vec<f32>> {
         let mut sum: Vec<f32> = Vec::new();
         for ex in examples {
-            let v = self.embed(ex).await?;
+            let v = self.embed_with(&self.warmup_client, ex).await?;
             if sum.is_empty() {
                 sum = v;
             } else {
@@ -159,10 +173,9 @@ impl EmbeddingRouter {
         Ok(sum.into_iter().map(|x| x / n).collect())
     }
 
-    /// Call Ollama embeddings endpoint for a single `text`.
-    async fn embed(&self, text: &str) -> anyhow::Result<Vec<f32>> {
-        let resp = self
-            .client
+    /// Call Ollama embeddings endpoint using the given client.
+    async fn embed_with(&self, client: &reqwest::Client, text: &str) -> anyhow::Result<Vec<f32>> {
+        let resp = client
             .post(&self.embed_url)
             .json(&EmbedRequest {
                 model: MODEL,
@@ -186,7 +199,7 @@ impl EmbeddingRouter {
         let guard = self.centroids.read().await;
         let c = guard.as_ref()?;
 
-        let embedding = match self.embed(text).await {
+        let embedding = match self.embed_with(&self.client, text).await {
             Ok(e) => e,
             Err(e) => {
                 debug!("embed_router: embed failed — {e:#}");
@@ -257,7 +270,6 @@ mod tests {
 
     #[tokio::test]
     async fn refine_returns_none_before_warmup() {
-        // Centroids not set — should return None gracefully.
         let router = EmbeddingRouter::new("http://localhost:11434");
         assert!(router.refine("hello").await.is_none());
     }
