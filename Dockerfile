@@ -1,5 +1,5 @@
 # Multi-stage build — slim final image.
-FROM rust:1.85-slim AS builder
+FROM rust:latest AS builder
 
 WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
