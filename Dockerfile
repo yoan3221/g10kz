@@ -1,16 +1,13 @@
 # Multi-stage build — slim final image.
-FROM rust:1.82-slim AS builder
+FROM rust:1.85-slim AS builder
 
 WORKDIR /build
-# Cache dependencies
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ crates/
 
-# Build release binary
 ENV CARGO_TARGET_DIR=/tmp/target
 RUN cargo build --release -p g10kz-bot
 
-# ── Runtime image ─────────────────────────────────────────────────────────────
 FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update && apt-get install -y \
