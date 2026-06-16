@@ -22,7 +22,6 @@ pub fn split_message(text: &str) -> Vec<String> {
             chunks.push(text[start..].to_owned());
             break;
         }
-        // Prefer to split at the last newline within the window.
         let window = &text[start..end];
         let split = window.rfind('\n').map(|p| start + p + 1).unwrap_or(end);
         chunks.push(text[start..split].trim_end().to_owned());
@@ -32,10 +31,14 @@ pub fn split_message(text: &str) -> Vec<String> {
 }
 
 /// Convert the channel ring buffer into LLM history messages (oldest first).
+///
+/// Each user message is prefixed with `[name]` so the LLM can tell
+/// different participants apart in group channels.
 pub fn build_history(ring: &VecDeque<ContextEntry>) -> Vec<Message> {
     let mut msgs = Vec::new();
     for entry in ring {
-        msgs.push(Message::text(Role::User, &entry.user_text));
+        let labeled = format!("[{}] {}", entry.user_name, entry.user_text);
+        msgs.push(Message::text(Role::User, &labeled));
         if let Some(bot_reply) = &entry.bot_reply {
             msgs.push(Message::text(Role::Assistant, bot_reply));
         }

@@ -44,6 +44,8 @@ pub struct TurnInput<'a> {
 
     /// Discord user snowflake.
     pub user_id: u64,
+    /// Display name shown to the LLM (guild nick > global name > username).
+    pub user_name: String,
     /// Raw message text from the user.
     pub text: String,
     /// True when the message carries an attachment.
@@ -79,12 +81,23 @@ impl<'a> TurnInput<'a> {
             memory,
             toolbox,
             user_id,
+            user_name: String::new(),
             text: text.into(),
             has_attachment: false,
             attachment_url: None,
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
+        }
+    }
+
+    /// Wrap `text` with `[user_name]` prefix for LLM messages.
+    /// Returns `text` unchanged when user_name is empty (tests, once-mode).
+    pub fn labeled(&self, text: &str) -> String {
+        if self.user_name.is_empty() {
+            text.to_owned()
+        } else {
+            format!("[{}] {}", self.user_name, text)
         }
     }
 }
@@ -235,7 +248,7 @@ async fn path_social(
 ) -> Result<(String, Usage), EngineError> {
     let mut messages = vec![Message::text(Role::System, &input.persona.system_prompt)];
     messages.extend(input.history.clone());
-    messages.push(Message::text(Role::User, display_text));
+    messages.push(Message::text(Role::User, input.labeled(display_text)));
 
     let params = CompletionParams::social(&input.config.llm_model_social);
     tokio::select! {
@@ -270,7 +283,7 @@ async fn path_search(
     messages.extend(input.history.clone());
     messages.push(Message::text(
         Role::User,
-        format!("{context}請根據以上資訊回答：{display_text}"),
+        input.labeled(&format!("{context}請根據以上資訊回答：{display_text}")),
     ));
 
     let params = CompletionParams::social(&input.config.llm_model_social);
@@ -293,7 +306,7 @@ async fn path_media(
             Ok(out) => {
                 // Build a message with image parts + text
                 let mut parts = out.parts;
-                parts.push(g10kz_llm::types::Part::Text { text: display_text.to_owned() });
+                parts.push(g10kz_llm::types::Part::Text { text: input.labeled(display_text) });
                 messages.push(g10kz_llm::types::Message {
                     role: Role::User,
                     parts,
@@ -301,11 +314,11 @@ async fn path_media(
             }
             Err(e) => {
                 warn!("media processing failed: {e}");
-                messages.push(Message::text(Role::User, display_text));
+                messages.push(Message::text(Role::User, input.labeled(display_text)));
             }
         }
     } else {
-        messages.push(Message::text(Role::User, display_text));
+        messages.push(Message::text(Role::User, input.labeled(display_text)));
     }
 
     let params = CompletionParams::social(&input.config.llm_model_social);
@@ -337,7 +350,7 @@ async fn path_reason(
     }
 
     messages.extend(input.history.clone());
-    messages.push(Message::text(Role::User, display_text));
+    messages.push(Message::text(Role::User, input.labeled(display_text)));
 
     let params = CompletionParams::reason(&input.config.llm_model_reason);
 
@@ -448,6 +461,7 @@ mod tests {
             toolbox: &toolbox,
             user_id: 0,
             text: "搜尋量子纏繞".into(),
+            user_name: String::new(),
             has_attachment: false,
             attachment_url: None,
             history: vec![],
@@ -473,6 +487,7 @@ mod tests {
             toolbox: &toolbox,
             user_id: 0,
             text: "分析這張圖".into(),
+            user_name: String::new(),
             has_attachment: true,
             attachment_url: Some("https://example.com/img.png".into()),
             history: vec![],
@@ -498,6 +513,7 @@ mod tests {
             toolbox: &toolbox,
             user_id: 0,
             text: "分析量子纏繞的機制是什麼".into(),
+            user_name: String::new(),
             has_attachment: false,
             attachment_url: None,
             history: vec![],

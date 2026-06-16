@@ -81,6 +81,14 @@ impl EventHandler for Handler {
             return;
         }
 
+        // Resolve the display name: guild nick > global display name > username.
+        let display_name = msg
+            .member
+            .as_ref()
+            .and_then(|m| m.nick.clone())
+            .or_else(|| msg.author.global_name.clone())
+            .unwrap_or_else(|| msg.author.name.clone());
+
         self.state.last_seen.lock().await.insert(channel_id, now_unix());
 
         let history = {
@@ -116,6 +124,7 @@ impl EventHandler for Handler {
             msg.author.id.get(),
             clean_text.clone(),
         );
+        turn_input.user_name = display_name.clone();
         turn_input.history = history;
         turn_input.has_attachment = has_attachment;
         turn_input.attachment_url = attachment_url;
@@ -151,6 +160,7 @@ impl EventHandler for Handler {
             let ring = ctx_map.entry(channel_id).or_default();
             ring.push_back(ContextEntry {
                 user_id: msg.author.id.get(),
+                user_name: display_name.clone(),
                 user_text: clean_text,
                 bot_reply: Some(reply_text.clone()),
             });

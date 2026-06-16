@@ -18,6 +18,8 @@ pub const RING_SIZE: usize = 30;
 /// One exchange in the per-channel conversation ring buffer.
 pub struct ContextEntry {
     pub user_id: u64,
+    /// Discord display name at message time (guild nick > global name > username).
+    pub user_name: String,
     pub user_text: String,
     pub bot_reply: Option<String>,
 }
