@@ -447,6 +447,7 @@ dependencies = [
  "g10kz-kernel",
  "g10kz-llm",
  "g10kz-tools",
+ "reqwest",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

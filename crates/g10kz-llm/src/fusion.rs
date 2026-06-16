@@ -31,7 +31,7 @@ impl FusionConfig {
             drafter_models,
             judge_model,
             quorum: 2,
-            timeout_ms: 8_000,
+            timeout_ms: 90_000,
             consensus_threshold: 0.82,
         }
     }

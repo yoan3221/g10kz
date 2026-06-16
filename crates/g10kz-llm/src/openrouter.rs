@@ -50,8 +50,17 @@ pub struct OpenRouterProvider {
 impl OpenRouterProvider {
     /// Create a new provider.
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
+        Self::new_with_timeout(base_url, api_key, Duration::from_secs(120))
+    }
+
+    /// Create a provider with an explicit HTTP timeout.
+    pub fn new_with_timeout(
+        base_url: impl Into<String>,
+        api_key: impl Into<String>,
+        timeout: Duration,
+    ) -> Self {
         let client = Client::builder()
-            .timeout(Duration::from_secs(30))
+            .timeout(timeout)
             .build()
             .expect("reqwest client build failed");
 
@@ -67,7 +76,7 @@ impl OpenRouterProvider {
 
     /// Construct from [`g10kz_config::Config`].
     pub fn from_config(config: &g10kz_config::Config) -> Self {
-        Self::new(&config.llm_base_url, &config.llm_api_key)
+        Self::new_with_timeout(&config.llm_base_url, &config.llm_api_key, config.request_timeout)
     }
 
     /// True if the circuit breaker is currently open (provider should be skipped).

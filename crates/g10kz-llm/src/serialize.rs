@@ -41,8 +41,11 @@ pub fn build_request(
         "model":       params.model,
         "messages":    serialised,
         "max_tokens":  params.max_tokens,
-        "temperature": params.temperature,
     });
+    // claude-opus-4+ (extended thinking) does not accept temperature
+    if !params.model.contains("opus-4") {
+        body["temperature"] = serde_json::json!(params.temperature);
+    }
 
     // Merge any extra fields (e.g. Fusion plugin, tools array).
     if let Some(extra) = extra_fields {
