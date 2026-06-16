@@ -6,7 +6,7 @@
 //! - `proactive`    — note: proactive runs automatically inside daemon
 
 use anyhow::Context;
-use tracing::info;
+use tracing::{info, warn};
 
 use g10kz_config::Config;
 use g10kz_engine::turn::{run_turn, TurnInput};
@@ -32,16 +32,16 @@ async fn main() -> anyhow::Result<()> {
         "daemon" => cmd_daemon(&config).await,
         "proactive" => {
             info!("proactive messaging runs automatically within daemon mode");
-            info!("hint: use `g10kz-bot daemon` — proactive fires every 60 s for idle channels");
+            info!("hint: use `g10kz-bot daemon` -- proactive fires every 60 s for idle channels");
             Ok(())
         }
         _ => {
             eprintln!("g10kz-bot v{}", env!("CARGO_PKG_VERSION"));
             eprintln!();
             eprintln!("USAGE:");
-            eprintln!("  g10kz-bot once <text>   — offline single-turn smoke test");
-            eprintln!("  g10kz-bot daemon         — connect to Discord (needs DISCORD_TOKEN)");
-            eprintln!("  g10kz-bot proactive      — alias: proactive runs inside daemon");
+            eprintln!("  g10kz-bot once <text>   -- offline single-turn smoke test");
+            eprintln!("  g10kz-bot daemon         -- connect to Discord (needs DISCORD_TOKEN)");
+            eprintln!("  g10kz-bot proactive      -- alias: proactive runs inside daemon");
             Ok(())
         }
     }
@@ -50,10 +50,16 @@ async fn main() -> anyhow::Result<()> {
 // ─── subcommands ─────────────────────────────────────────────────────────────
 
 /// Offline single-turn mode — no Discord, no network required when LLM_PROVIDER=mock.
+/// Loads the configured persona card (PERSONA_CARD_PATH) so the smoke test
+/// reflects the same system prompt as the live daemon.
 async fn cmd_once(config: &Config, text: String) -> anyhow::Result<()> {
     info!(text = %text, "once mode");
 
-    let persona = PersonaCard::stub();
+    let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
+        .unwrap_or_else(|e| {
+            warn!(error = ?e, "persona load failed, using stub");
+            PersonaCard::stub()
+        });
 
     let reply = if config.llm_provider == "mock" {
         let provider = MockProvider::social_default();
