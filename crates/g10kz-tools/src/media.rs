@@ -32,9 +32,7 @@ pub async fn process_image(url: &str) -> anyhow::Result<MediaOutput> {
     // can fetch it natively.  Only encode when it's not a regular URL.
     if url.starts_with("https://") || url.starts_with("http://") {
         return Ok(MediaOutput {
-            parts: vec![Part::ImageUrl {
-                url: url.to_owned(),
-            }],
+            parts: vec![Part::ImageUrl { url: url.to_owned() }],
             label: "[圖片]".into(),
         });
     }
@@ -53,11 +51,12 @@ pub async fn process_image(url: &str) -> anyhow::Result<MediaOutput> {
 
 fn guess_mime(bytes: &[u8]) -> &'static str {
     match bytes {
-        b if b.starts_with(b"\x89PNG") => "image/png",
-        b if b.starts_with(b"\xff\xd8\xff") => "image/jpeg",
-        b if b.starts_with(b"GIF8") => "image/gif",
-        b if b.starts_with(b"RIFF") && bytes.len() > 8 && &bytes[8..12] == b"WEBP" => "image/webp",
-        _ => "image/jpeg",
+        b if b.starts_with(b"\x89PNG")         => "image/png",
+        b if b.starts_with(b"\xff\xd8\xff")    => "image/jpeg",
+        b if b.starts_with(b"GIF8")            => "image/gif",
+        b if b.starts_with(b"RIFF") && bytes.len() > 8 && &bytes[8..12] == b"WEBP"
+                                                => "image/webp",
+        _                                       => "image/jpeg",
     }
 }
 
@@ -71,9 +70,9 @@ pub async fn process_video(
     duration_hint_secs: Option<f64>,
 ) -> anyhow::Result<MediaOutput> {
     let n_frames = match duration_hint_secs {
-        Some(d) if d <= 60.0 => 4,
+        Some(d) if d <= 60.0  => 4,
         Some(d) if d <= 180.0 => 8,
-        _ => 12,
+        _                     => 12,
     };
 
     let tmp_dir = tempdir()?;
@@ -82,17 +81,10 @@ pub async fn process_video(
     // Extract evenly-spaced frames with ffmpeg
     let status = tokio::process::Command::new("ffmpeg")
         .args([
-            "-i",
-            url,
-            "-vf",
-            &format!(
-                "select='not(mod(n\\,{}))',setpts=N/FRAME_RATE/TB",
-                frame_step_expr(url, n_frames)
-            ),
-            "-vframes",
-            &n_frames.to_string(),
-            "-q:v",
-            "4",
+            "-i",  url,
+            "-vf", &format!("select='not(mod(n\\,{}))',setpts=N/FRAME_RATE/TB", frame_step_expr(url, n_frames)),
+            "-vframes", &n_frames.to_string(),
+            "-q:v", "4",
             output_pattern.to_str().unwrap_or("."),
             "-y",
         ])
@@ -111,9 +103,7 @@ pub async fn process_video(
     let mut parts = Vec::new();
     for i in 1..=n_frames {
         let frame_path = tmp_dir.join(format!("frame_{i:03}.jpg"));
-        if !frame_path.exists() {
-            break;
-        }
+        if !frame_path.exists() { break; }
         match tokio::fs::read(&frame_path).await {
             Ok(bytes) => {
                 let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
@@ -130,10 +120,7 @@ pub async fn process_video(
     }
 
     debug!(frames = parts.len(), "video frames extracted");
-    Ok(MediaOutput {
-        parts,
-        label: "[影片分析]".into(),
-    })
+    Ok(MediaOutput { parts, label: "[影片分析]".into() })
 }
 
 fn frame_step_expr(_url: &str, n_frames: usize) -> String {
@@ -162,24 +149,18 @@ pub async fn transcribe_audio(url: &str) -> anyhow::Result<String> {
         .timeout(Duration::from_secs(60))
         .build()?;
 
-    let base_url =
-        std::env::var("LLM_BASE_URL").unwrap_or_else(|_| "https://openrouter.ai/api/v1".into());
+    let base_url = std::env::var("LLM_BASE_URL")
+        .unwrap_or_else(|_| "https://openrouter.ai/api/v1".into());
     let api_key = std::env::var("LLM_API_KEY").unwrap_or_default();
 
     let form = reqwest::multipart::Form::new()
-        .part(
-            "file",
-            reqwest::multipart::Part::bytes(bytes)
-                .file_name(filename)
-                .mime_str("audio/mpeg")?,
-        )
+        .part("file", reqwest::multipart::Part::bytes(bytes)
+            .file_name(filename)
+            .mime_str("audio/mpeg")?)
         .text("model", "whisper-1");
 
     let resp = client
-        .post(format!(
-            "{}/audio/transcriptions",
-            base_url.trim_end_matches('/')
-        ))
+        .post(format!("{}/audio/transcriptions", base_url.trim_end_matches('/')))
         .bearer_auth(api_key)
         .multipart(form)
         .send()

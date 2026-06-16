@@ -8,18 +8,10 @@ use crate::tool::{BoxFuture, Tool, ToolCall, ToolResult};
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 fn ok(name: &str, content: String) -> ToolResult {
-    ToolResult {
-        name: name.into(),
-        content,
-        success: true,
-    }
+    ToolResult { name: name.into(), content, success: true }
 }
 fn err(name: &str, msg: String) -> ToolResult {
-    ToolResult {
-        name: name.into(),
-        content: msg,
-        success: false,
-    }
+    ToolResult { name: name.into(), content: msg, success: false }
 }
 
 // ─── TimeTool ────────────────────────────────────────────────────────────────
@@ -28,12 +20,8 @@ fn err(name: &str, msg: String) -> ToolResult {
 pub struct TimeTool;
 
 impl Tool for TimeTool {
-    fn name(&self) -> &str {
-        "current_time"
-    }
-    fn description(&self) -> &str {
-        "回傳台灣當前日期與時間（UTC+8）。"
-    }
+    fn name(&self) -> &str { "current_time" }
+    fn description(&self) -> &str { "回傳台灣當前日期與時間（UTC+8）。" }
     fn schema(&self) -> Value {
         json!({ "type": "object", "properties": {}, "required": [] })
     }
@@ -54,8 +42,7 @@ impl Tool for TimeTool {
             // Gregorian calendar calculation (Tomohiko Sakamoto algorithm inspired)
             let (year, month, day) = unix_days_to_ymd(days);
 
-            let text =
-                format!("{year:04}-{month:02}-{day:02} {hh:02}:{mm:02}:{ss:02} (台灣時間 UTC+8)");
+            let text = format!("{year:04}-{month:02}-{day:02} {hh:02}:{mm:02}:{ss:02} (台灣時間 UTC+8)");
             ok(call.name.as_str(), text)
         })
     }
@@ -84,9 +71,7 @@ fn unix_days_to_ymd(days: u64) -> (u64, u64, u64) {
 pub struct EscalateTool;
 
 impl Tool for EscalateTool {
-    fn name(&self) -> &str {
-        "escalate"
-    }
+    fn name(&self) -> &str { "escalate" }
     fn description(&self) -> &str {
         "當問題超出社交對話範圍、需要深度分析時使用。觸發升級到推理路徑。"
     }
@@ -125,15 +110,11 @@ impl TwStockTool {
 }
 
 impl Default for TwStockTool {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl Tool for TwStockTool {
-    fn name(&self) -> &str {
-        "tw_stock"
-    }
+    fn name(&self) -> &str { "tw_stock" }
     fn description(&self) -> &str {
         "查詢台灣股票即時資訊（TWSE）。參數：stock_code（如 \"2330\" 代表台積電）。"
     }
@@ -176,19 +157,18 @@ impl Tool for TwStockTool {
                 Err(e) => return err(&call.name, format!("解析失敗：{e}")),
             };
 
-            let info = json
-                .get("msgArray")
+            let info = json.get("msgArray")
                 .and_then(|a| a.as_array())
                 .and_then(|a| a.first());
 
             match info {
                 Some(stock) => {
-                    let name = stock.get("n").and_then(|v| v.as_str()).unwrap_or("N/A");
+                    let name  = stock.get("n").and_then(|v| v.as_str()).unwrap_or("N/A");
                     let price = stock.get("z").and_then(|v| v.as_str()).unwrap_or("-");
-                    let open = stock.get("o").and_then(|v| v.as_str()).unwrap_or("-");
-                    let high = stock.get("h").and_then(|v| v.as_str()).unwrap_or("-");
-                    let low = stock.get("l").and_then(|v| v.as_str()).unwrap_or("-");
-                    let vol = stock.get("v").and_then(|v| v.as_str()).unwrap_or("-");
+                    let open  = stock.get("o").and_then(|v| v.as_str()).unwrap_or("-");
+                    let high  = stock.get("h").and_then(|v| v.as_str()).unwrap_or("-");
+                    let low   = stock.get("l").and_then(|v| v.as_str()).unwrap_or("-");
+                    let vol   = stock.get("v").and_then(|v| v.as_str()).unwrap_or("-");
                     ok(&call.name, format!(
                         "{code} {name}\n現價：{price}\n開盤：{open} 最高：{high} 最低：{low}\n成交量：{vol}張"
                     ))
@@ -201,47 +181,29 @@ impl Tool for TwStockTool {
 
 // ─── WebSearchTool ───────────────────────────────────────────────────────────
 
-/// Cloudflare AI Search — or DuckDuckGo fallback when not configured.
+/// DuckDuckGo Instant Answer web search.
 pub struct WebSearchTool {
     client: reqwest::Client,
-    account_id: String,
-    api_token: String,
 }
 
 impl WebSearchTool {
-    pub fn new(account_id: impl Into<String>, api_token: impl Into<String>) -> Self {
+    pub fn new() -> Self {
         Self {
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(8))
                 .build()
                 .unwrap(),
-            account_id: account_id.into(),
-            api_token: api_token.into(),
         }
-    }
-
-    pub fn from_config(config: &g10kz_config::Config) -> Self {
-        Self::new(&config.cf_account_id, &config.cf_api_token)
-    }
-
-    fn has_cloudflare(&self) -> bool {
-        !self.account_id.is_empty() && !self.api_token.is_empty()
     }
 }
 
 impl Default for WebSearchTool {
-    fn default() -> Self {
-        Self::new("", "")
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl Tool for WebSearchTool {
-    fn name(&self) -> &str {
-        "web_search"
-    }
-    fn description(&self) -> &str {
-        "搜尋網路上的最新資訊。參數：query（搜尋詞）。"
-    }
+    fn name(&self) -> &str { "web_search" }
+    fn description(&self) -> &str { "搜尋網路上的最新資訊。參數：query（搜尋詞）。" }
     fn schema(&self) -> Value {
         json!({
             "type": "object",
@@ -258,71 +220,42 @@ impl Tool for WebSearchTool {
                 None => return err(&call.name, "missing query".into()),
             };
 
-            // Cloudflare AI Search path
-            if self.has_cloudflare() {
-                let url = format!(
-                    "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/@cf/cloudflare/ai-search",
-                    self.account_id
-                );
-                match self
-                    .client
-                    .post(&url)
-                    .bearer_auth(&self.api_token)
-                    .json(&json!({ "query": query }))
-                    .send()
-                    .await
-                {
-                    Ok(r) if r.status().is_success() => match r.json::<Value>().await {
-                        Ok(v) => {
-                            let result =
-                                serde_json::to_string_pretty(&v).unwrap_or_else(|_| v.to_string());
-                            return ok(&call.name, result);
-                        }
-                        Err(e) => warn!("cf search parse error: {e}"),
-                    },
-                    Ok(r) => warn!("cf search HTTP {}", r.status()),
-                    Err(e) => warn!("cf search error: {e}"),
-                }
-            }
-
-            // DuckDuckGo fallback (Instant Answer API)
+            // DuckDuckGo Instant Answer API
             let ddg_url = format!(
                 "https://api.duckduckgo.com/?q={}&format=json&no_html=1&skip_disambig=1",
                 urlencoding(&query)
             );
             match self.client.get(&ddg_url).send().await {
-                Ok(r) if r.status().is_success() => match r.json::<Value>().await {
-                    Ok(v) => {
-                        let abstract_text =
-                            v.get("AbstractText").and_then(|v| v.as_str()).unwrap_or("");
-                        let related: Vec<&str> = v
-                            .get("RelatedTopics")
-                            .and_then(|a| a.as_array())
-                            .map(|a| {
-                                a.iter()
+                Ok(r) if r.status().is_success() => {
+                    match r.json::<Value>().await {
+                        Ok(v) => {
+                            let abstract_text = v.get("AbstractText")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            let related: Vec<&str> = v.get("RelatedTopics")
+                                .and_then(|a| a.as_array())
+                                .map(|a| a.iter()
                                     .take(3)
                                     .filter_map(|t| t.get("Text").and_then(|v| v.as_str()))
-                                    .collect()
-                            })
-                            .unwrap_or_default();
+                                    .collect())
+                                .unwrap_or_default();
 
-                        let mut out = if abstract_text.is_empty() {
-                            String::new()
-                        } else {
-                            format!("{abstract_text}\n")
-                        };
-                        for r in related {
-                            out.push_str(&format!("• {r}\n"));
+                            let mut out = if abstract_text.is_empty() {
+                                String::new()
+                            } else {
+                                format!("{abstract_text}\n")
+                            };
+                            for r in related { out.push_str(&format!("• {r}\n")); }
+                            if out.trim().is_empty() {
+                                ok(&call.name, format!("查不到「{query}」的相關資訊"))
+                            } else {
+                                ok(&call.name, out.trim().to_string())
+                            }
                         }
-                        if out.trim().is_empty() {
-                            ok(&call.name, format!("查不到「{query}」的相關資訊"))
-                        } else {
-                            ok(&call.name, out.trim().to_string())
-                        }
+                        Err(e) => err(&call.name, format!("搜尋結果解析失敗：{e}")),
                     }
-                    Err(e) => err(&call.name, format!("搜尋結果解析失敗：{e}")),
-                },
-                Ok(r) => err(&call.name, format!("搜尋 HTTP {}", r.status())),
+                }
+                Ok(r) => err(&call.name, format!("搜尋 HTTP {}",  r.status())),
                 Err(e) => err(&call.name, format!("搜尋失敗：{e}")),
             }
         })
@@ -330,15 +263,13 @@ impl Tool for WebSearchTool {
 }
 
 fn urlencoding(s: &str) -> String {
-    s.chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~') {
-                c.to_string()
-            } else {
-                format!("%{:02X}", c as u32)
-            }
-        })
-        .collect()
+    s.chars().map(|c| {
+        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~') {
+            c.to_string()
+        } else {
+            format!("%{:02X}", c as u32)
+        }
+    }).collect()
 }
 
 // ─── tests ───────────────────────────────────────────────────────────────────
@@ -356,11 +287,7 @@ mod tests {
         let result = TimeTool.call(call).await;
         assert!(result.success, "TimeTool should succeed");
         assert!(result.content.contains("UTC+8"), "got: {}", result.content);
-        assert!(
-            result.content.contains("20"),
-            "should contain year 20xx: {}",
-            result.content
-        );
+        assert!(result.content.contains("20"), "should contain year 20xx: {}", result.content);
     }
 
     #[test]
@@ -378,10 +305,7 @@ mod tests {
 
     #[tokio::test]
     async fn escalate_tool_returns_sentinel() {
-        let call = ToolCall {
-            name: "escalate".into(),
-            arguments: json!({"reason": "complex"}),
-        };
+        let call = ToolCall { name: "escalate".into(), arguments: json!({"reason": "complex"}) };
         let result = EscalateTool.call(call).await;
         assert!(result.success);
         assert_eq!(result.content, "ESCALATE");
@@ -389,20 +313,14 @@ mod tests {
 
     #[tokio::test]
     async fn tw_stock_missing_arg_returns_err() {
-        let call = ToolCall {
-            name: "tw_stock".into(),
-            arguments: json!({}),
-        };
+        let call = ToolCall { name: "tw_stock".into(), arguments: json!({}) };
         let result = TwStockTool::new().call(call).await;
         assert!(!result.success);
     }
 
     #[tokio::test]
     async fn web_search_missing_query_returns_err() {
-        let call = ToolCall {
-            name: "web_search".into(),
-            arguments: json!({}),
-        };
+        let call = ToolCall { name: "web_search".into(), arguments: json!({}) };
         let result = WebSearchTool::default().call(call).await;
         assert!(!result.success);
     }
@@ -412,3 +330,4 @@ mod tests {
         assert_eq!(urlencoding("hello world"), "hello%20world");
     }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   

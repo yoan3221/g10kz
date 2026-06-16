@@ -77,10 +77,9 @@ impl ToolBox {
         self.tools.push(Box::new(tool));
     }
 
+
     /// True if no tools have been registered.
-    pub fn is_empty(&self) -> bool {
-        self.tools.is_empty()
-    }
+    pub fn is_empty(&self) -> bool { self.tools.is_empty() }
 
     /// Iterator over all registered tools.
     pub fn tools(&self) -> impl Iterator<Item = &dyn Tool> {
@@ -88,10 +87,7 @@ impl ToolBox {
     }
     /// Find a tool by name.
     pub fn get(&self, name: &str) -> Option<&dyn Tool> {
-        self.tools
-            .iter()
-            .find(|t| t.name() == name)
-            .map(|t| t.as_ref())
+        self.tools.iter().find(|t| t.name() == name).map(|t| t.as_ref())
     }
 
     /// JSON schema array for the `tools` field in an OpenAI-compatible request.

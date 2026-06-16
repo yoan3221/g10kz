@@ -88,8 +88,9 @@ impl PersonaCard {
             return Ok(Self::stub());
         }
 
-        let raw = std::fs::read_to_string(path)
-            .map_err(|e| KernelError::PersonaParse(format!("read error: {e}")))?;
+        let raw = std::fs::read_to_string(path).map_err(|e| {
+            KernelError::PersonaParse(format!("read error: {e}"))
+        })?;
 
         Self::parse_json(&raw)
     }
@@ -163,11 +164,7 @@ fn parse_example_dialogue(raw: &str) -> Vec<String> {
         return vec![];
     }
     raw.lines()
-        .filter(|l| {
-            !l.trim().is_empty()
-                && !l.trim_start().starts_with("<START>")
-                && !l.trim_start().starts_with("<END>")
-        })
+        .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with("<START>") && !l.trim_start().starts_with("<END>"))
         .map(|l| l.trim().to_owned())
         .collect()
 }

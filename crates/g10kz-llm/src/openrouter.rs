@@ -198,8 +198,9 @@ impl OpenRouterProvider {
                 }
             };
 
-            let comp_resp: crate::serialize::CompletionResponse = serde_json::from_value(json_val)
-                .map_err(|e| LlmError::Request(format!("parse: {e}")))?;
+            let comp_resp: crate::serialize::CompletionResponse =
+                serde_json::from_value(json_val)
+                    .map_err(|e| LlmError::Request(format!("parse: {e}")))?;
 
             let (text, mut usage) = extract_reply(comp_resp)?;
             usage.cost_usd = cost_usd;
@@ -222,7 +223,9 @@ impl Provider for OpenRouterProvider {
         params: &'a CompletionParams,
     ) -> BoxFuture<'a, anyhow::Result<(String, Usage)>> {
         let cancel = self.cancel.clone();
-        Box::pin(async move { self.complete_with_cancel(messages, params, cancel).await })
+        Box::pin(async move {
+            self.complete_with_cancel(messages, params, cancel).await
+        })
     }
 }
 
@@ -264,7 +267,10 @@ mod tests {
     #[tokio::test]
     async fn cancellation_returns_cancelled_error() {
         let p = make_provider();
-        let msgs = vec![crate::types::Message::text(crate::types::Role::User, "hi")];
+        let msgs = vec![crate::types::Message::text(
+            crate::types::Role::User,
+            "hi",
+        )];
         let params = crate::types::CompletionParams::social("mock");
         let cancel = CancellationToken::new();
         cancel.cancel(); // pre-cancel

@@ -34,7 +34,11 @@ pub trait Memory: Send + Sync {
         limit: usize,
     ) -> BoxFuture<'a, Vec<MemoryEntry>>;
 
-    fn add<'a>(&'a self, user_id: u64, entry: MemoryEntry) -> BoxFuture<'a, ()>;
+    fn add<'a>(
+        &'a self,
+        user_id: u64,
+        entry: MemoryEntry,
+    ) -> BoxFuture<'a, ()>;
 }
 
 // ─── EverosError ─────────────────────────────────────────────────────────────

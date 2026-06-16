@@ -1,19 +1,23 @@
 //! serenity [`EventHandler`] implementation.
 
-use crate::{
-    commands::{global_commands, handle_command},
-    state::{BotState, ContextEntry, RING_SIZE},
-    util::{build_history, now_unix, spawn_typing_task, split_message},
-};
-use g10kz_engine::turn::{run_turn, TurnInput};
+use std::sync::Arc;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
-    model::{application::Interaction, channel::Message as DiscordMessage, gateway::Ready},
+    model::{
+        application::Interaction,
+        channel::Message as DiscordMessage,
+        gateway::Ready,
+    },
 };
-use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
+use g10kz_engine::turn::{run_turn, TurnInput};
+use crate::{
+    commands::{global_commands, handle_command},
+    state::{BotState, ContextEntry, RING_SIZE},
+    util::{build_history, now_unix, split_message, spawn_typing_task},
+};
 
 pub struct Handler {
     pub state: Arc<BotState>,
@@ -77,11 +81,7 @@ impl EventHandler for Handler {
             return;
         }
 
-        self.state
-            .last_seen
-            .lock()
-            .await
-            .insert(channel_id, now_unix());
+        self.state.last_seen.lock().await.insert(channel_id, now_unix());
 
         let history = {
             let ctx_map = self.state.channel_ctx.lock().await;

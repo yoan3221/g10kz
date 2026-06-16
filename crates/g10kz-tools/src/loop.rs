@@ -38,9 +38,9 @@ pub async fn run_tool_loop(
 
     for iteration in 0..toolbox.max_iterations {
         let (reply, usage) = provider.complete(&messages, params).await?;
-        total.prompt_tokens += usage.prompt_tokens;
+        total.prompt_tokens     += usage.prompt_tokens;
         total.completion_tokens += usage.completion_tokens;
-        total.cost_usd += usage.cost_usd;
+        total.cost_usd          += usage.cost_usd;
         last_text = reply.clone();
 
         // Done — no tool call tag
@@ -80,14 +80,11 @@ pub async fn run_tool_loop(
 
 /// Build the tool-schema block to append to the system prompt.
 pub fn tool_schema_snippet(toolbox: &ToolBox) -> String {
-    if toolbox.is_empty() {
-        return String::new();
-    }
+    if toolbox.is_empty() { return String::new(); }
 
-    let entries: Vec<String> = toolbox
-        .tools()
-        .map(|t| format!("- `{}`: {}", t.name(), t.description()))
-        .collect();
+    let entries: Vec<String> = toolbox.tools().map(|t| {
+        format!("- `{}`: {}", t.name(), t.description())
+    }).collect();
 
     format!(
         "\n\n---\n## 可用工具\n{}\n\n\

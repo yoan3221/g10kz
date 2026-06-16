@@ -56,7 +56,7 @@ static LEAK_SIGNALS: &[&str] = &[
     "chatgpt",
     "gpt-4",
     "gpt-3",
-    "claude", // the Anthropic model (persona is 小十, not Claude)
+    "claude",           // the Anthropic model (persona is 小十, not Claude)
     "gemini",
     "llama",
     "anthropic",
@@ -72,10 +72,7 @@ static LEAK_SIGNALS: &[&str] = &[
 /// Returns `Some(signal)` if a leak is detected in `reply`.
 pub fn find_leak(reply: &str) -> Option<&'static str> {
     let scanned = normalize_for_scan(reply);
-    LEAK_SIGNALS
-        .iter()
-        .find(|&&sig| scanned.contains(sig))
-        .copied()
+    LEAK_SIGNALS.iter().find(|&&sig| scanned.contains(sig)).copied()
 }
 
 // ─── Anti-repetition ─────────────────────────────────────────────────────────
@@ -125,7 +122,9 @@ pub fn format_output(reply: &str) -> String {
 }
 
 fn strip_leading_artefact(s: &str) -> &str {
-    static ARTEFACTS: &[&str] = &["assistant:", "ai:", "小十:", "bot:", "小十：", "ai："];
+    static ARTEFACTS: &[&str] = &[
+        "assistant:", "ai:", "小十:", "bot:", "小十：", "ai：",
+    ];
     let lower = s.to_lowercase();
     for art in ARTEFACTS {
         if lower.starts_with(art) {
@@ -204,17 +203,17 @@ mod tests {
 
     #[test]
     fn whitespace_only_triggers_regenerate() {
-        assert!(matches!(
-            ok("   \n  \t  "),
-            SanitizeResult::Regenerate { .. }
-        ));
+        assert!(matches!(ok("   \n  \t  "), SanitizeResult::Regenerate { .. }));
     }
 
     // ── clean reply ───────────────────────────────────────────────────────────
 
     #[test]
     fn clean_zh_reply_passes() {
-        assert!(matches!(ok("哼，算你問的還不蠢。"), SanitizeResult::Ok(_)));
+        assert!(matches!(
+            ok("哼，算你問的還不蠢。"),
+            SanitizeResult::Ok(_)
+        ));
     }
 
     #[test]

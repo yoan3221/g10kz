@@ -3,13 +3,13 @@
 //! L2 — depends on [`g10kz_config`] and [`g10kz_llm`].
 
 pub mod builtins;
-pub mod r#loop;
 pub mod media;
+pub mod r#loop;
 pub mod tool;
 
-pub use builtins::{EscalateTool, TimeTool, TwStockTool, WebSearchTool};
-pub use r#loop::{run_tool_loop, tool_schema_snippet};
 pub use tool::{Tool, ToolBox, ToolCall, ToolResult};
+pub use r#loop::{run_tool_loop, tool_schema_snippet};
+pub use builtins::{EscalateTool, TimeTool, TwStockTool, WebSearchTool};
 
 /// Errors from tool execution.
 #[derive(Debug, thiserror::Error)]

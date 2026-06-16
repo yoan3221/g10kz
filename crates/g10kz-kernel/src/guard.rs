@@ -179,10 +179,7 @@ mod tests {
 
     #[test]
     fn allow_clean_message() {
-        assert_eq!(
-            pre_guard(&cfg(), 1, "你好！今天天氣怎麼樣？"),
-            GuardVerdict::Allow
-        );
+        assert_eq!(pre_guard(&cfg(), 1, "你好！今天天氣怎麼樣？"), GuardVerdict::Allow);
     }
 
     #[test]

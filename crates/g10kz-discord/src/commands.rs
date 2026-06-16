@@ -1,7 +1,6 @@
 //! Slash command definitions and dispatch.
 
-use crate::state::BotState;
-use g10kz_kernel::persona::PersonaCard;
+use std::sync::Arc;
 use serenity::{
     builder::{
         CreateCommand, CreateCommandOption, CreateInteractionResponse,
@@ -10,22 +9,27 @@ use serenity::{
     client::Context,
     model::application::{CommandInteraction, CommandOptionType},
 };
-use std::sync::Arc;
 use tracing::{info, warn};
+use g10kz_kernel::persona::PersonaCard;
+use crate::state::BotState;
 
 /// Build the list of global slash commands to register on `ready`.
 pub fn global_commands() -> Vec<CreateCommand> {
     vec![
-        CreateCommand::new("reset").description("清除此頻道的對話記錄"),
-        CreateCommand::new("stop").description("取消目前正在生成的回覆"),
+        CreateCommand::new("reset")
+            .description("清除此頻道的對話記錄"),
+        CreateCommand::new("stop")
+            .description("取消目前正在生成的回覆"),
         CreateCommand::new("memory")
             .description("搜尋小十的記憶")
             .add_option(
                 CreateCommandOption::new(CommandOptionType::String, "query", "搜尋關鍵字")
                     .required(true),
             ),
-        CreateCommand::new("persona").description("重新載入人設檔案"),
-        CreateCommand::new("trace").description("切換除錯追蹤輸出"),
+        CreateCommand::new("persona")
+            .description("重新載入人設檔案"),
+        CreateCommand::new("trace")
+            .description("切換除錯追蹤輸出"),
     ]
 }
 
