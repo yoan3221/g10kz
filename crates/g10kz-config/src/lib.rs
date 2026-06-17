@@ -6,72 +6,36 @@ use std::time::Duration;
 
 use serde::Deserialize;
 
-// ─── Config ─────────────────────────────────────────────────────────────────
-
 /// Central, immutable configuration.
-/// Construct once at startup via [`Config::from_env`] or [`Config::mock_default`].
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    /// Discord bot token.
     pub discord_token: String,
-
-    /// Active LLM provider: `"mock"` | `"openrouter"` | `"openai-compat"`.
     pub llm_provider: String,
-
-    /// Base URL for the OpenAI-compatible API endpoint.
     pub llm_base_url: String,
-
-    /// API key forwarded in `Authorization: Bearer …`.
     pub llm_api_key: String,
-
-    // ── per-path model selection ──────────────────────────────
     pub llm_model_social: String,
     pub llm_model_reason: String,
     pub llm_model_judge: String,
-
-    /// Comma-separated model ids used as Fusion drafters.
     pub llm_fusion_drafters: Vec<String>,
-
-    /// EverOS HTTP sidecar base URL.
     pub everos_url: String,
-
-    /// Discord snowflake of the bot owner (trusted for owner-only commands).
     pub owner_user_id: u64,
-
-    /// Timeout applied to every outbound HTTP request.
     pub request_timeout: Duration,
-
-    /// `RUST_LOG` filter string passed to `tracing-subscriber`.
     pub log_level: String,
-
-    /// Discord snowflake IDs of blacklisted users.
-    /// Blacklisted users receive restricted-mode responses (no media/search/memory).
     pub blacklisted_users: Vec<u64>,
-
-    /// Minimum inactive seconds before proactive messaging fires.
-    /// Default: 86400 (24 hours).
     pub proactive_inactive_secs: u64,
-
-    /// Path to SillyTavern V2 character card JSON.
-    /// Falls back to built-in stub when empty or file not found.
     pub persona_card_path: String,
-
-    /// Base URL for the llama.cpp embedding server (OpenAI-compat `/v1/embeddings`).
-    /// Default: `http://localhost:8082`.
-    /// Set to empty string to disable semantic routing (keyword routing only).
     pub embed_server_url: String,
+    /// Path to the Obscura headless browser binary for web search.
+    /// Defaults to `/usr/local/bin/obscura`. Empty string disables page fetching.
+    pub obscura_path: String,
 }
 
 impl Config {
-    /// Load from environment variables.
-    /// Calls [`dotenvy::dotenv`] first so a `.env` file is picked up automatically.
     pub fn from_env() -> anyhow::Result<Self> {
         dotenvy::dotenv().ok();
 
         let llm_fusion_drafters = std::env::var("LLM_FUSION_DRAFTERS")
-            .unwrap_or_else(|_| {
-                "openai/gpt-4o,anthropic/claude-3-5-sonnet,google/gemini-2.0-flash".into()
-            })
+            .unwrap_or_default()
             .split(',')
             .map(|s| s.trim().to_owned())
             .filter(|s| !s.is_empty())
@@ -117,10 +81,11 @@ impl Config {
             persona_card_path: std::env::var("PERSONA_CARD_PATH").unwrap_or_default(),
             embed_server_url: std::env::var("EMBED_SERVER_URL")
                 .unwrap_or_else(|_| "http://localhost:8082".into()),
+            obscura_path: std::env::var("OBSCURA_PATH")
+                .unwrap_or_else(|_| "/usr/local/bin/obscura".into()),
         })
     }
 
-    /// Offline-safe defaults for unit tests and `LLM_PROVIDER=mock` runs.
     pub fn mock_default() -> Self {
         Self {
             discord_token: String::new(),
@@ -138,12 +103,11 @@ impl Config {
             blacklisted_users: vec![],
             proactive_inactive_secs: 86400,
             persona_card_path: String::new(),
-            embed_server_url: String::new(),  // disabled in tests
+            embed_server_url: String::new(),
+            obscura_path: String::new(),
         }
     }
 }
-
-// ─── tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -151,19 +115,16 @@ mod tests {
 
     #[test]
     fn mock_default_is_mock_provider() {
-        let cfg = Config::mock_default();
-        assert_eq!(cfg.llm_provider, "mock");
+        assert_eq!(Config::mock_default().llm_provider, "mock");
     }
 
     #[test]
     fn mock_default_has_two_fusion_drafters() {
-        let cfg = Config::mock_default();
-        assert_eq!(cfg.llm_fusion_drafters.len(), 2);
+        assert_eq!(Config::mock_default().llm_fusion_drafters.len(), 2);
     }
 
     #[test]
     fn mock_default_embed_server_url_empty() {
-        let cfg = Config::mock_default();
-        assert!(cfg.embed_server_url.is_empty());
+        assert!(Config::mock_default().embed_server_url.is_empty());
     }
 }

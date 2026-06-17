@@ -19,3 +19,6 @@ Thumbs.db
 
 # EverOS sidecar
 everos_data/
+
+# large pre-built binaries
+bin/

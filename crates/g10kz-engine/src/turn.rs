@@ -120,16 +120,25 @@ impl<'a> TurnInput<'a> {
     }
 
     /// Persona system prompt augmented with channel-context guidance,
-    /// optional server/channel environment note, and JPAF personality modifier.
+    /// optional server/channel environment note, Discord format guide,
+    /// and JPAF personality modifier.
     pub fn system_prompt(&self) -> String {
         let mut s = format!("{}{}", self.persona.system_prompt, self.channel_note());
         if let Some(env) = self.env_note() {
             s.push_str(&env);
         }
+        s.push_str(Self::discord_format_note());
         if let Some(modifier) = &self.personality_modifier {
             s.push_str(modifier);
         }
         s
+    }
+
+    /// Static Discord Markdown formatting guide injected into every system prompt.
+    /// Teaches the LLM which formatting syntax Discord actually renders.
+    fn discord_format_note() -> &'static str {
+        "\n\n[Discord 格式]\n你的回覆在 Discord 中渲染 Markdown，可使用以下格式：\n         **粗體** `**文字**` · *斜體* `*文字*` · __底線__ `__文字__` · ~~刪除線~~ `~~文字~~`\n         ` 行內代碼 ` · 多行代碼區塊：\\`\\`\\`語言\n程式碼\n\\`\\`\\`\n         引用：`> 文字` · 暗文：`||文字||` · 小字：`-# 文字`\n         標題：`# 大` `## 中` `### 小` · 清單：`- 項目` 或 `1. 項目`\n         連結：`[顯示文字](https://url)` （僅在 embed 允許時可點擊）\n         **使用原則**：日常聊天保持自然語氣，不過度格式化；\
+技術說明、列表、代碼才優先使用 Markdown。"
     }
 
     /// Inject guild/channel name into system prompt for server-aware responses.

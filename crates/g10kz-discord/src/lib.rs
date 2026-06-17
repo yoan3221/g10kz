@@ -1,10 +1,4 @@
 //! Discord gateway integration using serenity.
-//!
-//! L4 — depends on g10kz-engine (L3).
-//!
-//! Entry points:
-//! - [`run_gateway`]   — start the bot and block until shutdown signal.
-//! - [`build_state`]   — construct shared [`BotState`] (exported for tests).
 
 mod commands;
 mod handler;
@@ -12,6 +6,7 @@ mod transcript;
 pub mod state;
 mod util;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -29,9 +24,6 @@ use crate::handler::Handler;
 use crate::state::BotState;
 use crate::util::now_unix;
 
-// ─── run_gateway ──────────────────────────────────────────────────────────────
-
-/// Start the Discord gateway and block until a shutdown signal is received.
 pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
     let state = build_state(config);
 
@@ -44,7 +36,6 @@ pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
         .event_handler(Handler { state: state.clone() })
         .await?;
 
-    // Spawn proactive background loop before blocking on start().
     let proactive_http = client.http.clone();
     let proactive_state = state.clone();
     let inactive_secs = config.proactive_inactive_secs;
@@ -57,16 +48,27 @@ pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-// ─── build_state ──────────────────────────────────────────────────────────────
-
-/// Construct shared bot state from config.
 pub fn build_state(config: &Config) -> Arc<BotState> {
     let provider = OpenRouterProvider::from_config(config);
+
+    // Resolve Obscura path from config
+    let obscura_path = if config.obscura_path.is_empty() {
+        None
+    } else {
+        let p = PathBuf::from(&config.obscura_path);
+        if p.exists() {
+            info!(path = %p.display(), "obscura binary found");
+            Some(p)
+        } else {
+            warn!(path = %p.display(), "obscura binary not found — web search in snippet-only mode");
+            None
+        }
+    };
 
     let mut toolbox = ToolBox::new();
     toolbox.register(TimeTool);
     toolbox.register(TwStockTool::new());
-    toolbox.register(WebSearchTool::new());
+    toolbox.register(WebSearchTool::new(obscura_path));
 
     let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
         .unwrap_or_else(|e| {
@@ -74,9 +76,6 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
             PersonaCard::stub()
         });
 
-    // Build semantic router and warm up centroids in background.
-    // If embed_server_url is empty, warmup will fail gracefully and
-    // all refine() calls return None (keyword routing only).
     let embed_router = EmbeddingRouter::new(&config.embed_server_url);
     if !config.embed_server_url.is_empty() {
         embed_router.spawn_warmup();
@@ -92,9 +91,6 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
     }
 }
 
-// ─── proactive_loop ───────────────────────────────────────────────────────────
-
-/// Background task: every 60 s, send to channels silent for > inactive_secs.
 async fn proactive_loop(
     state: Arc<BotState>,
     http: Arc<serenity::http::Http>,
