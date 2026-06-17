@@ -195,6 +195,7 @@ impl EventHandler for Handler {
         let reply_text = match result {
             Ok(output) => {
                 debug!(path = ?output.path, ptok = output.usage.prompt_tokens, "turn ok");
+
                 // JPAF: classify the exchange and update per-user personality state
                 {
                     let activated = classify_activation(&clean_text, &output.reply);
@@ -203,6 +204,18 @@ impl EventHandler for Handler {
                           .or_insert_with(PersonalityState::default)
                           .update(activated);
                 }
+
+                // EverOS: persist the conversation turn in background
+                if let Some(everos) = self.state.everos.clone() {
+                    let uid        = msg.author.id.get();
+                    let session    = format!("g10kz-{uid}");
+                    let user_text  = clean_text.clone();
+                    let bot_reply  = output.reply.clone();
+                    tokio::spawn(async move {
+                        everos.add_turn(uid, &session, &user_text, &bot_reply).await;
+                    });
+                }
+
                 output.reply
             }
             Err(e) => {

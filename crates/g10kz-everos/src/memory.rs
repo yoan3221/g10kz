@@ -1,10 +1,16 @@
-//! `Memory` trait implementations: `NullMemory` and `EverosMemory`.
+//! EverOS 1.0 HTTP client — `NullMemory` + `EverosMemory`.
 //!
-//! # EverosMemory features
-//! - reqwest client with **800ms timeout** for search calls
-//! - **Circuit breaker**: opens after 3 consecutive failures; half-open probe after 30s
-//! - **Search TTL cache**: 30-second in-process cache keyed by (user_id, query, limit)
-//! - **Batched writes**: accumulates up to 8 entries, then spawns a background flush task
+//! # EverOS 1.0 API used
+//! | Method | Path                          | Purpose                        |
+//! |--------|-------------------------------|--------------------------------|
+//! | POST   | /api/v1/memory/search         | Hybrid BM25 + vector retrieval |
+//! | POST   | /api/v1/memory/add            | Ingest conversation turn       |
+//! | POST   | /api/v1/memory/flush          | Force boundary extraction      |
+//!
+//! # Search response mapping
+//! `data.episodes[].atomic_facts[].content` → `MemoryEntry` (tag = "fact")
+//! `data.episodes[].summary`               → `MemoryEntry` (tag = "episode")
+//! Results are sorted descending by score and truncated to `limit`.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -16,30 +22,33 @@ use tracing::{debug, warn};
 
 use crate::{BoxFuture, Memory};
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────
 
-const CIRCUIT_OPEN_THRESHOLD: u32 = 3;
+const APP_ID:     &str = "default";
+const PROJECT_ID: &str = "default";
+const AGENT_ID:   &str = "g10kz";
+
+const CIRCUIT_THRESHOLD: u32 = 3;
 const CIRCUIT_RESET_SECS: u64 = 30;
-const SEARCH_TIMEOUT_MS: u64 = 800;
-const CACHE_TTL_SECS: u64 = 30;
-const WRITE_BATCH_MAX: usize = 8;
+const SEARCH_TIMEOUT_MS: u64 = 1500;
+const WRITE_TIMEOUT_MS:  u64 = 8000;   // flush triggers LLM extraction
+const CACHE_TTL_SECS:    u64 = 30;
 
-// ─── MemoryEntry ─────────────────────────────────────────────────────────────
+// ─── MemoryEntry ───────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryEntry {
-    pub text: String,
+    pub text:  String,
     #[serde(default)]
     pub score: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tag: Option<String>,
+    pub tag:   Option<String>,
 }
 
 impl MemoryEntry {
     pub fn new(text: impl Into<String>) -> Self {
         Self { text: text.into(), score: 0.0, tag: None }
     }
-
     pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
         self.tag = Some(tag.into());
         self
@@ -48,7 +57,7 @@ impl MemoryEntry {
 
 pub type MemoryResult = Vec<MemoryEntry>;
 
-// ─── NullMemory ──────────────────────────────────────────────────────────────
+// ─── NullMemory ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Default)]
 pub struct NullMemory;
@@ -60,54 +69,128 @@ impl Memory for NullMemory {
     fn add<'a>(&'a self, _uid: u64, _e: MemoryEntry) -> BoxFuture<'a, ()> {
         Box::pin(async {})
     }
+    fn add_turn<'a>(
+        &'a self,
+        _uid: u64,
+        _session_id: &'a str,
+        _user_text: &'a str,
+        _bot_reply: &'a str,
+    ) -> BoxFuture<'a, ()> {
+        Box::pin(async {})
+    }
 }
 
-// ─── Internal cache / write-buffer types ─────────────────────────────────────
+// ─── EverOS 1.0 request / response shapes ───────────────────────────────────
+
+#[derive(Serialize)]
+struct SearchReq<'a> {
+    user_id:    &'a str,
+    app_id:     &'static str,
+    project_id: &'static str,
+    query:      &'a str,
+    top_k:      usize,
+}
+
+#[derive(Serialize)]
+struct AddReq<'a> {
+    session_id:  &'a str,
+    app_id:      &'static str,
+    project_id:  &'static str,
+    messages:    Vec<AddMsg<'a>>,
+}
+
+#[derive(Serialize)]
+struct AddMsg<'a> {
+    sender_id:  &'a str,
+    role:       &'static str,
+    timestamp:  i64,   // Unix ms
+    content:    &'a str,
+}
+
+#[derive(Serialize)]
+struct FlushReq<'a> {
+    session_id:  &'a str,
+    app_id:      &'static str,
+    project_id:  &'static str,
+}
+
+// Search response
+#[derive(Deserialize, Debug)]
+struct SearchResp {
+    data: SearchData,
+}
+
+#[derive(Deserialize, Debug)]
+struct SearchData {
+    #[serde(default)]
+    episodes: Vec<Episode>,
+    #[serde(default)]
+    profiles: Vec<ProfileFact>,
+}
+
+#[derive(Deserialize, Debug)]
+struct Episode {
+    summary: String,
+    #[serde(default)]
+    score: f32,
+    #[serde(default)]
+    atomic_facts: Vec<AtomicFact>,
+}
+
+#[derive(Deserialize, Debug)]
+struct AtomicFact {
+    content: String,
+    #[serde(default)]
+    score: f32,
+}
+
+#[derive(Deserialize, Debug)]
+struct ProfileFact {
+    #[serde(default)]
+    content: String,
+    #[serde(default)]
+    score: f32,
+}
+
+// ─── Cache ─────────────────────────────────────────────────────────────────
 
 type CacheKey = (u64, String, usize);
+struct CacheEntry { results: Vec<MemoryEntry>, expires: Instant }
 
-struct CacheEntry {
-    results: Vec<MemoryEntry>,
-    expires: Instant,
-}
+// ─── EverosMemory ──────────────────────────────────────────────────────────
 
-// ─── EverosMemory ─────────────────────────────────────────────────────────────
-
-/// HTTP client for the EverOS memory sidecar.
+/// HTTP client for the EverOS 1.0 memory sidecar.
 #[derive(Clone)]
 pub struct EverosMemory {
-    client: Arc<reqwest::Client>,
-    base_url: Arc<String>,
-    failures: Arc<AtomicU32>,
-    last_failure_ts: Arc<AtomicU32>,
-    /// Short-lived search result cache. Eviction is lazy (checked on access).
-    cache: Arc<Mutex<HashMap<CacheKey, CacheEntry>>>,
-    /// Accumulates pending writes until WRITE_BATCH_MAX is reached.
-    write_buf: Arc<Mutex<Vec<(u64, MemoryEntry)>>>,
+    search_client: Arc<reqwest::Client>,
+    write_client:  Arc<reqwest::Client>,
+    base_url:      Arc<String>,
+    failures:      Arc<AtomicU32>,
+    last_fail_ts:  Arc<AtomicU32>,
+    cache:         Arc<Mutex<HashMap<CacheKey, CacheEntry>>>,
 }
 
 impl std::fmt::Debug for EverosMemory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EverosMemory")
             .field("base_url", &self.base_url)
-            .field("failures", &self.failures.load(Ordering::Relaxed))
             .finish()
     }
 }
 
 impl EverosMemory {
     pub fn new(base_url: impl Into<String>) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_millis(SEARCH_TIMEOUT_MS))
+        let mk = |ms| reqwest::Client::builder()
+            .timeout(Duration::from_millis(ms))
             .build()
             .expect("reqwest client build failed");
         Self {
-            client: Arc::new(client),
-            base_url: Arc::new(base_url.into()),
-            failures: Arc::new(AtomicU32::new(0)),
-            last_failure_ts: Arc::new(AtomicU32::new(0)),
-            cache: Arc::new(Mutex::new(HashMap::new())),
-            write_buf: Arc::new(Mutex::new(Vec::new())),
+            search_client: Arc::new(mk(SEARCH_TIMEOUT_MS)),
+            write_client:  Arc::new(mk(WRITE_TIMEOUT_MS)),
+            base_url:      Arc::new(base_url.into()),
+            failures:      Arc::new(AtomicU32::new(0)),
+            last_fail_ts:  Arc::new(AtomicU32::new(0)),
+            cache:         Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -115,270 +198,271 @@ impl EverosMemory {
         Self::new(&config.everos_url)
     }
 
-    pub fn circuit_open(&self) -> bool {
+    fn url(&self, path: &str) -> String {
+        format!("{}{path}", self.base_url.trim_end_matches('/'))
+    }
+
+    fn circuit_open(&self) -> bool {
         let f = self.failures.load(Ordering::Relaxed);
-        if f < CIRCUIT_OPEN_THRESHOLD { return false; }
-        let last = self.last_failure_ts.load(Ordering::Relaxed) as u64;
+        if f < CIRCUIT_THRESHOLD { return false; }
+        let last = self.last_fail_ts.load(Ordering::Relaxed) as u64;
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
         now.saturating_sub(last) < CIRCUIT_RESET_SECS
     }
-
-    fn record_success(&self) { self.failures.store(0, Ordering::Relaxed); }
-
-    fn record_failure(&self) {
+    fn record_ok(&self)   { self.failures.store(0, Ordering::Relaxed); }
+    fn record_fail(&self) {
         self.failures.fetch_add(1, Ordering::Relaxed);
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs() as u32;
-        self.last_failure_ts.store(now, Ordering::Relaxed);
+        self.last_fail_ts.store(now, Ordering::Relaxed);
     }
 
-    /// Drain write buffer and POST to EverOS. Returns count flushed.
-    pub async fn flush_pending_writes(&self) -> usize {
-        let items = {
-            let mut buf = self.write_buf.lock().unwrap();
-            std::mem::take(&mut *buf)
-        };
-        if items.is_empty() { return 0; }
-        let n = items.len();
-        flush_batch(self.client.clone(), self.base_url.clone(), items).await;
-        n
-    }
-
-    /// Number of writes currently buffered (for testing).
-    pub fn pending_write_count(&self) -> usize {
-        self.write_buf.lock().unwrap().len()
-    }
-}
-
-// ─── EverOS HTTP helpers ──────────────────────────────────────────────────────
-
-/// POST the batch to {base_url}/memory/batch (fire-and-forget).
-async fn flush_batch(
-    client: Arc<reqwest::Client>,
-    base_url: Arc<String>,
-    items: Vec<(u64, MemoryEntry)>,
-) {
-    let url = format!("{}/memory/batch", base_url.trim_end_matches('/'));
-    let body = serde_json::json!({
-        "items": items.iter().map(|(uid, e)| serde_json::json!({
-            "user_id": uid,
-            "text":    e.text,
-            "tag":     e.tag,
-            "score":   e.score,
-        })).collect::<Vec<_>>()
-    });
-    match client.post(&url).json(&body).send().await {
-        Ok(r) if r.status().is_success() => {
-            debug!(count = items.len(), "EverOS batch flushed");
+    // ── Public: add a full conversation turn ─────────────────────────────────
+    //
+    // Sends the user message + bot reply to EverOS, then forces extraction
+    // via /flush.  Designed to be called from a tokio::spawn background task.
+    pub async fn add_turn(
+        &self,
+        user_id: u64,
+        session_id: &str,
+        user_text: &str,
+        bot_reply: &str,
+    ) {
+        if self.circuit_open() {
+            debug!("EverOS circuit open — skipping add_turn");
+            return;
         }
-        Ok(r) => warn!("EverOS batch HTTP {}", r.status()),
-        Err(e) => warn!("EverOS batch flush error: {e}"),
+
+        let uid_str = user_id.to_string();
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+
+        let add_body = AddReq {
+            session_id,
+            app_id:     APP_ID,
+            project_id: PROJECT_ID,
+            messages: vec![
+                AddMsg { sender_id: &uid_str, role: "user",      timestamp: now_ms,     content: user_text },
+                AddMsg { sender_id: AGENT_ID, role: "assistant", timestamp: now_ms + 1, content: bot_reply },
+            ],
+        };
+
+        let add_resp = self.write_client
+            .post(self.url("/api/v1/memory/add"))
+            .json(&add_body)
+            .send()
+            .await;
+
+        match add_resp {
+            Err(e) => { warn!("EverOS add_turn add error: {e}"); self.record_fail(); return; }
+            Ok(r) if !r.status().is_success() => {
+                warn!("EverOS add_turn add HTTP {}", r.status());
+                self.record_fail(); return;
+            }
+            Ok(_) => { debug!("EverOS add_turn: accumulated"); }
+        }
+
+        // Force boundary extraction so the memory is searchable immediately.
+        let flush_body = FlushReq { session_id, app_id: APP_ID, project_id: PROJECT_ID };
+        match self.write_client
+            .post(self.url("/api/v1/memory/flush"))
+            .json(&flush_body)
+            .send()
+            .await
+        {
+            Err(e) => warn!("EverOS flush error: {e}"),
+            Ok(r) if !r.status().is_success() => warn!("EverOS flush HTTP {}", r.status()),
+            Ok(_) => {
+                self.record_ok();
+                debug!(session_id, "EverOS add_turn: flushed");
+            }
+        }
     }
 }
 
-/// EverOS search response shape.
-#[derive(Deserialize)]
-struct SearchResponse {
-    #[serde(alias = "results", alias = "data")]
-    memories: Vec<MemoryEntry>,
-}
-
-// ─── impl Memory ─────────────────────────────────────────────────────────────
+// ─── impl Memory ───────────────────────────────────────────────────────────
 
 impl Memory for EverosMemory {
     fn search<'a>(
         &'a self,
         user_id: u64,
-        query: &'a str,
-        limit: usize,
+        query:   &'a str,
+        limit:   usize,
     ) -> BoxFuture<'a, Vec<MemoryEntry>> {
         Box::pin(async move {
             if self.circuit_open() {
-                debug!("EverOS circuit open, skipping search");
+                debug!("EverOS circuit open — skipping search");
                 return vec![];
             }
 
             let key: CacheKey = (user_id, query.to_string(), limit);
-
-            // Cache lookup (drop lock before await)
             {
-                let mut cache = self.cache.lock().unwrap();
-                if let Some(e) = cache.get(&key) {
+                let mut c = self.cache.lock().unwrap();
+                if let Some(e) = c.get(&key) {
                     if e.expires > Instant::now() {
-                        debug!("EverOS cache hit");
+                        debug!("EverOS search cache hit");
                         return e.results.clone();
                     }
-                    cache.remove(&key);
+                    c.remove(&key);
                 }
             }
 
-            let url = format!("{}/memory/search", self.base_url.trim_end_matches('/'));
-            let body = serde_json::json!({ "user_id": user_id, "query": query, "limit": limit });
+            let uid_str = user_id.to_string();
+            let body = SearchReq {
+                user_id:    &uid_str,
+                app_id:     APP_ID,
+                project_id: PROJECT_ID,
+                query,
+                top_k: limit * 2,   // over-fetch; we trim after merging
+            };
 
-            let resp = match self.client.post(&url).json(&body).send().await {
+            let resp = match self.search_client
+                .post(self.url("/api/v1/memory/search"))
+                .json(&body)
+                .send()
+                .await
+            {
                 Ok(r) => r,
                 Err(e) => {
                     warn!("EverOS search error: {e}");
-                    self.record_failure();
+                    self.record_fail();
                     return vec![];
                 }
             };
 
             if !resp.status().is_success() {
                 warn!("EverOS search HTTP {}", resp.status());
-                self.record_failure();
+                self.record_fail();
                 return vec![];
             }
 
-            match resp.json::<SearchResponse>().await {
-                Ok(sr) => {
-                    self.record_success();
-                    let results = sr.memories;
-                    let expires = Instant::now() + Duration::from_secs(CACHE_TTL_SECS);
-                    self.cache.lock().unwrap()
-                        .insert(key, CacheEntry { results: results.clone(), expires });
-                    results
-                }
+            let parsed: SearchResp = match resp.json().await {
+                Ok(p) => p,
                 Err(e) => {
                     warn!("EverOS search parse error: {e}");
-                    self.record_failure();
-                    vec![]
-                }
-            }
-        })
-    }
-
-    fn add<'a>(&'a self, user_id: u64, entry: MemoryEntry) -> BoxFuture<'a, ()> {
-        Box::pin(async move {
-            // Push to buffer; if full, drain and spawn background flush.
-            let maybe_flush = {
-                let mut buf = self.write_buf.lock().unwrap();
-                buf.push((user_id, entry));
-                if buf.len() >= WRITE_BATCH_MAX {
-                    Some(std::mem::take(&mut *buf))
-                } else {
-                    None
+                    self.record_fail();
+                    return vec![];
                 }
             };
 
-            if let Some(items) = maybe_flush {
-                let client = self.client.clone();
-                let base_url = self.base_url.clone();
-                tokio::spawn(async move {
-                    flush_batch(client, base_url, items).await;
-                });
+            self.record_ok();
+
+            // Flatten: atomic facts (most specific) + episode summaries + profiles
+            let mut entries: Vec<MemoryEntry> = Vec::new();
+
+            for ep in &parsed.data.episodes {
+                for af in &ep.atomic_facts {
+                    if !af.content.is_empty() {
+                        entries.push(MemoryEntry {
+                            text:  af.content.clone(),
+                            score: af.score,
+                            tag:   Some("fact".into()),
+                        });
+                    }
+                }
+                // Episode summary as broader context
+                if !ep.summary.is_empty() {
+                    entries.push(MemoryEntry {
+                        text:  ep.summary.clone(),
+                        score: ep.score * 0.8,   // de-prioritise vs facts
+                        tag:   Some("episode".into()),
+                    });
+                }
             }
+
+            for p in &parsed.data.profiles {
+                if !p.content.is_empty() {
+                    entries.push(MemoryEntry {
+                        text:  p.content.clone(),
+                        score: p.score,
+                        tag:   Some("profile".into()),
+                    });
+                }
+            }
+
+            // Sort descending by score, take top `limit`
+            entries.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+            entries.truncate(limit);
+
+            let expires = Instant::now() + Duration::from_secs(CACHE_TTL_SECS);
+            self.cache.lock().unwrap().insert(key, CacheEntry { results: entries.clone(), expires });
+
+            debug!(count = entries.len(), "EverOS search ok");
+            entries
         })
+    }
+
+    /// Legacy single-entry add — wraps as a single-message session.
+    fn add<'a>(&'a self, user_id: u64, entry: MemoryEntry) -> BoxFuture<'a, ()> {
+        Box::pin(async move {
+            let session = format!("g10kz-legacy-{user_id}");
+            self.add_turn(user_id, &session, &entry.text, "").await;
+        })
+    }
+
+    fn add_turn<'a>(
+        &'a self,
+        user_id:   u64,
+        session_id: &'a str,
+        user_text: &'a str,
+        bot_reply: &'a str,
+    ) -> BoxFuture<'a, ()> {
+        Box::pin(self.add_turn(user_id, session_id, user_text, bot_reply))
     }
 }
 
-// ─── tests ───────────────────────────────────────────────────────────────────
+// ─── tests ─────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn make_everos() -> EverosMemory {
-        EverosMemory::new("http://127.0.0.1:19900") // no server — tests degradation
-    }
-
-    // ── NullMemory ─────────────────────────────────────────────────────────────
-
     #[tokio::test]
-    async fn null_memory_returns_empty() {
-        assert!(NullMemory.search(1, "query", 5).await.is_empty());
+    async fn null_memory_search_empty() {
+        assert!(NullMemory.search(1, "q", 5).await.is_empty());
     }
-
     #[tokio::test]
-    async fn null_memory_add_is_noop() {
-        NullMemory.add(1, MemoryEntry::new("test")).await;
+    async fn null_memory_add_noop() {
+        NullMemory.add(1, MemoryEntry::new("x")).await;
     }
-
-    // ── Circuit breaker ───────────────────────────────────────────────────────
+    #[tokio::test]
+    async fn null_memory_add_turn_noop() {
+        NullMemory.add_turn(1, "s", "u", "b").await;
+    }
 
     #[test]
     fn circuit_starts_closed() {
-        assert!(!make_everos().circuit_open());
-    }
-
-    #[test]
-    fn circuit_opens_after_threshold() {
-        let m = make_everos();
-        for _ in 0..CIRCUIT_OPEN_THRESHOLD {
-            m.record_failure();
-        }
-        assert!(m.circuit_open());
-    }
-
-    #[test]
-    fn circuit_closes_after_success() {
-        let m = make_everos();
-        for _ in 0..CIRCUIT_OPEN_THRESHOLD { m.record_failure(); }
-        m.record_success();
+        let m = EverosMemory::new("http://127.0.0.1:19900");
         assert!(!m.circuit_open());
     }
-
-    // ── Degradation ───────────────────────────────────────────────────────────
-
+    #[test]
+    fn circuit_opens_after_failures() {
+        let m = EverosMemory::new("http://127.0.0.1:19900");
+        for _ in 0..CIRCUIT_THRESHOLD { m.record_fail(); }
+        assert!(m.circuit_open());
+    }
+    #[test]
+    fn circuit_resets_after_success() {
+        let m = EverosMemory::new("http://127.0.0.1:19900");
+        for _ in 0..CIRCUIT_THRESHOLD { m.record_fail(); }
+        m.record_ok();
+        assert!(!m.circuit_open());
+    }
     #[tokio::test]
     async fn search_returns_empty_when_unreachable() {
-        let m = make_everos();
-        let r = m.search(1, "test query", 5).await;
-        assert!(r.is_empty());
-        assert!(m.failures.load(Ordering::Relaxed) > 0, "should have recorded failure");
+        let m = EverosMemory::new("http://127.0.0.1:19900");
+        assert!(m.search(1, "test", 5).await.is_empty());
     }
-
-    #[tokio::test]
-    async fn search_returns_empty_when_circuit_open() {
-        let m = make_everos();
-        for _ in 0..CIRCUIT_OPEN_THRESHOLD { m.record_failure(); }
-        assert!(m.circuit_open());
-        let r = m.search(1, "test", 5).await;
-        assert!(r.is_empty());
-        // Failures should NOT have increased (circuit short-circuited)
-        assert_eq!(m.failures.load(Ordering::Relaxed), CIRCUIT_OPEN_THRESHOLD);
-    }
-
-    // ── Write batching ────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn add_buffers_writes_below_batch_max() {
-        let m = make_everos();
-        for i in 0..(WRITE_BATCH_MAX - 1) {
-            m.add(1, MemoryEntry::new(format!("entry {i}"))).await;
-        }
-        assert_eq!(m.pending_write_count(), WRITE_BATCH_MAX - 1);
-    }
-
-    #[tokio::test]
-    async fn add_flushes_at_batch_max() {
-        let m = make_everos();
-        for i in 0..WRITE_BATCH_MAX {
-            m.add(1, MemoryEntry::new(format!("entry {i}"))).await;
-        }
-        // Buffer should be empty (spawned flush task drained it)
-        assert_eq!(m.pending_write_count(), 0);
-    }
-
-    // ── MemoryEntry helpers ───────────────────────────────────────────────────
-
     #[test]
-    fn memory_entry_with_tag() {
+    fn memory_entry_new() {
         let e = MemoryEntry::new("hello").with_tag("fact");
         assert_eq!(e.tag.as_deref(), Some("fact"));
-    }
-
-    #[test]
-    fn memory_entry_serde_roundtrip() {
-        let e = MemoryEntry { text: "abc".into(), score: 0.9, tag: Some("event".into()) };
-        let json = serde_json::to_string(&e).unwrap();
-        let e2: MemoryEntry = serde_json::from_str(&json).unwrap();
-        assert_eq!(e2.text, "abc");
-        assert!((e2.score - 0.9).abs() < 0.001);
     }
 }

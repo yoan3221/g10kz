@@ -84,10 +84,11 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
     }
 
     if config.everos_url.is_empty() {
-        BotState::new(config.clone(), provider, NullMemory, toolbox, persona, embed_router)
+        BotState::new(config.clone(), provider, NullMemory, toolbox, persona, embed_router, None)
     } else {
         let memory = EverosMemory::from_config(config);
-        BotState::new(config.clone(), provider, memory, toolbox, persona, embed_router)
+        let everos_write = EverosMemory::from_config(config);
+        BotState::new(config.clone(), provider, memory, toolbox, persona, embed_router, Some(everos_write))
     }
 }
 
