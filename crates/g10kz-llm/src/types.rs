@@ -85,7 +85,7 @@ impl CompletionParams {
     pub fn social(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
-            max_tokens: 512,
+            max_tokens: 280,
             temperature: 0.9,
             cache_system_prompt: true,
         }
@@ -95,7 +95,7 @@ impl CompletionParams {
     pub fn reason(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
-            max_tokens: 2048,
+            max_tokens: 1500,
             temperature: 0.4,
             cache_system_prompt: true,
         }
@@ -105,7 +105,7 @@ impl CompletionParams {
     pub fn judge(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
-            max_tokens: 1024,
+            max_tokens: 800,
             temperature: 0.3,
             cache_system_prompt: true,
         }
