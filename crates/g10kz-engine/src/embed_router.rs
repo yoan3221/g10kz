@@ -27,18 +27,40 @@ const THRESHOLD: f32 = 0.72;
 // ─── Training examples ───────────────────────────────────────────────────────
 
 const SEARCH_EXAMPLES: &[&str] = &[
+    // 即時資料
     "幫我搜尋最新的消息",
     "查一下今天的股價",
     "最新的天氣預報是什麼",
     "現在美元匯率是多少",
     "最近有什麼新聞",
     "今天比特幣多少錢",
+    // 明確查詢指令
+    "查詢fable5什麼時候可以用",
+    "查一下這個遊戲什麼時候出",
+    "幫我找找這個軟體的發布日期",
+    "搜一下這個模型什麼時候上線",
+    "去查查看XXX的最新消息",
+    "查查有沒有相關的新聞",
+    "幫我查這個東西的資料",
+    "找一下這個產品什麼時候發售",
+    "查詢最新版本是什麼",
+    "幫我搜一下有沒有更新",
+    // 發布/上線時間類
+    "這個遊戲什麼時候出？",
+    "新版本什麼時候發布",
+    "什麼時候可以用這個功能",
+    "這個什麼時候正式上線",
+    // 英文
     "look up the latest news about OpenAI",
     "search for current bitcoin price",
     "what's the weather like today",
     "find me the latest tech news",
     "what time is it in Tokyo right now",
     "current stock price of NVIDIA",
+    "when does this game release",
+    "search when will X be available",
+    "look up the release date for this",
+    "find information about this product",
 ];
 
 const REASON_EXAMPLES: &[&str] = &[
@@ -195,6 +217,18 @@ impl EmbeddingRouter {
     /// - `Some(Reason)` — closer to reasoning intent
     /// - `None`         — centroids not ready, server down, or below threshold
     pub async fn refine(&self, text: &str) -> Option<RouteDecision> {
+        // ── Keyword fast-path: explicit search/query commands bypass embedding ──
+        let lower = text.to_lowercase();
+        let search_keywords: &[&str] = &[
+            "查詢", "搜一下", "搜搜看", "幫我找", "幫我查", "幫我搜",
+            "查一查", "找一下", "查看看", "去查",
+            "search for", "look up", "find me", "google",
+        ];
+        if search_keywords.iter().any(|kw| lower.contains(kw)) {
+            debug!("embed_router: keyword fast-path → Search");
+            return Some(RouteDecision::Search);
+        }
+
         let guard = self.centroids.read().await;
         let c = guard.as_ref()?;
 
