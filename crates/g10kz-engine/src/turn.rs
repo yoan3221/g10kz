@@ -175,9 +175,8 @@ impl<'a> TurnInput<'a> {
     /// Static Discord Markdown formatting guide injected into every system prompt.
     /// Teaches the LLM which formatting syntax Discord actually renders.
     fn discord_format_note() -> &'static str {
-        "\n\n[Discord 格式]\n回覆會渲染 Markdown：**粗體** *斜體* __底線__ ~~刪除線~~ `行內碼` ```代碼塊``` > 引用 ||暗文|| -# 小字 # 標題 - 清單 [文字](url)。日常聊天保持自然、勿過度格式化；技術說明/列表/代碼才用 Markdown。"
+        "\n\n[Discord Markdown 速查]\n強調：**粗** *斜* __底線__ ~~刪除~~ ***粗斜*** __**粗底**__ __*斜底*__\n區塊：`行內碼`　```lang\n代碼塊\n```　> 引用　>>> 多行引用\n結構：# H1　## H2　### H3　- 列表　1. 編號　[文字](url)\n特效：||暗文/劇透||　-# 小字（副文字）\n聊天中可活用以上格式增添表達力；視情況使用，勿每句都套。"
     }
-
     /// Inject guild/channel name into system prompt for server-aware responses.
     /// Empty string in DMs.
     fn env_note(&self) -> Option<String> {
