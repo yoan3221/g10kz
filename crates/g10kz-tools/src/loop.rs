@@ -87,10 +87,8 @@ pub fn tool_schema_snippet(toolbox: &ToolBox) -> String {
     }).collect();
 
     format!(
-        "\n\n---\n## 可用工具\n{}\n\n\
-         如需使用工具，以此格式輸出（僅一次一個工具）：\n\
-         <tool_call>{{\"name\":\"工具名\",\"arguments\":{{...}}}}</tool_call>\n\
-         工具結果會在 <tool_result> 中回傳，你再繼續作答。",
+        "\n\n## 工具（一次一個）\n{}\n\
+         用 <tool_call>{{\"name\":\"...\",\"arguments\":{{...}}}}</tool_call>，結果見 <tool_result> 後繼續。",
         entries.join("\n")
     )
 }
