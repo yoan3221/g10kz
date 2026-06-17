@@ -79,3 +79,62 @@ pub fn spawn_typing_task(
     });
     token
 }
+
+/// Strip single-backtick inline-code formatting from Social/Search path replies.
+///
+/// Triple-backtick code blocks are preserved verbatim. Single-backtick pairs
+/// on the same line (`word`) have their backticks removed so Discord doesn't
+/// render them as monospace code — the bot should use **bold** for emphasis.
+/// Unmatched lone backticks are left as-is.
+pub fn sanitize_backticks(text: &str) -> String {
+    // Split on ``` to find code-block boundaries.
+    // Even-indexed segments are outside code blocks; odd-indexed are inside.
+    let segments: Vec<&str> = text.split("```").collect();
+    if segments.len() == 1 {
+        return strip_inline_backtick_pairs(text);
+    }
+    let mut result = String::with_capacity(text.len());
+    for (i, seg) in segments.iter().enumerate() {
+        if i % 2 == 0 {
+            result.push_str(&strip_inline_backtick_pairs(seg));
+        } else {
+            result.push_str("```");
+            result.push_str(seg);
+            if i + 1 < segments.len() {
+                result.push_str("```");
+            }
+        }
+    }
+    result
+}
+
+fn strip_inline_backtick_pairs(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut result = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '`' {
+            let start = i + 1;
+            let mut j = start;
+            // Scan for closing backtick on the same line
+            while j < chars.len() && chars[j] != '`' && chars[j] != '\n' {
+                j += 1;
+            }
+            if j < chars.len() && chars[j] == '`' && j > start {
+                // Valid pair: output content without backticks
+                for &ch in &chars[start..j] {
+                    result.push(ch);
+                }
+                i = j + 1;
+            } else {
+                // No matching close on this line: keep the backtick
+                result.push('`');
+                i += 1;
+            }
+        } else {
+            result.push(chars[i]);
+            i += 1;
+        }
+    }
+    result
+}

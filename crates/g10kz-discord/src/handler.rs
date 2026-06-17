@@ -13,7 +13,7 @@ use serenity::{
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 use g10kz_engine::turn::{run_turn, TurnInput};
-use g10kz_kernel::{classify_activation, PersonalityState};
+use g10kz_kernel::{classify_activation, PersonalityState, RouteDecision};
 use crate::{
     commands::{global_commands, handle_command},
     state::{BotState, ContextEntry, RING_SIZE},
@@ -216,7 +216,15 @@ impl EventHandler for Handler {
                     });
                 }
 
-                output.reply
+                // Sanitize backtick misuse on conversational paths:
+                // strip single-backtick inline-code pairs so they don't
+                // render as monospace in Discord. Triple-backtick blocks intact.
+                let reply = output.reply;
+                match output.path {
+                    RouteDecision::Social | RouteDecision::Search =>
+                        crate::util::sanitize_backticks(&reply),
+                    _ => reply,
+                }
             }
             Err(e) => {
                 if cancel.is_cancelled() {

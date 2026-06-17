@@ -175,7 +175,10 @@ impl<'a> TurnInput<'a> {
     /// Static Discord Markdown formatting guide injected into every system prompt.
     /// Teaches the LLM which formatting syntax Discord actually renders.
     fn discord_format_note() -> &'static str {
-        "\n\n[Discord Markdown 速查]\n強調：**粗** *斜* __底線__ ~~刪除~~ ***粗斜*** __**粗底**__ __*斜底*__\n區塊：> 引用　>>> 多行引用（代碼格式反引號僅限真正程式碼，聊天絕不用）\n結構：# H1　## H2　### H3　- 列表　1. 編號　[文字](url)\n特效：||暗文/劇透||　-# 小字（副文字）\n聊天中可活用以上格式增添表達力；視情況使用，勿每句都套。\n日常聊天口語化：句子短、可省主語、不用每句加句號，像在傳訊息不像寫作文；勿套格式、勿長篇大論，1～3 句夠了。技術說明或列舉才適度加長。"
+        "\n\n[Discord Markdown 速查]\n強調：**粗** *斜* __底線__ ~~刪除~~ ***粗斜*** __**粗底**__ __*斜底*__\n代碼（程式碼/命令/變數專用）：`行內碼`　```lang
+代碼塊
+```
+區塊：> 引用　>>> 多行引用\n結構：# H1　## H2　### H3　- 列表　1. 編號　[文字](url)\n特效：||暗文/劇透||　-# 小字（副文字）\n聊天中可活用以上格式；**強調詞用粗體或斜體**，反引號代碼格式只給程式碼用；視情況使用，勿每句都套。\n日常聊天口語化：句子短、可省主語、不用每句加句號，像在傳訊息不像寫作文；勿套格式、勿長篇大論，1～3 句夠了。技術說明或列舉才適度加長。"
     }
     /// Inject guild/channel name into system prompt for server-aware responses.
     /// Empty string in DMs.
