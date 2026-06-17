@@ -7,10 +7,13 @@
 ## 功能特色
 
 - **傲嬌人格** — SillyTavern V2 角色卡驅動，支援熱抽換；預設角色 g10kz 具完整口癖、顏文字與傲嬌反差萌
+- **JPAF 人格適應框架** — 榮格認知功能（Fe/Ti/Ne/Si/Te/Fi/Se/Ni）per-user 建模，每輪對話自動 bump/decay，動態注入 system prompt modifier，讓角色對不同使用者產生差異化互動風格
 - **多路由引擎** — 同一訊息依內容自動走 Social / Search / Reason / Media / Command 五條路徑，成本最小化
 - **Fusion 多模型** — Reason 路徑並行多個 drafter → Jaccard 共識過濾 → judge 模型合成，回覆品質優於單模型
-- **工具迴圈** — DuckDuckGo 網路搜尋、台灣股市即時報價、當前台灣時間
-- **EverOS 記憶 sidecar** — HTTP 語意記憶，掛掉自動降級為 NullMemory，bot 不崩
+- **工具迴圈** — Obscura 防偵測瀏覽器 + DuckDuckGo Lite 網路搜尋（BM25 相關段落萃取）、台灣股市即時報價、當前台灣時間
+- **EverOS 語意記憶** — EverOS 1.0 HTTP sidecar 深度整合；每輪對話 add → flush，回覆前 search 注入上下文；掛掉自動降級為 NullMemory，bot 不崩
+- **Discord Markdown** — 每個 system prompt 注入格式指引，讓 LLM 懂得在 Discord 正確使用 **粗體**、*斜體*、`code`、`> 引用`、`-# 小字`、`||劇透||`、標題與超連結
+- **伺服器 / 頻道感知** — `[伺服器環境]` 區塊注入 system prompt，包含 guild 名稱、頻道名稱、topic；讓角色能依環境調整語氣與行為
 - **主動發話** — 頻道靜默超過設定時間後，bot 主動傳訊
 - **Owner 防護** — 提示注入防禦與輸出 sanitize，0 LLM 成本，最先擋
 - **媒體處理** — 附件 URL 傳入引擎，影片走 ffmpeg 抽幀（需容器內有 ffmpeg）
@@ -26,10 +29,10 @@
 L5  g10kz-bot        ← 主 binary（daemon / once）
 L4  g10kz-discord    ← Serenity 0.12 閘道、附件抽取、slash commands
 L3  g10kz-engine     ← turn 狀態機，串接所有 L0-L2 組件
-L2  g10kz-everos     ← EverOS HTTP 記憶客戶端
+L2  g10kz-everos     ← EverOS 1.0 HTTP 記憶客戶端
 L2  g10kz-tools      ← ToolBox 介面、WebSearch / TwStock / Time / Escalate
 L1  g10kz-llm        ← OpenAI 相容供應層、FusionProvider、MockProvider
-L1  g10kz-kernel     ← 路由（route）、guard、normalize、persona card 載入
+L1  g10kz-kernel     ← 路由（route）、guard、normalize、persona card 載入、JPAF
 L0  g10kz-config     ← 從環境變數載入的型別化設定，無任何依賴
 ```
 
@@ -42,16 +45,18 @@ Discord 訊息
   → run_turn:
       guard::pre          ── 純函式提示注入防禦（0 LLM）
       normalize           ── 去 mention、前綴解析
-      persona system msg  ── 從角色卡組裝 system prompt
+      EverOS::search      ── 語意記憶注入（HTTP, 降級安全）
+      persona system msg  ── 角色卡 + [伺服器環境] + Discord格式 + JPAF modifier
       route()             ── Social / Search / Reason / Media / Command
           │
           ├─ Social  → 單次 social model call（最便宜）
-          ├─ Search  → WebSearchTool → social model 整合回覆
+          ├─ Search  → WebSearchTool（DDG+Obscura+BM25）→ social model 整合回覆
           ├─ Reason  → FusionProvider（N drafter 並行 → judge 合成）+ 工具迴圈
           ├─ Media   → 附件 URL 帶入 reason 路徑
           └─ Command → 直接處理（reset/stop/search/memory/trace/help）
       output sanitize     ── 輸出後檢
-  → 寫回頻道對話環
+      EverOS::add + flush ── 本輪對話寫入記憶
+      JPAF::update        ── 根據本輪訊號 bump/decay 認知函式分數
   → Discord 分段發送（>2000 字自動切割）
 ```
 
@@ -85,11 +90,52 @@ Discord 訊息
 
 ---
 
+## 網路搜索（Obscura + DuckDuckGo Lite）
+
+Search 路徑使用三層流水線：
+
+```
+用戶查詢
+  → POST DuckDuckGo Lite HTML（https://lite.duckduckgo.com/lite/）
+  → 解析 result-link / result-snippet，取前 5 筆
+  → Obscura headless browser fetch 前 3 頁全文（防偵測，CDP）
+  → BM25 相關段落萃取（按查詢詞命中率排序，取 top N 至 max_chars）
+  → Discord Markdown 格式化輸出
+```
+
+Obscura 二進位放在 `bin/obscura`（gitignore），透過 Dockerfile `COPY` 打入容器。`OBSCURA_PATH` 未設或路徑不存在時，自動降級為僅回傳 DDG snippets（無全文擷取）。
+
+---
+
+## JPAF 人格適應框架
+
+每位使用者維護 8 個榮格認知函式分數（Fe/Ti/Ne/Si/Te/Fi/Se/Ni），初始值均等：
+
+- 每輪對話依訊息特徵（情緒詞、邏輯詞、創意詞、細節詞等）**bump** 對應函式
+- 所有分數每輪輕微 **decay**，讓模型自然回歸基線
+- 主導函式（最高分）注入 system prompt `[人格適應]` modifier，影響角色語氣與優先回應策略
+
+---
+
+## EverOS 記憶整合
+
+使用 [EverOS 1.0](https://github.com/EverMind-AI/EverOS) HTTP API：
+
+| 端點 | 時機 | 說明 |
+|---|---|---|
+| `POST /api/v1/memory/add` | 每輪對話後 | 寫入 user + assistant 訊息 |
+| `POST /api/v1/memory/flush` | add 之後 | 觸發向量化與持久化 |
+| `POST /api/v1/memory/search` | 每輪開始前 | 語意搜尋注入上下文 |
+
+embedding 後端：`llama-embed`（llama.cpp server-cuda），`Qwen3-Embedding-0.6B-Q8_0.gguf`（1024-dim，~112ms/次），比 Ollama `/v1/embeddings` 快 4×。
+
+---
+
 ## 快速開始
 
 ### 前置需求
 
-- Rust 1.88+（`rust:latest`）或符合 MSRV 的版本
+- Rust 1.88+（`rust:slim-bookworm` 或符合 MSRV 的版本）
 - Docker + Docker Compose（部署用）
 - Discord bot token（`DISCORD_TOKEN`）
 - OpenAI 相容 LLM API（OpenRouter、new-api、或任意相容閘道）
@@ -112,11 +158,8 @@ PERSONA_CARD_PATH=./persona/g10kz.json LLM_PROVIDER=mock \
 ### Docker 部署
 
 ```bash
-# build image（本機）
+# build image
 docker build -t g10kz-bot:latest .
-
-# 或用腳本（WSL 環境，會自動 build + scp + 遠端 reload）
-bash build_and_deploy.sh
 ```
 
 ```bash
@@ -142,8 +185,8 @@ LLM_BASE_URL=https://openrouter.ai/api/v1
 LLM_API_KEY=
 
 # 路徑模型選擇
-LLM_MODEL_SOCIAL=openai/gpt-4o-mini    # Social / Search 路徑
-LLM_MODEL_REASON=openai/gpt-4o         # Reason 路徑（非 Fusion drafter）
+LLM_MODEL_SOCIAL=openai/gpt-4o-mini         # Social / Search 路徑
+LLM_MODEL_REASON=openai/gpt-4o              # Reason 路徑（非 Fusion drafter）
 LLM_MODEL_JUDGE=anthropic/claude-3-5-haiku  # Fusion judge
 
 # Fusion drafter（逗號分隔）
@@ -154,6 +197,9 @@ EVEROS_URL=http://localhost:8000
 
 # 角色卡（SillyTavern V2 JSON；留空則用內建 stub）
 PERSONA_CARD_PATH=./persona/g10kz.json
+
+# 網路搜索（Obscura 二進位路徑；留空則僅用 DDG snippet）
+OBSCURA_PATH=/usr/local/bin/obscura
 
 # 調優
 PROACTIVE_INACTIVE_SECS=86400   # 主動發話閾值（秒）
@@ -186,7 +232,9 @@ RUST_LOG=g10kz=info,warn
 }
 ```
 
-system_prompt → description → personality → scenario 依序拼接為最終 system prompt，空欄位略過。
+`system_prompt → description → personality → scenario` 依序拼接為最終 system prompt，空欄位略過。
+
+> **注意**：`g10kz-bot once` 模式不載入角色卡（使用內建 stub persona），角色卡僅在 daemon 模式下生效。
 
 ---
 
@@ -209,12 +257,16 @@ system_prompt → description → personality → scenario 依序拼接為最終
 ```
 REDACTED
 ├─ new-api          :3000   （OpenAI 相容閘道，管理多個後端 API key）
-├─ everos           :8000   （EverOS 記憶 sidecar，獨立 compose stack）
+├─ everos           :8000   ┐
+├─ llama-embed      :8082   ├─ g10kz-memory compose stack
+└─ ollama           :11434  ┘  （GPU 推論，llama.cpp server-cuda）
+│
 └─ g10kz-bot        host    （docker-compose.yml，network_mode: host）
                             （./persona/g10kz.json 掛載至 /persona/）
+                            （Obscura 二進位打入 image：/usr/local/bin/obscura）
 ```
 
-bot 以 `network_mode: host` 執行，直接存取宿主機上的 new-api 與 everos，不走 bridge 網路。
+bot 以 `network_mode: host` 執行，直接存取宿主機上的 new-api 與 everos，不走 bridge 網路。EverOS embedding 後端為 `llama-embed:8082`（與 everos 同在 `g10kz-memory_default` 網路）。
 
 ---
 
@@ -233,7 +285,9 @@ GitHub Actions（`.github/workflows/ci.yml`）每次 push main 自動執行：
 
 **Windows 掛載的 null byte 問題**：透過 Windows-mounted 路徑（`C:\Users\...\Projects\g10kz`）使用 Edit/Write 工具修改的檔案，可能附帶 trailing null bytes（`\x00`），導致 cargo 或 TOML 解析失敗（`unknown start of token: \u{0}`）。
 
-修改程式碼後，推送前請先清理：
+所有 Rust / TOML / 設定檔的修改必須透過 paramiko SFTP 或 SSH exec_command，**不可**使用本地 Edit/Write 工具。
+
+推送前清理檢查：
 
 ```bash
 python3 -c "
