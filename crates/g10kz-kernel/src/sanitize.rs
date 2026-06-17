@@ -131,7 +131,25 @@ fn strip_leading_artefact(s: &str) -> &str {
             return s[art.len()..].trim_start();
         }
     }
+    // Strip speaker-label artefact: "[任何名字]" or "[名字：]" at start of reply.
+    // LLMs sometimes echo the group-channel label format in their own reply.
+    // Match: literal '[', non-']' chars, ']', optional '：'/':', optional space.
+    if let Some(rest) = strip_bracket_label(s) {
+        return rest;
+    }
     s
+}
+
+/// Strip a leading `[name]` or `[name]:` / `[name]：` speaker-label artefact.
+/// Only strips when the content inside brackets contains no whitespace and is
+/// ≤ 32 chars — avoids clobbering intentional bracket usage in replies.
+fn strip_bracket_label(s: &str) -> Option<&str> {
+    if !s.starts_with('[') { return None; }
+    let end = s.find(']')?;
+    let inner = &s[1..end];
+    if inner.is_empty() || inner.len() > 32 || inner.contains(' ') { return None; }
+    let after = s[end + 1..].trim_start_matches(|c| c == ':' || c == '：');
+    Some(after.trim_start())
 }
 
 fn collapse_blank_lines(s: &str) -> String {
