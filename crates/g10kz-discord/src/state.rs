@@ -6,6 +6,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 use serenity::model::id::{ChannelId, MessageId};
 use g10kz_config::Config;
+use g10kz_kernel::PersonalityState;
 use g10kz_everos::Memory;
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::Provider;
@@ -45,6 +46,8 @@ pub struct BotState {
     pub trace_channels: Mutex<HashSet<ChannelId>>,
     /// Last message Unix timestamp per channel (for proactive scheduling).
     pub last_seen: Mutex<HashMap<ChannelId, u64>>,
+    /// Per-user JPAF personality adaptation state.
+    pub personality_states: Mutex<HashMap<u64, PersonalityState>>,
 }
 
 impl BotState {
@@ -68,6 +71,7 @@ impl BotState {
             cancel_map: Mutex::new(HashMap::new()),
             trace_channels: Mutex::new(HashSet::new()),
             last_seen: Mutex::new(HashMap::new()),
+            personality_states: Mutex::new(HashMap::new()),
         })
     }
 }

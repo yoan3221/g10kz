@@ -62,6 +62,14 @@ pub struct TurnInput<'a> {
     pub embed_router: Option<Arc<EmbeddingRouter>>,
     /// True when this turn happens in a 1:1 DM (suppresses speaker labels).
     pub is_dm: bool,
+    /// Discord guild (server) name — injected into system prompt for env awareness.
+    /// `None` in DMs.
+    pub guild_name: Option<String>,
+    /// Discord channel name — injected into system prompt for env awareness.
+    /// `None` in DMs.
+    pub channel_name: Option<String>,
+    /// Optional personality modifier from JPAF state — appended to system prompt.
+    pub personality_modifier: Option<String>,
     /// Pre-rendered reply context for the current message, e.g. `Alice「…」`.
     /// Only set in group channels when the message replies to another message.
     pub reply_context: Option<String>,
@@ -94,6 +102,9 @@ impl<'a> TurnInput<'a> {
             cancel: CancellationToken::new(),
             embed_router: None,
             is_dm: false,
+            guild_name: None,
+            channel_name: None,
+            personality_modifier: None,
             reply_context: None,
         }
     }
@@ -108,9 +119,37 @@ impl<'a> TurnInput<'a> {
         )
     }
 
-    /// Persona system prompt augmented with channel-context guidance.
+    /// Persona system prompt augmented with channel-context guidance,
+    /// optional server/channel environment note, and JPAF personality modifier.
     pub fn system_prompt(&self) -> String {
-        format!("{}{}", self.persona.system_prompt, self.channel_note())
+        let mut s = format!("{}{}", self.persona.system_prompt, self.channel_note());
+        if let Some(env) = self.env_note() {
+            s.push_str(&env);
+        }
+        if let Some(modifier) = &self.personality_modifier {
+            s.push_str(modifier);
+        }
+        s
+    }
+
+    /// Inject guild/channel name into system prompt for server-aware responses.
+    /// Empty string in DMs.
+    fn env_note(&self) -> Option<String> {
+        match (&self.guild_name, &self.channel_name) {
+            (Some(guild), Some(ch)) => Some(format!(
+                "
+
+[伺服器環境]
+你目前在 Discord 伺服器「{guild}」的 #{ch} 頻道。"
+            )),
+            (Some(guild), None) => Some(format!(
+                "
+
+[伺服器環境]
+你目前在 Discord 伺服器「{guild}」。"
+            )),
+            _ => None,
+        }
     }
 
     /// Guidance appended to the system prompt in group channels: explains the

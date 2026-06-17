@@ -13,6 +13,7 @@ use serenity::{
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 use g10kz_engine::turn::{run_turn, TurnInput};
+use g10kz_kernel::{classify_activation, PersonalityState};
 use crate::{
     commands::{global_commands, handle_command},
     state::{BotState, ContextEntry, RING_SIZE},
@@ -134,6 +135,26 @@ impl EventHandler for Handler {
             .map(|a| (true, Some(a.url.clone())))
             .unwrap_or((false, None));
 
+        // ── Guild / channel name for environment-aware system prompt ──────────
+        let guild_name: Option<String> = if !is_dm {
+            msg.guild_id
+                .and_then(|gid| ctx.cache.guild(gid).map(|g| g.name.clone()))
+        } else {
+            None
+        };
+        let channel_name: Option<String> = if !is_dm {
+            ctx.cache.channel(channel_id).map(|ch| ch.name.clone())
+        } else {
+            None
+        };
+
+        // ── JPAF: read personality modifier for this user ─────────────────────
+        let personality_modifier: Option<String> = {
+            let states = self.state.personality_states.lock().await;
+            states.get(&msg.author.id.get())
+                  .and_then(|s| s.render_modifier())
+        };
+
         let cancel = CancellationToken::new();
         self.state
             .cancel_map
@@ -161,6 +182,9 @@ impl EventHandler for Handler {
         turn_input.attachment_url = attachment_url;
         turn_input.cancel = cancel.clone();
         turn_input.embed_router = Some(self.state.embed_router.clone());
+        turn_input.guild_name = guild_name;
+        turn_input.channel_name = channel_name;
+        turn_input.personality_modifier = personality_modifier;
 
         let result = run_turn(turn_input).await;
 
@@ -171,6 +195,14 @@ impl EventHandler for Handler {
         let reply_text = match result {
             Ok(output) => {
                 debug!(path = ?output.path, ptok = output.usage.prompt_tokens, "turn ok");
+                // JPAF: classify the exchange and update per-user personality state
+                {
+                    let activated = classify_activation(&clean_text, &output.reply);
+                    let mut states = self.state.personality_states.lock().await;
+                    states.entry(msg.author.id.get())
+                          .or_insert_with(PersonalityState::default)
+                          .update(activated);
+                }
                 output.reply
             }
             Err(e) => {
