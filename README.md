@@ -69,12 +69,12 @@ LLM_PROVIDER=openrouter
 LLM_BASE_URL=https://openrouter.ai/api/v1
 LLM_API_KEY=
 
-LLM_MODEL_SOCIAL=openai/gpt-4o-mini       # 日常對話
-LLM_MODEL_REASON=openai/gpt-4o            # 深度推理
-LLM_MODEL_JUDGE=anthropic/claude-3-5-haiku # Fusion 合成
+LLM_MODEL_SOCIAL=               # 日常對話路徑（Social / Search）
+LLM_MODEL_REASON=               # 深度推理路徑（Reason 工具迴圈）
+LLM_MODEL_JUDGE=                # Fusion judge（合成多個 drafter 結果）
 
-# Fusion drafter 列表（逗號分隔，≥2 個才啟用）
-LLM_FUSION_DRAFTERS=openai/gpt-4o,anthropic/claude-3-5-sonnet,google/gemini-2.0-flash
+# Fusion drafter 列表（逗號分隔，≥2 個才啟用 Fusion；留空退化為單模型）
+LLM_FUSION_DRAFTERS=
 
 # ── 記憶 ─────────────────────────────────────────────
 EVEROS_URL=http://localhost:8000   # 留空則用 NullMemory
