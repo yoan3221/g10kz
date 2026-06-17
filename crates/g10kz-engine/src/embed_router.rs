@@ -220,9 +220,18 @@ impl EmbeddingRouter {
         // ── Keyword fast-path: explicit search/query commands bypass embedding ──
         let lower = text.to_lowercase();
         let search_keywords: &[&str] = &[
+            // 明確查詢指令
             "查詢", "搜一下", "搜搜看", "幫我找", "幫我查", "幫我搜",
-            "查一查", "找一下", "查看看", "去查",
+            "查一查", "找一下", "查看看", "去查", "查查",
+            // 操作/教學類（複合詞才觸發，避免誤判）
+            "怎麼用", "怎麼開通", "怎麼設定", "怎麼安裝", "怎麼啟用",
+            "如何使用", "如何開通", "如何設定", "如何安裝",
+            "怎麼申請", "怎麼訂閱", "如何申請",
+            "教學", "使用方法", "操作步驟",
+            // 英文
             "search for", "look up", "find me", "google",
+            "how to use", "how do i", "how to set up", "how to install",
+            "tutorial for", "guide for",
         ];
         if search_keywords.iter().any(|kw| lower.contains(kw)) {
             debug!("embed_router: keyword fast-path → Search");
