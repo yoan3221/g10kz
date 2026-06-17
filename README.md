@@ -15,8 +15,8 @@
 - **Discord Markdown** — 每個 system prompt 注入格式指引，讓 LLM 懂得在 Discord 正確使用 **粗體**、*斜體*、`code`、`> 引用`、`-# 小字`、`||劇透||`、標題與超連結
 - **伺服器 / 頻道感知** — `[伺服器環境]` 區塊注入 system prompt，包含 guild 名稱、頻道名稱；讓角色能依環境調整語氣與行為
 - **Prompt Token 最佳化** — 語義去重 persona 骨架（1073→520 tok）+ prefix-cache 靜態/動態分離；每輪 system token −45%，快取命中時等效 −89%
+- **輸出 sanitize** — 提示注入防禦、`[角色名]` 前綴標籤自動剝除、反重複偵測，0 LLM 成本
 - **主動發話** — 頻道靜默超過設定時間後，bot 主動傳訊
-- **Owner 防護** — 提示注入防禦與輸出 sanitize，0 LLM 成本，最先擋
 - **媒體處理** — 附件 URL 傳入引擎，影片走 ffmpeg 抽幀（需容器內有 ffmpeg）
 - **可離線測試** — `LLM_PROVIDER=mock` 全離線執行，CI 零網路全綠
 
@@ -57,7 +57,7 @@ Discord 訊息
           ├─ Reason  → FusionProvider（N drafter 並行 → judge 合成）+ 工具迴圈
           ├─ Media   → 附件 URL 帶入 reason 路徑
           └─ Command → 直接處理（reset/stop/search/memory/trace/help）
-      output sanitize     ── 輸出後檢
+      sanitize_output     ── 剝除 [標籤] 前綴、提示注入偵測、反重複
       EverOS::add + flush ── 本輪對話寫入記憶
       JPAF::update        ── 根據本輪訊號 bump/decay 認知函式分數
   → Discord 分段發送（>2000 字自動切割）
@@ -130,7 +130,7 @@ Obscura 二進位放在 `bin/obscura`（gitignore），透過 Dockerfile `COPY` 
 | `POST /api/v1/memory/flush` | add 之後 | 觸發向量化與持久化 |
 | `POST /api/v1/memory/search` | 每輪開始前 | 語意搜尋注入上下文 |
 
-embedding 後端：`llama-embed`（llama.cpp server-cuda），`Qwen3-Embedding-0.6B-Q8_0.gguf`（1024-dim，~112ms/次），比 Ollama `/v1/embeddings` 快 4×。
+embedding 後端：`llama-embed`（llama.cpp server-cuda），`Qwen3-Embedding-0.6B-Q8_0.gguf`（1024-dim，~112ms/次）。
 
 ---
 
@@ -147,11 +147,11 @@ embedding 後端：`llama-embed`（llama.cpp server-cuda），`Qwen3-Embedding-0
 
 ### 語義去重
 
-`persona/g10kz.json` 原有四欄（system_prompt / description / personality / scenario）各自重複陳述同一組人設，合併為單一無重複骨架（1073→520 tok）。description 的外貌規格與「自我介紹不列外貌」規則自相矛盾一併清除。channel_note、discord_format_note、tool_schema 各自精簡。
+`persona/g10kz.json` 四欄（system_prompt / description / personality / scenario）合併為單一無重複骨架，channel_note、discord_format_note、tool_schema 各自精簡。
 
 ### Prefix-Cache 靜態/動態分離
 
-`system_message()` 回傳兩-part Message，解鎖既有的 `cache_control: ephemeral` 機制：
+`system_message()` 回傳兩-part Message：
 
 ```
 part 0  靜態前綴 ← cache_control 在這裡
@@ -160,10 +160,7 @@ part 0  靜態前綴 ← cache_control 在這裡
 
 part 1  動態後綴 ← 不快取
         env_note（guild/channel 名）+ JPAF modifier
-        ↑ 每輪/每用戶可變，不破壞前綴一致性
 ```
-
-原本動態內容夾在靜態之間，前綴每輪都不同導致快取永遠 miss；修正後前綴穩定，命中時 input 計費 ~0.1×。
 
 ---
 
@@ -171,32 +168,24 @@ part 1  動態後綴 ← 不快取
 
 ### 前置需求
 
-- Rust 1.88+（`rust:slim-bookworm` 或符合 MSRV 的版本）
-- Docker + Docker Compose（部署用）
-- Discord bot token（`DISCORD_TOKEN`）
-- OpenAI 相容 LLM API（OpenRouter、new-api、或任意相容閘道）
+- Rust 1.88+（`rust:slim-bookworm`）
+- Docker + Docker Compose
+- Discord bot token
+- OpenAI 相容 LLM API（OpenRouter、new-api 等）
 
 ### 本地執行（無 Discord）
 
 ```bash
-cp .env.example .env   # 填入 LLM_API_KEY 等
+cp .env.example .env
 
 # 離線 smoke test
 LLM_PROVIDER=mock cargo run -p g10kz-bot -- once "你好，自我介紹一下"
-
-# 指定角色卡
-PERSONA_CARD_PATH=./persona/g10kz.json LLM_PROVIDER=mock \
-  cargo run -p g10kz-bot -- once "你好"
 ```
 
 ### Docker 部署
 
 ```bash
 docker build -t g10kz-bot:latest .
-```
-
-```bash
-# 伺服器端（確認 .env 與 persona/ 已就位）
 docker compose up -d
 docker logs g10kz-bot -f
 ```
@@ -205,41 +194,37 @@ docker logs g10kz-bot -f
 
 ## 環境變數
 
-複製 `.env.example` 為 `.env` 並填入值，**永遠不要 commit `.env`**。
+複製 `.env.example` 為 `.env`，**永遠不要 commit `.env`**。
 
 ```env
 # Discord
-DISCORD_TOKEN=           # Bot token（daemon 模式必填）
-OWNER_USER_ID=           # 你的 Discord 雪花 ID（owner 特權指令用）
+DISCORD_TOKEN=
+OWNER_USER_ID=
 
-# LLM（OpenAI 相容）
-LLM_PROVIDER=openrouter  # "openrouter" | "mock"
+# LLM
+LLM_PROVIDER=openrouter
 LLM_BASE_URL=https://openrouter.ai/api/v1
 LLM_API_KEY=
 
-# 路徑模型選擇
-LLM_MODEL_SOCIAL=openai/gpt-4o-mini         # Social / Search 路徑
-LLM_MODEL_REASON=openai/gpt-4o              # Reason 路徑（非 Fusion drafter）
-LLM_MODEL_JUDGE=anthropic/claude-3-5-haiku  # Fusion judge
-
-# Fusion drafter（逗號分隔）
+LLM_MODEL_SOCIAL=openai/gpt-4o-mini
+LLM_MODEL_REASON=openai/gpt-4o
+LLM_MODEL_JUDGE=anthropic/claude-3-5-haiku
 LLM_FUSION_DRAFTERS=openai/gpt-4o,anthropic/claude-3-5-sonnet,google/gemini-2.0-flash
 
 # 記憶 sidecar（留空則用 NullMemory）
 EVEROS_URL=http://localhost:8000
 
-# 角色卡（SillyTavern V2 JSON；留空則用內建 stub）
+# 角色卡
 PERSONA_CARD_PATH=./persona/g10kz.json
 
-# 網路搜索（Obscura 二進位路徑；留空則僅用 DDG snippet）
+# 網路搜索（留空則僅 DDG snippet）
 OBSCURA_PATH=/usr/local/bin/obscura
 
 # 調優
-PROACTIVE_INACTIVE_SECS=86400   # 主動發話閾值（秒）
+PROACTIVE_INACTIVE_SECS=86400
 REQUEST_TIMEOUT_SECS=30
-BLACKLISTED_USERS=              # 逗號分隔的 Discord 雪花 ID
+BLACKLISTED_USERS=
 
-# 日誌
 RUST_LOG=g10kz=info,warn
 ```
 
@@ -247,7 +232,7 @@ RUST_LOG=g10kz=info,warn
 
 ## 角色卡（SillyTavern V2）
 
-`persona/` 目錄存放 SillyTavern V2 格式的 JSON 角色卡。`system_prompt` 欄位為唯一必填，其餘欄位（description / personality / scenario）若有內容會依序拼接至尾端。
+`persona/` 目錄存放 SillyTavern V2 格式的 JSON 角色卡。`system_prompt` 欄位為唯一必填，其餘欄位若有內容依序拼接。
 
 ```json
 {
@@ -262,7 +247,7 @@ RUST_LOG=g10kz=info,warn
 }
 ```
 
-> **注意**：`g10kz-bot once` 模式不載入角色卡（使用內建 stub persona），角色卡僅在 daemon 模式下生效。
+> `g10kz-bot once` 模式使用內建 stub persona，角色卡僅在 daemon 模式下生效。
 
 ---
 
@@ -280,57 +265,23 @@ RUST_LOG=g10kz=info,warn
 
 ---
 
-## 部署拓樸（生產環境）
+## 部署拓樸
 
 ```
 REDACTED
-├─ new-api          :3000   （OpenAI 相容閘道，管理多個後端 API key）
-├─ everos           :8000   ┐
-├─ llama-embed      :8082   ├─ g10kz-memory compose stack
-└─ ollama           :11434  ┘  （GPU 推論，llama.cpp server-cuda）
-│
-└─ g10kz-bot        host    （docker-compose.yml，network_mode: host）
-                            （./persona/g10kz.json 掛載至 /persona/）
-                            （Obscura 二進位打入 image：/usr/local/bin/obscura）
+├─ new-api        :3000   OpenAI 相容閘道
+├─ everos         :8000   ┐
+├─ llama-embed    :8082   ├─ g10kz-memory stack（GPU 推論）
+└─ ollama         :11434  ┘
+└─ g10kz-bot      host    network_mode: host
+                          persona/ 掛載，Obscura 打入 image
 ```
-
-bot 以 `network_mode: host` 執行，直接存取宿主機上的 new-api 與 everos，不走 bridge 網路。
 
 ---
 
 ## CI
 
-GitHub Actions（`.github/workflows/ci.yml`）每次 push main 自動執行：
-
-1. `cargo fmt --all -- --check`
-2. `cargo clippy --workspace --exclude g10kz-discord --exclude g10kz-bot -- -D warnings`
-3. `cargo test --workspace --exclude g10kz-discord --exclude g10kz-bot`
-4. `LLM_PROVIDER=mock cargo run -p g10kz-bot -- once "你好小十"`（smoke test）
-
----
-
-## 開發注意事項
-
-**Windows 掛載的 null byte 問題**：透過 Windows-mounted 路徑使用 Edit/Write 工具修改的檔案，可能附帶 trailing null bytes（`\x00`），導致 cargo 或 TOML 解析失敗。所有 Rust / TOML / 設定檔的修改必須透過 paramiko SFTP 或 SSH exec_command，**不可**使用本地 Edit/Write 工具。
-
-**Rust 字串中文**：直接使用字面 UTF-8 中文，不要用 `\u` escape（Rust 的 `\u` 需大括號 `\u{XXXX}`，但字面中文更清晰安全）。
-
-推送前清理 null bytes：
-
-```bash
-python3 -c "
-import os
-for root, _, files in os.walk('.'):
-    if '.git' in root: continue
-    for f in files:
-        if not f.endswith(('.rs', '.toml', '.yml', '.json', '.md')): continue
-        p = os.path.join(root, f)
-        d = open(p,'rb').read()
-        if b'\x00' in d:
-            open(p,'wb').write(d.replace(b'\x00', b''))
-            print('cleaned:', p)
-"
-```
+每次 push main 自動執行 fmt → clippy → test → smoke test（`LLM_PROVIDER=mock once "你好小十"`）。
 
 ---
 
