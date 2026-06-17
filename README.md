@@ -13,7 +13,8 @@
 - **工具迴圈** — Obscura 防偵測瀏覽器 + DuckDuckGo Lite 網路搜尋（BM25 相關段落萃取）、台灣股市即時報價、當前台灣時間
 - **EverOS 語意記憶** — EverOS 1.0 HTTP sidecar 深度整合；每輪對話 add → flush，回覆前 search 注入上下文；掛掉自動降級為 NullMemory，bot 不崩
 - **Discord Markdown** — 每個 system prompt 注入格式指引，讓 LLM 懂得在 Discord 正確使用 **粗體**、*斜體*、`code`、`> 引用`、`-# 小字`、`||劇透||`、標題與超連結
-- **伺服器 / 頻道感知** — `[伺服器環境]` 區塊注入 system prompt，包含 guild 名稱、頻道名稱、topic；讓角色能依環境調整語氣與行為
+- **伺服器 / 頻道感知** — `[伺服器環境]` 區塊注入 system prompt，包含 guild 名稱、頻道名稱；讓角色能依環境調整語氣與行為
+- **Prompt Token 最佳化** — 語義去重 persona 骨架（1073→520 tok）+ prefix-cache 靜態/動態分離；每輪 system token −45%，快取命中時等效 −89%
 - **主動發話** — 頻道靜默超過設定時間後，bot 主動傳訊
 - **Owner 防護** — 提示注入防禦與輸出 sanitize，0 LLM 成本，最先擋
 - **媒體處理** — 附件 URL 傳入引擎，影片走 ffmpeg 抽幀（需容器內有 ffmpeg）
@@ -46,7 +47,9 @@ Discord 訊息
       guard::pre          ── 純函式提示注入防禦（0 LLM）
       normalize           ── 去 mention、前綴解析
       EverOS::search      ── 語意記憶注入（HTTP, 降級安全）
-      persona system msg  ── 角色卡 + [伺服器環境] + Discord格式 + JPAF modifier
+      system_message()    ── [靜態前綴 + cache_control] + [動態後綴]
+                             靜態：persona + channel note + Discord 格式指引
+                             動態：伺服器環境 + JPAF modifier（不破壞快取前綴）
       route()             ── Social / Search / Reason / Media / Command
           │
           ├─ Social  → 單次 social model call（最便宜）
@@ -103,7 +106,7 @@ Search 路徑使用三層流水線：
   → Discord Markdown 格式化輸出
 ```
 
-Obscura 二進位放在 `bin/obscura`（gitignore），透過 Dockerfile `COPY` 打入容器。`OBSCURA_PATH` 未設或路徑不存在時，自動降級為僅回傳 DDG snippets（無全文擷取）。
+Obscura 二進位放在 `bin/obscura`（gitignore），透過 Dockerfile `COPY` 打入容器。`OBSCURA_PATH` 未設或路徑不存在時，自動降級為僅回傳 DDG snippets。
 
 ---
 
@@ -113,7 +116,7 @@ Obscura 二進位放在 `bin/obscura`（gitignore），透過 Dockerfile `COPY` 
 
 - 每輪對話依訊息特徵（情緒詞、邏輯詞、創意詞、細節詞等）**bump** 對應函式
 - 所有分數每輪輕微 **decay**，讓模型自然回歸基線
-- 主導函式（最高分）注入 system prompt `[人格適應]` modifier，影響角色語氣與優先回應策略
+- 主導函式（最高分）注入 system prompt `[人格動態]` modifier，影響角色語氣與優先回應策略
 
 ---
 
@@ -131,6 +134,39 @@ embedding 後端：`llama-embed`（llama.cpp server-cuda），`Qwen3-Embedding-0
 
 ---
 
+## Prompt Token 最佳化
+
+詳見 [`docs/prompt-token-optimization.md`](docs/prompt-token-optimization.md)。
+
+### Before / After（cl100k 量測）
+
+| 路徑 | Before | After（純去重） | 快取命中等效 |
+|---|---:|---:|---:|
+| Social / Search | 1699 tok | **923 tok（−45%）** | **≈186 tok（−89%）** |
+| Reason | 1880 tok | **1018 tok（−46%）** | — |
+
+### 語義去重
+
+`persona/g10kz.json` 原有四欄（system_prompt / description / personality / scenario）各自重複陳述同一組人設，合併為單一無重複骨架（1073→520 tok）。description 的外貌規格與「自我介紹不列外貌」規則自相矛盾一併清除。channel_note、discord_format_note、tool_schema 各自精簡。
+
+### Prefix-Cache 靜態/動態分離
+
+`system_message()` 回傳兩-part Message，解鎖既有的 `cache_control: ephemeral` 機制：
+
+```
+part 0  靜態前綴 ← cache_control 在這裡
+        persona + channel_note + discord_format [+ tool_schema（Reason）]
+        ↑ 跨所有頻道/用戶/turn 逐字節相同 → KV-cache 命中
+
+part 1  動態後綴 ← 不快取
+        env_note（guild/channel 名）+ JPAF modifier
+        ↑ 每輪/每用戶可變，不破壞前綴一致性
+```
+
+原本動態內容夾在靜態之間，前綴每輪都不同導致快取永遠 miss；修正後前綴穩定，命中時 input 計費 ~0.1×。
+
+---
+
 ## 快速開始
 
 ### 前置需求
@@ -143,14 +179,12 @@ embedding 後端：`llama-embed`（llama.cpp server-cuda），`Qwen3-Embedding-0
 ### 本地執行（無 Discord）
 
 ```bash
-# 複製設定
-cp .env.example .env
-# 編輯 .env，填入 LLM_API_KEY 等
+cp .env.example .env   # 填入 LLM_API_KEY 等
 
-# 離線 smoke test（不需 Discord token，不需網路）
+# 離線 smoke test
 LLM_PROVIDER=mock cargo run -p g10kz-bot -- once "你好，自我介紹一下"
 
-# 指定角色卡的 once test
+# 指定角色卡
 PERSONA_CARD_PATH=./persona/g10kz.json LLM_PROVIDER=mock \
   cargo run -p g10kz-bot -- once "你好"
 ```
@@ -158,7 +192,6 @@ PERSONA_CARD_PATH=./persona/g10kz.json LLM_PROVIDER=mock \
 ### Docker 部署
 
 ```bash
-# build image
 docker build -t g10kz-bot:latest .
 ```
 
@@ -214,7 +247,7 @@ RUST_LOG=g10kz=info,warn
 
 ## 角色卡（SillyTavern V2）
 
-`persona/` 目錄存放 SillyTavern V2 格式的 JSON 角色卡。
+`persona/` 目錄存放 SillyTavern V2 格式的 JSON 角色卡。`system_prompt` 欄位為唯一必填，其餘欄位（description / personality / scenario）若有內容會依序拼接至尾端。
 
 ```json
 {
@@ -222,17 +255,12 @@ RUST_LOG=g10kz=info,warn
   "spec_version": "2.0",
   "data": {
     "name": "g10kz",
-    "description": "...",
-    "personality": "...",
-    "scenario": "...",
-    "system_prompt": "...",
+    "system_prompt": "你是 g10kz，...",
     "first_mes": "...",
     "mes_example": "<START>\n{{user}}: ...\n{{char}}: ...\n<END>"
   }
 }
 ```
-
-`system_prompt → description → personality → scenario` 依序拼接為最終 system prompt，空欄位略過。
 
 > **注意**：`g10kz-bot once` 模式不載入角色卡（使用內建 stub persona），角色卡僅在 daemon 模式下生效。
 
@@ -266,7 +294,7 @@ REDACTED
                             （Obscura 二進位打入 image：/usr/local/bin/obscura）
 ```
 
-bot 以 `network_mode: host` 執行，直接存取宿主機上的 new-api 與 everos，不走 bridge 網路。EverOS embedding 後端為 `llama-embed:8082`（與 everos 同在 `g10kz-memory_default` 網路）。
+bot 以 `network_mode: host` 執行，直接存取宿主機上的 new-api 與 everos，不走 bridge 網路。
 
 ---
 
@@ -283,11 +311,11 @@ GitHub Actions（`.github/workflows/ci.yml`）每次 push main 自動執行：
 
 ## 開發注意事項
 
-**Windows 掛載的 null byte 問題**：透過 Windows-mounted 路徑（`C:\Users\...\Projects\g10kz`）使用 Edit/Write 工具修改的檔案，可能附帶 trailing null bytes（`\x00`），導致 cargo 或 TOML 解析失敗（`unknown start of token: \u{0}`）。
+**Windows 掛載的 null byte 問題**：透過 Windows-mounted 路徑使用 Edit/Write 工具修改的檔案，可能附帶 trailing null bytes（`\x00`），導致 cargo 或 TOML 解析失敗。所有 Rust / TOML / 設定檔的修改必須透過 paramiko SFTP 或 SSH exec_command，**不可**使用本地 Edit/Write 工具。
 
-所有 Rust / TOML / 設定檔的修改必須透過 paramiko SFTP 或 SSH exec_command，**不可**使用本地 Edit/Write 工具。
+**Rust 字串中文**：直接使用字面 UTF-8 中文，不要用 `\u` escape（Rust 的 `\u` 需大括號 `\u{XXXX}`，但字面中文更清晰安全）。
 
-推送前清理檢查：
+推送前清理 null bytes：
 
 ```bash
 python3 -c "
