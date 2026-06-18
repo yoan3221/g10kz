@@ -409,6 +409,7 @@ fn replace_kaomoji_markers(s: &str) -> String {
 }
 
 
+
 // ─── Format normalisation ─────────────────────────────────────────────────────
 
 /// Format normalisation applied to clean replies before delivery.
@@ -506,7 +507,7 @@ fn collapse_blank_lines(s: &str) -> String {
     for line in s.lines() {
         if line.trim().is_empty() {
             blank_count += 1;
-            if blank_count <= 2 {
+            if blank_count <= 1 {
                 out.push('\n');
             }
         } else {
