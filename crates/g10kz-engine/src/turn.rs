@@ -415,6 +415,12 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 /// task is beyond it, the model emits `[[ESCALATE]]` on the first line instead
 /// of answering, and the engine re-issues the turn on the strong (opus) model.
 /// Appended only on the Social path, folded into the cacheable static prefix.
+
+/// Few-shot format primer injected after system message so haiku learns the
+/// action/speech/inner-thought format by example rather than abstract rules.
+const FORMAT_PRIMER_USER: &str = "（示範）你好";
+const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去\n…誰稀罕你打招呼。-# 怎麼有點開心...";
+
 const ESCALATE_NOTE: &str = "\n\n[升級規則]\n若這則訊息需要深入推理、查資料、寫程式、長篇分析或超出你的能力，請第一行只輸出 [[ESCALATE]] 再停止，不要嘗試作答；一般日常對話、閒聊、簡單問題就照常正常回覆。";
 
 /// True if `text` opens with the escalation sentinel.
@@ -435,6 +441,9 @@ async fn path_social(
 
     // Non-streaming: cheap model first, escalate on sentinel.
     let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    // Few-shot format primer: concrete example > abstract rules for small models during RP
+    messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
+    messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
     messages.extend(input.history.clone());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
@@ -461,6 +470,9 @@ async fn path_social_streaming(
     let sink = input.stream_sink.clone().expect("stream_sink present");
 
     let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    // Few-shot format primer: concrete example > abstract rules for small models during RP
+    messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
+    messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
     messages.extend(input.history.clone());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
