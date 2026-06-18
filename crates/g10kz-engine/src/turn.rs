@@ -161,6 +161,8 @@ impl<'a> TurnInput<'a> {
         if let Some(modifier) = &self.personality_modifier {
             s.push_str(modifier);
         }
+        // 格式提醒放最後 — model 最後讀到的指令，注意力最高
+        s.push_str("\n\n[RP格式] 動作/神情必須 *斜體*；對白純文字；-# 內心獨白。禁裸寫動作行。動作+對白合一行，勿碎片換行。1～3句為主。");
         s
     }
 
