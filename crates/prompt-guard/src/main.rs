@@ -34,34 +34,29 @@ async fn classify(State(st): State<Arc<AppState>>, Json(req): Json<Req>) -> Json
 
     let ids_val = match Tensor::<i64>::from_array((vec![1i64, seq_len as i64], ids)) {
         Ok(v) => v,
-        Err(e) => { warn!(error = %e, "ids tensor error"); return benign(); }
+        Err(e) => { warn!(error = %e, "ids tensor"); return benign(); }
     };
     let mask_val = match Tensor::<i64>::from_array((vec![1i64, seq_len as i64], mask)) {
         Ok(v) => v,
-        Err(e) => { warn!(error = %e, "mask tensor error"); return benign(); }
+        Err(e) => { warn!(error = %e, "mask tensor"); return benign(); }
     };
 
-    // Run inference inside the lock scope; extract all data before dropping sess.
-    // SessionOutputs borrows from the Session/MutexGuard, so we must not let it escape.
     let (score, blocked, label) = {
         let mut sess = match st.session.lock() {
             Ok(s) => s,
-            Err(e) => { warn!(error = %e, "session lock error"); return benign(); }
+            Err(e) => { warn!(error = %e, "session lock"); return benign(); }
         };
         let result = match sess.run(inputs![
             "input_ids"      => ids_val,
             "attention_mask" => mask_val
         ]) {
             Ok(r) => r,
-            Err(e) => { warn!(error = %e, "ort run error"); return benign(); }
+            Err(e) => { warn!(error = %e, "ort run"); return benign(); }
         };
-
-        // ort 2.0.0-rc.12: try_extract_tensor returns (&Shape, &[T])
         let (_, flat) = match result["logits"].try_extract_tensor::<f32>() {
             Ok(t) => t,
-            Err(e) => { warn!(error = %e, "logits extract error"); return benign(); }
+            Err(e) => { warn!(error = %e, "logits extract"); return benign(); }
         };
-
         if flat.len() < 2 { return benign(); }
         let max = flat.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
         let exp: Vec<f32> = flat.iter().map(|&x| (x - max).exp()).collect();
@@ -69,7 +64,7 @@ async fn classify(State(st): State<Arc<AppState>>, Json(req): Json<Req>) -> Json
         let s = exp[1] / sum;
         let b = s >= st.threshold;
         let l = if b { "MALICIOUS" } else { "BENIGN" }.to_string();
-        (s, b, l)  // only owned data escapes the lock
+        (s, b, l)
     };
 
     Json(Resp { label, score, blocked })
@@ -92,7 +87,8 @@ async fn main() -> anyhow::Result<()> {
     let tokenizer = Tokenizer::from_file(&tokenizer_path)
         .map_err(|e| anyhow::anyhow!("tokenizer: {e}"))?;
 
-    info!(model = %model_path, "Loading ONNX model — CUDA EP");
+    // Try CUDA EP first; ort falls back to CPU automatically if GPU is unavailable
+    info!(model = %model_path, "Loading ONNX model");
     let session = Session::builder()
         .map_err(|e| anyhow::anyhow!("session builder: {e}"))?
         .with_execution_providers([ep::CUDA::default().build()])
@@ -100,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
         .commit_from_file(&model_path)
         .map_err(|e| anyhow::anyhow!("model load: {e}"))?;
 
-    info!("Session ready on CUDA");
+    info!("Session ready");
     let state = Arc::new(AppState { session: Mutex::new(session), tokenizer, threshold });
     let app = Router::new()
         .route("/health", get(health))
