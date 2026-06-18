@@ -1,0 +1,4232 @@
+[
+  {
+    "kaomoji": "= =",
+    "keywords": ["无语", "黑脸", "无奈", "翻白眼"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "( ´_ゝ`)",
+    "keywords": ["鄙视", "不屑", "看不起", "无奈"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "(╯°□°）╯︵ ┻━┻",
+    "keywords": ["掀桌", "愤怒", "生气", "暴躁"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "ヽ(´▽`)/",
+    "keywords": ["开心", "高兴", "快乐", "兴奋"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "(｡•́︿•̀｡)",
+    "keywords": ["难过", "伤心", "哭", "委屈"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "( ・ω・)",
+    "keywords": ["疑惑", "好奇", "卖萌"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "(｀・ω・´)",
+    "keywords": ["认真", "严肃", "正经"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "( ﾟ∀ﾟ)",
+    "keywords": ["惊讶", "吃惊", "震惊", "意外"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "_(:3」∠)_",
+    "keywords": ["躺平", "摆烂", "咸鱼", "懒"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "φ(゜▽゜*)♪",
+    "keywords": ["开心", "写字"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "(* ^ ω ^)",
+    "keywords": ["开心", "快乐", "喜悦", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(´ ∀ ` *)",
+    "keywords": ["开心", "愉快", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "٩(◕‿◕｡)۶",
+    "keywords": ["开心", "微笑", "兴奋", "欢呼", "庆祝"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "☆*:.｡.o(≧▽≦)o.｡.:*☆",
+    "keywords": ["开心", "兴奋", "闪亮", "超级快乐", "庆祝"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(o^▽^o)",
+    "keywords": ["开心", "愉快", "欢乐"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(⌒▽⌒)☆",
+    "keywords": ["开心", "大笑", "闪亮", "愉快"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "<(￣︶￣)>",
+    "keywords": ["开心", "得意", "满意", "自豪"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "。.:☆*:･'(*⌒―⌒*))",
+    "keywords": ["开心", "闪亮", "喜悦", "温柔"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ(・∀・)ﾉ",
+    "keywords": ["开心", "举手", "欢呼", "打招呼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(´｡• ω •｡`)",
+    "keywords": ["开心", "可爱", "温柔", "柔和", "疑惑"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(￣ω￣)",
+    "keywords": ["满足", "眯眼", "幸福", "惬意", "舒适", "开心"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(o･ω･o)",
+    "keywords": ["开心", "可爱", "期待", "好奇"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(＠＾◡＾)",
+    "keywords": ["开心", "微笑", "愉快"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ(*・ω・)ﾉ",
+    "keywords": ["开心", "举手", "打招呼", "欢迎"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(o_ _)ﾉ彡☆",
+    "keywords": ["鞠躬", "感谢", "开心", "闪亮"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(^人^)",
+    "keywords": ["祈祷", "感谢", "拜托", "开心"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(o´▽`o)",
+    "keywords": ["开心", "快乐", "微笑", "愉悦"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*´▽`*)",
+    "keywords": ["开心", "害羞", "可爱", "甜美"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "｡ﾟ( ﾟ^∀^ﾟ)ﾟ｡",
+    "keywords": ["开心", "大笑", "快乐", "兴奋"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "( ´ ω ` )",
+    "keywords": ["满足", "舒适", "开心", "惬意"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(((o(*°▽°*)o)))",
+    "keywords": ["超级开心", "兴奋", "激动", "颤抖", "期待"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(≧◡≦)",
+    "keywords": ["开心", "可爱", "甜美", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(o´∀`o)",
+    "keywords": ["开心", "笑", "愉快"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(´• ω •`)",
+    "keywords": ["开心", "可爱", "温柔", "柔软", "疑惑"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(＾▽＾)",
+    "keywords": ["开心", "大笑", "快乐", "愉快"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(⌒ω⌒)",
+    "keywords": ["开心", "微笑", "满足", "舒适"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "∑d(°∀°d)",
+    "keywords": ["点赞", "惊讶", "赞同", "开心", "支持"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "╰(▔∀▔)╯",
+    "keywords": ["开心", "举手", "欢呼", "胜利"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*^‿^*)",
+    "keywords": ["开心", "微笑", "可爱", "害羞", "甜美"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ(o^ ^o)ﾉ",
+    "keywords": ["开心", "举手", "欢呼", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(✯◡✯)",
+    "keywords": ["开心", "期待", "欣喜", "闪亮", "兴奋", "星星眼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(◕‿◕)",
+    "keywords": ["开心", "微笑", "可爱", "温柔"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*≧ω≦*)",
+    "keywords": ["开心", "兴奋", "激动", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(☆▽☆)",
+    "keywords": ["开心", "星星眼", "兴奋", "闪亮"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(⌒‿⌒)",
+    "keywords": ["微笑", "开心", "温柔", "友好"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "＼(≧▽≦)／",
+    "keywords": ["超级开心", "举手", "欢呼", "兴奋"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ(o＾▽＾o)ノ",
+    "keywords": ["开心", "举手", "欢呼", "快乐"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "☆ ～('▽^人)",
+    "keywords": ["开心", "闪亮", "祈祷", "感谢"],
+    "weight": 1.1,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*°▽°*)",
+    "keywords": ["开心", "期待", "兴奋", "快乐", "激动"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "٩(｡•́‿•̀｡)۶",
+    "keywords": ["开心", "可爱", "举手", "尴尬", "无奈"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(✧ω✧)",
+    "keywords": ["开心", "期待", "闪亮", "兴奋", "星星眼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ(*⌒▽⌒*)ﾉ",
+    "keywords": ["开心", "大笑", "举手", "欢呼", "快乐"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(´｡• ᵕ •｡`)",
+    "keywords": ["开心", "可爱", "温柔", "萌", "甜美"],
+    "weight": 1.1,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "( ´ ▽ ` )",
+    "keywords": ["开心", "微笑", "满足", "愉快"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(￣▽￣)",
+    "keywords": ["开心", "微笑", "满意", "得意", "无语"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "╰(*´︶`*)╯",
+    "keywords": ["开心", "举手", "可爱", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ(>∀<☆)ノ",
+    "keywords": ["超级开心", "举手", "闪亮", "兴奋"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "o(≧▽≦)o",
+    "keywords": ["超级开心", "兴奋", "激动", "欢呼", "大笑"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(☆ω☆)",
+    "keywords": ["开心", "星星眼", "兴奋", "闪亮"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(っ˘ω˘ς )",
+    "keywords": ["开心", "可爱", "柔软", "满足", "捂脸"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "＼(￣▽￣)／",
+    "keywords": ["开心", "举手", "欢呼", "胜利"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*¯︶¯*)",
+    "keywords": ["微笑", "开心", "满足", "温柔"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "＼(＾▽＾)／",
+    "keywords": ["开心", "举手", "欢呼", "快乐"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "٩(◕‿◕)۶",
+    "keywords": ["开心", "举手", "欢呼", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(o˘◡˘o)",
+    "keywords": ["开心", "可爱", "温柔", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "\\(★ω★)/",
+    "keywords": ["开心", "星星眼", "举手", "兴奋"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "\\(^ヮ^)/",
+    "keywords": ["开心", "大笑", "举手", "欢呼", "快乐"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(〃＾▽＾〃)",
+    "keywords": ["开心", "害羞", "可爱", "甜美"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(╯✧▽✧)╯",
+    "keywords": ["开心", "兴奋", "闪亮", "举手", "打开", "观察", "看"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "o(>ω<)o",
+    "keywords": ["超级开心", "激动", "兴奋", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "o( ❛ᴗ❛ )o",
+    "keywords": ["开心", "可爱", "温柔", "萌", "满足", "看"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "｡ﾟ(TヮT)ﾟ｡",
+    "keywords": ["开心到哭", "感动", "激动", "喜极而泣"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "( ‾́ ◡ ‾́ )",
+    "keywords": ["微笑", "开心", "温柔", "满足", "无奈"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(ﾉ´ヮ`)ﾉ*: ･ﾟ",
+    "keywords": ["开心", "举手", "闪亮", "欢呼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(b ᵔ▽ᵔ)b",
+    "keywords": ["点赞", "支持", "开心", "赞同", "同意"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(๑˃ᴗ˂)ﻭ",
+    "keywords": ["开心", "可爱", "兴奋", "加油"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(๑˘︶˘๑)",
+    "keywords": ["开心", "可爱", "温柔", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "( ˙꒳​˙ )",
+    "keywords": ["开心", "可爱", "呆萌", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "°˖✧◝(⁰▿⁰)◜✧˖°",
+    "keywords": ["超级开心", "闪亮", "兴奋", "星星眼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(´･ᴗ･ ` )",
+    "keywords": ["开心", "可爱", "温柔", "满足", "害羞"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧",
+    "keywords": ["开心", "举手", "闪亮", "魔法", "兴奋", "撒花"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(„• ֊ •„)",
+    "keywords": ["开心", "可爱", "温柔", "害羞", "呆", "冷脸萌", "暗爽"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(.❛ ᴗ ❛.)",
+    "keywords": ["开心", "可爱", "温柔", "豆豆眼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(⁀ᗢ⁀)",
+    "keywords": ["开心", "可爱", "萌", "满足", "开怀大笑"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(¬‿¬ )",
+    "keywords": ["微笑", "偷笑", "开心", "满意", "得意", "干坏事", "狡黠"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*￣▽￣)b",
+    "keywords": ["点赞", "开心", "支持", "满意"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "( ˙▿˙ )",
+    "keywords": ["微笑", "开心", "满足", "温柔", "呆萌", "愣神"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(¯▿¯)",
+    "keywords": ["微笑", "开心", "平静", "满足"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "( ◕▿◕ )",
+    "keywords": ["开心", "微笑", "可爱", "温柔"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "＼(٥⁀▽⁀ )／",
+    "keywords": ["开心", "举手", "欢呼", "快乐"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(ﾉ´ з `)ノ",
+    "keywords": ["爱", "亲吻", "飞吻", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(♡μ_μ)",
+    "keywords": ["爱", "陶醉", "幸福", "满足"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(*^^*)♡",
+    "keywords": ["爱", "喜欢", "开心", "害羞"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "☆⌒ヽ(*'､^*)chu",
+    "keywords": ["爱", "亲吻", "飞吻", "可爱", "闪亮"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(♡-_-♡)",
+    "keywords": ["爱", "陶醉", "迷恋", "傲娇", "幸福"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(￣ε￣＠)",
+    "keywords": ["亲吻", "嘟嘴", "傲娇", "可爱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "ヽ(♡‿♡)ノ",
+    "keywords": ["爱", "开心", "喜欢", "举手", "爱心眼"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "( ´ ∀ `)ノ～ ♡",
+    "keywords": ["爱", "飞吻", "打招呼", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(─‿‿─)♡",
+    "keywords": ["爱", "微笑", "温柔", "可爱", "萌", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´｡• ᵕ •｡`) ♡",
+    "keywords": ["爱", "可爱", "温柔", "萌", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(*♡∀♡)",
+    "keywords": ["爱", "开心", "幸福", "兴奋", "爱心眼"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(｡・//ε//・｡)",
+    "keywords": ["爱", "害羞", "亲吻", "脸红"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´ ω `♡)",
+    "keywords": ["爱", "满足", "舒适", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡( ◡‿◡ )",
+    "keywords": ["爱", "微笑", "温柔", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(◕‿◕)♡",
+    "keywords": ["爱", "微笑", "可爱", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(/▽＼*)｡o○♡",
+    "keywords": ["爱", "害羞", "脸红", "喜欢", "爱心"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(ღ˘⌣˘ღ)",
+    "keywords": ["爱", "陶醉", "幸福", "满足"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(♡°▽°♡)",
+    "keywords": ["爱", "开心", "兴奋", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡(｡- ω -)",
+    "keywords": ["爱", "满足", "舒适", "陶醉", "给爱心"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡ ～('▽^人)",
+    "keywords": ["爱", "开心", "合掌", "给爱心", "感谢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´• ω •`) ♡",
+    "keywords": ["爱", "可爱", "温柔", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´ ε ` )♡",
+    "keywords": ["爱", "亲吻", "嘟嘴", "可爱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´｡• ω •｡`) ♡",
+    "keywords": ["爱", "可爱", "温柔", "柔软"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "( ´ ▽ ` ).｡ｏ♡",
+    "keywords": ["爱", "开心", "微笑", "喜欢", "给爱心"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "╰(*´︶`*)╯♡",
+    "keywords": ["爱", "开心", "举手", "可爱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(*˘︶˘*).｡.:*♡",
+    "keywords": ["爱", "微笑", "温柔", "闪亮", "给爱心"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(♡˙︶˙♡)",
+    "keywords": ["爱", "微笑", "幸福", "满足"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡＼(￣▽￣)／♡",
+    "keywords": ["爱", "开心", "举手", "欢呼"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(≧◡≦) ♡",
+    "keywords": ["爱", "开心", "可爱", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(⌒▽⌒)♡",
+    "keywords": ["爱", "开心", "微笑", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(*¯ ³¯*)♡",
+    "keywords": ["爱", "亲吻", "嘟嘴", "可爱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(っ˘з(˘⌣˘ ) ♡",
+    "keywords": ["爱", "亲吻", "拥抱", "恋爱", "双人", "亲亲你"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡ (˘▽˘>ԅ( ˘⌣˘)",
+    "keywords": ["爱", "戳脸", "双人", "亲密", "萌", "可爱"],
+    "weight": 1.2,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "( ˘⌣˘)♡(˘⌣˘ )",
+    "keywords": ["爱", "情侣", "双人", "恋爱", "幸福", "相爱"],
+    "weight": 1.05,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(/^-^(^ ^*)/ ♡",
+    "keywords": ["爱", "拥抱", "双人", "恋爱", "温柔"],
+    "weight": 1.2,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "٩(♡ε♡)۶",
+    "keywords": ["爱", "亲吻", "兴奋", "喜欢", "爱心眼"],
+    "weight": 0.8,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "σ(≧ε≦σ) ♡",
+    "keywords": ["爱", "亲吻", "索吻", "嘟嘴", "可爱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡ (⇀ 3 ↼)",
+    "keywords": ["爱", "亲吻", "嘟嘴", "傲娇"],
+    "weight": 0.9,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "♡ (￣З￣)",
+    "keywords": ["爱", "亲吻", "嘟嘴", "可爱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(❤ω❤)",
+    "keywords": ["爱", "陶醉", "迷恋", "心动"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(˘∀˘)/(μ‿μ) ❤",
+    "keywords": ["爱", "双人", "抚摸", "温柔", "安慰"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "❤ (ɔˆз(ˆ⌣ˆc)",
+    "keywords": ["爱", "亲吻", "双人", "拥抱", "恋爱"],
+    "weight": 1.1,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´♡‿♡`)",
+    "keywords": ["爱", "开心", "幸福", "喜欢", "爱心眼"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(°◡°♡)",
+    "keywords": ["爱", "微笑", "温柔", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "Σ>―(〃°ω°〃)♡→",
+    "keywords": ["爱", "丘比特之箭", "心动", "害羞", "惊", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(* ⁰̷̴͈꒨⁰̷̴͈)=͟͟͞͞➳❤",
+    "keywords": ["爱", "丘比特之箭", "心动", "射箭", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´,,•ω•,,)♡",
+    "keywords": ["爱", "可爱", "温柔", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(´꒳`)♡",
+    "keywords": ["爱", "可爱", "满足", "喜欢"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(⌒_⌒;)",
+    "keywords": ["尴尬", "无奈", "流汗", "不好意思"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(o^ ^o)",
+    "keywords": ["害羞", "脸红", "开心", "可爱"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*/ω＼)",
+    "keywords": ["害羞", "脸红", "遮脸", "不好意思", "捂脸"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*/_＼)",
+    "keywords": ["害羞", "脸红", "遮脸", "羞愧"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*ﾉωﾉ)",
+    "keywords": ["害羞", "脸红", "遮脸", "可爱"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(o-_-o)",
+    "keywords": ["害羞", "脸红", "不好意思", "羞涩", "无奈"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*μ_μ)",
+    "keywords": ["害羞", "脸红", "陶醉", "满足"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "( ◡‿◡ *)",
+    "keywords": ["害羞", "微笑", "可爱", "温柔"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(ᵔ.ᵔ)",
+    "keywords": ["害羞", "可爱", "呆萌", "温柔"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*ﾉ∀`*)",
+    "keywords": ["害羞", "脸红", "开心", "可爱"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(//▽//)",
+    "keywords": ["害羞", "脸红", "开心", "不好意思"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(//ω//)",
+    "keywords": ["害羞", "脸红", "羞涩", "可爱"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(ノ*°▽°*)",
+    "keywords": ["害羞", "脸红", "开心", "兴奋"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*^.^*)",
+    "keywords": ["害羞", "微笑", "可爱", "温柔"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*ﾉ▽ﾉ)",
+    "keywords": ["害羞", "脸红", "开心", "遮脸"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(￣▽￣*)ゞ",
+    "keywords": ["尴尬", "不好意思", "挠头", "害羞"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(⁄ ⁄•⁄ω⁄•⁄ ⁄)",
+    "keywords": ["害羞", "脸红", "羞涩", "可爱"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(*/▽＼*)",
+    "keywords": ["害羞", "脸红", "遮脸", "开心"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)",
+    "keywords": ["害羞", "脸红", "开心", "羞涩"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(„ಡωಡ„)",
+    "keywords": ["害羞", "脸红", "可爱", "萌", "狡黠", "奸笑"],
+    "weight": 0.9,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(ง ื▿ ื)ว",
+    "keywords": ["害羞", "脸红", "可爱", "羞涩"],
+    "weight": 0.8,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "( 〃▽〃)",
+    "keywords": ["害羞", "脸红", "开心", "笑", "不好意思"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(/▿＼ )",
+    "keywords": ["害羞", "遮脸", "笑", "脸红", "羞涩"],
+    "weight": 1.0,
+    "category": "害羞尴尬"
+  },
+  {
+    "kaomoji": "(ノ_<。)ヾ(´ ▽ ` )",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "温柔", "开朗"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "｡･ﾟ･(ﾉД`)ヽ(￣ω￣ )",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "拍肩"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "ρ(- ω -、)ヾ(￣ω￣; )",
+    "keywords": ["安慰", "双人", "同情", "沮丧", "拍肩"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "ヽ(￣ω￣(。。 )ゝ",
+    "keywords": ["安慰", "双人", "拥抱", "温柔", "支持"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(*´ I `)ﾉﾟ(ﾉД｀ﾟ)ﾟ｡",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "擦眼泪"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "ヽ(~_~(・_・ )ゝ",
+    "keywords": ["安慰", "双人", "拥抱", "支持", "温柔"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(ﾉ_；)ヾ(´ ∀ ` )",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "拍头"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(; ω ; )ヾ(´∀`* )",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "温柔"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(*´ー)ﾉ(ノд`)",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "拍头"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(´-ω-`( _ _ )",
+    "keywords": ["安慰", "双人", "拥抱", "沮丧", "支持"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(っ´ω`)ﾉ(╥ω╥)",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "拥抱"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(ｏ・_・)ノ\"(ノ_<、)",
+    "keywords": ["安慰", "双人", "同情", "哭泣", "拍头"],
+    "weight": 1.0,
+    "category": "安慰同情"
+  },
+  {
+    "kaomoji": "(＃＞＜)",
+    "keywords": ["不满", "生气", "皱眉", "不爽"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(；⌣̀_⌣́)",
+    "keywords": ["不满", "无奈", "无语", "不开心", "郁闷"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "☆ｏ(＞＜；)○",
+    "keywords": ["不满", "生气", "头疼", "烦躁"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(￣ ￣|||)",
+    "keywords": ["无语", "尴尬", "流汗"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(；￣Д￣)",
+    "keywords": ["不满", "惊讶", "无语", "不爽"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(￣□￣」)",
+    "keywords": ["不满", "惊讶", "无语", "无力"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(＃￣0￣)",
+    "keywords": ["不满", "生气", "愤怒", "皱眉"],
+    "weight": 0.9,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(＃￣ω￣)",
+    "keywords": ["不满", "不爽", "郁闷", "生气"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(￢_￢;)",
+    "keywords": ["不满", "怀疑", "不信", "无语"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(＞ｍ＜)",
+    "keywords": ["不满", "生气", "皱眉", "不开心"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(」°ロ°)」",
+    "keywords": ["惊讶", "抗议", "震惊", "不服"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(〃＞＿＜;〃)",
+    "keywords": ["不满", "萌", "烦恼", "困扰", "头疼"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(＾＾＃)",
+    "keywords": ["不满", "假笑", "生气", "愤怒"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(︶︹︺)",
+    "keywords": ["不满", "难过", "沮丧", "郁闷"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(￣ヘ￣)",
+    "keywords": ["不满", "不爽", "无语", "傲慢"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "<(￣ ﹌ ￣)>",
+    "keywords": ["不满", "傲慢", "不屑", "得意"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(￣︿￣)",
+    "keywords": ["不满", "不开心", "郁闷", "沮丧"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(＞﹏＜)",
+    "keywords": ["不满", "难过", "难受", "痛苦", "委屈", "想哭"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(--_--)",
+    "keywords": ["不满", "无语", "无奈", "无力"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "凸(￣ヘ￣)",
+    "keywords": ["不满", "竖中指", "鄙视", "愤怒", "不爽"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ヾ( ￣O￣)ツ",
+    "keywords": ["不满", "抗议", "不服", "反对"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(⇀‸↼‶)",
+    "keywords": ["不满", "不爽", "郁闷", "烦躁"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "o(> < )o",
+    "keywords": ["不满", "生气", "愤怒", "萌", "烦躁"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(」＞＜)」",
+    "keywords": ["不满", "抗议", "愤怒", "不服"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ᗒᗣᗕ)՞",
+    "keywords": ["不满", "难过", "1.1委屈", "1.1大哭", "沮丧"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(눈_눈)",
+    "keywords": ["不满", "无语", "鄙视", "怀疑"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(*・ω・)ﾉ",
+    "keywords": ["打招呼", "问候", "你好", "挥手", "再见"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(￣▽￣)ノ",
+    "keywords": ["打招呼", "挥手", "开心", "你好", "招手"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(°▽°)/",
+    "keywords": ["打招呼", "挥手", "开心", "嗨", "举手"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "( ´ ∀ ` )ﾉ",
+    "keywords": ["打招呼", "挥手", "开心", "问候", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(^-^*)/",
+    "keywords": ["打招呼", "挥手", "害羞", "可爱", "问候"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(＠´ー`)ﾉﾞ",
+    "keywords": ["打招呼", "挥手", "慵懒", "问候", "随意"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(´• ω •`)ﾉ",
+    "keywords": ["打招呼", "挥手", "可爱", "温柔", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "( ° ∀ ° )ﾉﾞ",
+    "keywords": ["打招呼", "挥手", "开心", "兴奋", "嗨"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "ヾ(*'▽'*)",
+    "keywords": ["打招呼", "挥手", "开心", "再见", "拜拜"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "＼(⌒▽⌒)",
+    "keywords": ["打招呼", "举手", "开心", "问候", "欢迎"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "ヾ(☆▽☆)",
+    "keywords": ["打招呼", "挥手", "开心", "星星眼", "兴奋"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "( ´ ▽ ` )ﾉ",
+    "keywords": ["打招呼", "挥手", "开心", "微笑", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(^０^)ノ",
+    "keywords": ["打招呼", "挥手", "开心", "大笑", "嗨"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "~ヾ(・ω・)",
+    "keywords": ["打招呼", "挥手", "可爱", "问候", "拜拜"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(・∀・)ノ",
+    "keywords": ["打招呼", "挥手", "开心", "你好", "招手"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "ヾ(・ω・*)",
+    "keywords": ["打招呼", "挥手", "可爱", "害羞", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(*°ｰ°)ﾉ",
+    "keywords": ["打招呼", "挥手", "冷淡", "随意", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(・_・)ノ",
+    "keywords": ["打招呼", "挥手", "平淡", "问候", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(o´ω`o)ﾉ",
+    "keywords": ["打招呼", "挥手", "可爱", "温柔", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "( ´ ▽ ` )/",
+    "keywords": ["打招呼", "举手", "开心", "欢迎", "嗨"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(￣ω￣)/",
+    "keywords": ["打招呼", "举手", "满足", "问候", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "( ´ ω ` )ノﾞ",
+    "keywords": ["打招呼", "挥手", "温柔", "满足", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(⌒ω⌒)ﾉ",
+    "keywords": ["打招呼", "挥手", "开心", "微笑", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(o^ ^o)/",
+    "keywords": ["打招呼", "举手", "害羞", "可爱", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(≧▽≦)/",
+    "keywords": ["打招呼", "举手", "超级开心", "兴奋", "嗨"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(✧∀✧)/",
+    "keywords": ["打招呼", "举手", "闪亮", "兴奋", "星星眼"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(o´▽`o)ﾉ",
+    "keywords": ["打招呼", "挥手", "开心", "快乐", "你好"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(￣▽￣)/",
+    "keywords": ["打招呼", "举手", "开心", "满意", "嗨"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(づ￣ ³￣)づ",
+    "keywords": ["拥抱", "抱抱", "亲吻", "爱", "索抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(つ≧▽≦)つ",
+    "keywords": ["拥抱", "抱抱", "开心", "兴奋", "求抱抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(つ✧ω✧)つ",
+    "keywords": ["拥抱", "抱抱", "闪亮", "期待", "星星眼"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(づ ◕‿◕ )づ",
+    "keywords": ["拥抱", "抱抱", "可爱", "温柔", "求抱抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(⊃｡•́‿•̀｡)⊃",
+    "keywords": ["拥抱", "抱抱", "可爱", "开心", "求抱抱", "害羞"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(つ . •́ _ʖ •̀ .)つ",
+    "keywords": ["拥抱", "抱抱", "温柔", "安慰", "求抱抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(っಠ‿ಠ)っ",
+    "keywords": ["拥抱", "抱抱", "坏笑", "狡黠", "求抱抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(づ◡﹏◡)づ",
+    "keywords": ["拥抱", "抱抱", "委屈", "难过", "需要拥抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "⊂(´• ω •`⊂)",
+    "keywords": ["拥抱", "抱抱", "可爱", "温柔", "被抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "⊂(･ω･*⊂)",
+    "keywords": ["拥抱", "抱抱", "可爱", "害羞", "被抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "⊂(￣▽￣)⊃",
+    "keywords": ["拥抱", "抱抱", "开心", "满意", "被抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "⊂( ´ ▽ ` )⊃",
+    "keywords": ["拥抱", "抱抱", "开心", "微笑", "被抱"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "( ~*-*)~",
+    "keywords": ["拥抱", "抱抱", "害羞", "温柔", "摇晃"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(｡•̀ᴗ-)✧",
+    "keywords": ["拥抱", "抱抱", "可爱", "闪亮", "眨眼", "发射星星"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "(^_~)",
+    "keywords": ["眨眼", "俏皮", "可爱", "调皮", "卖萌"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "( ﾟｏ⌒)",
+    "keywords": ["眨眼", "俏皮", "惊讶", "可爱", "调皮"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^_-)≡☆",
+    "keywords": ["眨眼", "俏皮", "闪亮", "调皮", "卖萌", "发射星星"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^ω~)",
+    "keywords": ["眨眼", "俏皮", "可爱", "调皮", "卖萌"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(>ω^)",
+    "keywords": ["眨眼", "俏皮", "可爱", "调皮", "得意"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(~人^)",
+    "keywords": ["眨眼", "俏皮", "祈祷", "感谢", "可爱"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^_-)",
+    "keywords": ["眨眼", "俏皮", "可爱", "调皮", "卖萌"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "( -_・)",
+    "keywords": ["眨眼", "冷淡", "傲娇", "不屑", "俏皮"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^_<)〜☆",
+    "keywords": ["眨眼", "俏皮", "闪亮", "可爱", "调皮", "发射星星"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^人<)〜☆",
+    "keywords": ["眨眼", "祈祷", "感谢", "闪亮", "可爱", "给星星"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "☆⌒(≧▽​° )",
+    "keywords": ["眨眼", "1.1俏皮", "开心", "闪亮", "兴奋", "活泼", "开朗", "给星星"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "☆⌒(ゝ。∂)",
+    "keywords": ["眨眼", "俏皮", "闪亮", "可爱", "调皮", "发射星星"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^_<)",
+    "keywords": ["眨眼", "俏皮", "可爱", "调皮", "卖萌"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^_−)☆",
+    "keywords": ["眨眼", "俏皮", "闪亮", "可爱", "调皮", "发射星星"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(･ω<)☆",
+    "keywords": ["眨眼", "俏皮", "可爱", "闪亮", "卖萌"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^.~)☆",
+    "keywords": ["眨眼", "俏皮", "闪亮", "可爱", "调皮"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(^.~)",
+    "keywords": ["眨眼", "俏皮", "可爱", "调皮", "卖萌"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "m(_ _)m",
+    "keywords": ["道歉", "1.1鞠躬", "抱歉", "对不起", "感谢"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "(シ_ _)シ",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "低头"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "m(. .)m",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "感谢"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "<(_ _)>",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "行礼"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "人(_ _*)",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "请求"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "(*_ _)人",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "祈求"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "m(_ _;m)",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "流汗"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "(シ. .)シ",
+    "keywords": ["道歉", "鞠躬", "抱歉", "对不起", "低头"],
+    "weight": 1.0,
+    "category": "礼貌尊重"
+  },
+  {
+    "kaomoji": "(*￣ii￣)",
+    "keywords": ["流鼻血", "兴奋", "害羞", "激动", "心动"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "(￣ﾊ￣*)",
+    "keywords": ["流鼻血", "兴奋", "害羞", "激动", "心动"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "\\(￣ﾊ￣)",
+    "keywords": ["流鼻血", "兴奋", "举手", "激动", "心动"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "(＾་།＾)",
+    "keywords": ["流鼻血", "兴奋", "激动", "心动", "害羞"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "(＾〃＾)",
+    "keywords": ["流鼻血", "兴奋", "害羞", "激动", "脸红"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "(￣ ¨ヽ￣)",
+    "keywords": ["流鼻血", "兴奋", "激动", "心动", "害羞"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "(￣ ;￣)",
+    "keywords": ["流鼻血", "兴奋", "激动", "流汗", "紧张"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "(￣ ;;￣)",
+    "keywords": ["流鼻血", "兴奋", "激动", "紧张", "害羞"],
+    "weight": 1.0,
+    "category": "兴奋激动"
+  },
+  {
+    "kaomoji": "|･ω･)",
+    "keywords": ["躲藏", "1.05偷看", "窥视", "1.05好奇", "观察"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "ﾍ(･_|",
+    "keywords": ["躲藏", "偷看", "窥视", "隐藏", "观察"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|ω･)ﾉ",
+    "keywords": ["躲藏", "1.05偷看", "窥视", "打招呼", "挥手"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "ヾ(･|",
+    "keywords": ["躲藏", "偷看", "窥视", "挥手", "隐藏"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|д･)",
+    "keywords": ["躲藏", "偷看", "窥视", "惊讶", "观察"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|_￣))",
+    "keywords": ["躲藏", "偷看", "窥视", "隐藏", "观察", "无语"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|▽//)",
+    "keywords": ["躲藏", "偷看", "窥视", "害羞", "脸红"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "┬┴┬┴┤(･_├┬┴┬┴",
+    "keywords": ["躲藏", "偷看", "窥视", "墙后", "隐藏"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "┬┴┬┴┤･ω･)ﾉ",
+    "keywords": ["躲藏", "偷看", "窥视", "墙后", "挥手"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "┬┴┬┴┤( ͡° ͜ʖ├┬┴┬┴",
+    "keywords": ["躲藏", "偷看", "窥视", "墙后", "坏笑"],
+    "weight": 0.9,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "┬┴┬┴┤(･_├┬┴┬┴",
+    "keywords": ["躲藏", "偷看", "窥视", "墙后", "隐藏"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|_・)",
+    "keywords": ["躲藏", "偷看", "窥视", "观察", "隐藏"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|･д･)ﾉ",
+    "keywords": ["躲藏", "偷看", "窥视", "打招呼", "惊讶"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "|ʘ‿ʘ)╯",
+    "keywords": ["躲藏", "偷看", "窥视", "举手", "开心"],
+    "weight": 1.0,
+    "category": "好奇观察"
+  },
+  {
+    "kaomoji": "__φ(．．)",
+    "keywords": ["写字", "记录", "笔记", "学习", "工作"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "( ￣ー￣)φ__",
+    "keywords": ["写字", "记录", "认真", "笔记", "思考"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "__φ(。。)",
+    "keywords": ["写字", "记录", "笔记", "专注", "工作"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "__φ(．．;)",
+    "keywords": ["写字", "记录", "紧张", "流汗", "笔记"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "ヾ( `ー´)シφ__",
+    "keywords": ["写字", "记录", "得意", "认真", "笔记", "奋笔疾书"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "__〆(￣ー￣ )",
+    "keywords": ["写字", "记录", "完成", "签名", "笔记"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "....φ(・∀・*)",
+    "keywords": ["写字", "记录", "开心", "笔记", "学习"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "___〆(・∀・)",
+    "keywords": ["写字", "记录", "完成", "开心", "签名"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "( ^▽^)ψ__",
+    "keywords": ["写字", "记录", "开心", "笔记", "学习"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "....φ(︶▽︶)φ....",
+    "keywords": ["写字", "记录", "开心", "笔记", "愉快"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "( . .)φ__",
+    "keywords": ["写字", "记录", "专注", "认真", "笔记"],
+    "weight": 1.0,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "__φ(◎◎ヘ)",
+    "keywords": ["写字", "记录", "疲惫", "困", "笔记"],
+    "weight": 0.9,
+    "category": "学习工作"
+  },
+  {
+    "kaomoji": "☆ﾐ(o*･ω･)ﾉ",
+    "keywords": ["跑", "奔跑", "逃跑", "快速", "冲"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "C= C= C= C= C=┌(;・ω・)┘",
+    "keywords": ["跑", "奔跑", "逃跑", "快速", "狂奔"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "─=≡Σ((( つ＞＜)つ",
+    "keywords": ["跑", "奔跑", "逃跑", "惊恐", "快速"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "ε=ε=ε=ε=┌(;￣▽￣)┘",
+    "keywords": ["跑", "奔跑", "逃跑", "开心", "快速"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "ε=ε=┌( >_<)┘",
+    "keywords": ["跑", "奔跑", "逃跑", "着急", "快速"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "C= C= C= C=┌( `ー´)┘",
+    "keywords": ["跑", "奔跑", "得意", "快速", "冲"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "ε===(っ≧ω≦)っ",
+    "keywords": ["跑", "奔跑", "冲", "开心", "兴奋"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "ヽ(￣д￣;)ノ=3=3=3",
+    "keywords": ["跑", "奔跑", "逃跑", "惊慌", "快速"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "。。。ミヽ(。＞＜)ノ",
+    "keywords": ["跑", "奔跑", "逃跑", "惊恐", "快速", "害怕"],
+    "weight": 1.0,
+    "category": "动作状态"
+  },
+  {
+    "kaomoji": "[(－－)]..zzZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "困", "休息"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(－_－) zzZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "困", "休息"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(∪｡∪)｡｡｡zzZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "可爱", "困"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(－ω－) zzZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "困", "休息"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(￣o￣) zzZZzzZZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "大睡", "困"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(( _ _ ))..zzzZZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "疲惫", "困"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(￣ρ￣)..zzZZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "流口水", "困"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(－.－)...zzz",
+    "keywords": ["睡觉", "睡眠", "打鼾", "困", "休息"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(＿ ＿*) Z z z",
+    "keywords": ["睡觉", "睡眠", "打鼾", "困", "休息"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(x . x) ~~zzZ",
+    "keywords": ["睡觉", "睡眠", "打鼾", "困", "昏睡"],
+    "weight": 1.0,
+    "category": "困倦疲惫"
+  },
+  {
+    "kaomoji": "(＃`Д´)",
+    "keywords": ["愤怒", "生气", "暴怒", "凶恶"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(`皿´＃)",
+    "keywords": ["愤怒", "咬牙", "暴怒", "凶"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "( ` ω ´ )",
+    "keywords": ["愤怒", "不爽", "生气", "凶", "萌"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ヽ( `д´*)ノ",
+    "keywords": ["愤怒", "生气", "暴怒", "抗议"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(・`ω´・)",
+    "keywords": ["愤怒", "不爽", "生气", "认真", "凶"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(`ー´)",
+    "keywords": ["愤怒", "不满", "傲慢", "凶"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ヽ(`⌒´メ)ノ",
+    "keywords": ["愤怒", "暴怒", "生气", "抗议"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "凸(`△´＃)",
+    "keywords": ["愤怒", "竖中指", "暴怒", "骂人"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "( `ε´ )",
+    "keywords": ["愤怒", "嘟嘴", "不满", "生气"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ψ( ` ∇ ´ )ψ",
+    "keywords": ["愤怒", "恶魔", "邪恶", "坏笑"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ヾ(`ヘ´)ﾉﾞ",
+    "keywords": ["愤怒", "生气", "抗议", "不服"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ヽ(‵﹏´)ノ",
+    "keywords": ["愤怒", "哭泣", "委屈", "难过"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ﾒ` ﾛ ´)",
+    "keywords": ["愤怒", "凶恶", "暴怒", "生气"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(╬`益´)",
+    "keywords": ["愤怒", "暴怒", "凶恶", "咬牙"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "┌∩┐(◣_◢)┌∩┐",
+    "keywords": ["愤怒", "竖中指", "骂人", "挑衅"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "凸( ` ﾛ ´ )凸",
+    "keywords": ["愤怒", "竖中指", "骂人", "挑衅"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "Σ(▼□▼メ)",
+    "keywords": ["愤怒", "凶恶", "暴怒", "震怒"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(°ㅂ°╬)",
+    "keywords": ["愤怒", "生气", "暴怒", "瞪眼", "不爽"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ψ(▼へ▼メ)～→",
+    "keywords": ["愤怒", "恶魔", "攻击", "邪恶"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ノ°益°)ノ",
+    "keywords": ["愤怒", "掀桌", "暴怒", "抗议"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(҂ `з´ )",
+    "keywords": ["愤怒", "嘟嘴", "生气", "不满", "萌"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(‡▼益▼)",
+    "keywords": ["愤怒", "凶恶", "暴怒", "咬牙"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(҂` ﾛ ´)凸",
+    "keywords": ["愤怒", "竖中指", "骂人", "挑衅"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "((╬◣﹏◢))",
+    "keywords": ["愤怒", "暴怒", "凶恶", "生气"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "٩(╬ʘ益ʘ╬)۶",
+    "keywords": ["愤怒", "暴怒", "凶恶", "抗议"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(╬ Ò﹏Ó)",
+    "keywords": ["愤怒", "哭泣", "委屈", "暴怒"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "＼＼٩(๑`^´๑)۶／／",
+    "keywords": ["愤怒", "生气", "抗议", "不服", "萌"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(凸ಠ益ಠ)凸",
+    "keywords": ["愤怒", "竖中指", "骂人", "挑衅"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "↑_(ΦwΦ)Ψ",
+    "keywords": ["恶魔", "邪恶", "坏笑"],
+    "weight": 1.0,
+    "category": ""
+  },
+  {
+    "kaomoji": "←~(Ψ▼ｰ▼)∈",
+    "keywords": ["愤怒", "恶魔", "邪恶", "凶恶", "无语"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "୧((#Φ益Φ#))୨",
+    "keywords": ["愤怒", "暴怒", "凶恶", "咬牙"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "٩(ఠ益ఠ)۶",
+    "keywords": ["愤怒", "生气", "不满", "抗议"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ﾉಥ益ಥ)ﾉ",
+    "keywords": ["愤怒", "哭泣", "委屈", "暴怒"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ノ_<。)",
+    "keywords": ["难过", "哭泣", "伤心", "委屈"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(-_-)",
+    "keywords": [ "沮丧", "无奈", "无力"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(´-ω-`)",
+    "keywords": ["难过", "沮丧", "疲惫", "无奈"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": ".･ﾟﾟ･(／ω＼)･ﾟﾟ･.",
+    "keywords": ["难过", "哭泣", "伤心", "遮脸", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(μ_μ)",
+    "keywords": ["难过", "沮丧", "疲惫", "无力"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ﾉД`)",
+    "keywords": ["难过", "哭泣", "伤心", "痛苦"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(-ω-、)",
+    "keywords": ["难过", "沮丧", "无奈", "疲惫", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "。゜゜(´Ｏ`) ゜゜。",
+    "keywords": ["难过", "哭泣", "大哭", "伤心", "眼泪", "嚎啕大哭"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "o(TヘTo)",
+    "keywords": ["难过", "哭泣", "大哭", "痛苦", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "( ; ω ; )",
+    "keywords": ["难过", "哭泣", "伤心", "委屈", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(｡╯︵╰｡)",
+    "keywords": ["难过", "伤心", "沮丧", "失落"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "｡･ﾟﾟ*(>д<)*ﾟﾟ･｡",
+    "keywords": ["难过", "哭泣", "大哭", "痛苦"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "( ﾟ，_ゝ｀)",
+    "keywords": ["难过", "无奈", "沮丧", "疲惫", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(个_个)",
+    "keywords": ["难过", "无奈", "无语", "沮丧"],
+    "weight": 0.9,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(╯︵╰,)",
+    "keywords": ["难过", "伤心", "沮丧", "失落", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "｡･ﾟ(ﾟ><ﾟ)ﾟ･｡",
+    "keywords": ["难过", "哭泣", "痛苦", "伤心", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "( ╥ω╥ )",
+    "keywords": ["难过", "哭泣", "伤心", "委屈", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(╯_╰)",
+    "keywords": ["难过", "沮丧", "无奈", "失落"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(╥_╥)",
+    "keywords": ["难过", "哭泣", "伤心", "痛苦", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": ".｡･ﾟﾟ･(＞_＜)･ﾟﾟ･｡.",
+    "keywords": ["难过", "哭泣", "大哭", "痛苦", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(／ˍ・、)",
+    "keywords": ["难过", "哭泣", "伤心", "遮脸", "擦眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ノ_<、)",
+    "keywords": ["难过", "哭泣", "伤心", "委屈", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(╥﹏╥)",
+    "keywords": ["难过", "哭泣", "伤心", "委屈", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "｡ﾟ(｡ﾉωヽ｡)ﾟ｡",
+    "keywords": ["难过", "哭泣", "大哭", "遮脸", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(つω`｡)",
+    "keywords": ["难过", "哭泣", "伤心", "委屈", "擦眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(｡T ω T｡)",
+    "keywords": ["难过", "哭泣", "大哭", "伤心", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ﾉω･､)",
+    "keywords": ["难过", "哭泣", "伤心", "委屈", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "･ﾟ･(｡>ω<｡)･ﾟ･",
+    "keywords": ["开心", "闪亮", "萌", "笑"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(T_T)",
+    "keywords": ["难过", "哭泣", "伤心", "痛苦"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(>_<)",
+    "keywords": ["难过", "痛苦", "烦恼", "困扰"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(っ˘̩╭╮˘̩)っ",
+    "keywords": ["难过", "哭泣", "需要拥抱", "伤心", "哭脸"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "｡ﾟ･ (>﹏<) ･ﾟ｡",
+    "keywords": ["难过", "哭泣", "痛苦", "伤心", "难受"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "o(〒﹏〒)o",
+    "keywords": ["难过", "哭泣", "大哭", "伤心", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(｡•́︿•̀｡)",
+    "keywords": ["难过", "伤心", "沮丧", "委屈"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ಥ﹏ಥ)",
+    "keywords": ["难过", "哭泣", "伤心", "痛苦", "眼泪"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "~(>_<~)",
+    "keywords": ["疼痛", "痛苦", "受伤", "难受"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "☆⌒(> _ <)",
+    "keywords": ["疼痛", "头疼", "痛苦", "难受"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "☆⌒(>。<)",
+    "keywords": ["疼痛", "头疼", "痛苦", "受伤"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(☆_@)",
+    "keywords": ["疼痛", "晕", "受伤", "眩晕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(×_×)",
+    "keywords": ["疼痛", "晕倒", "昏迷", "眩晕", "死亡"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(x_x)",
+    "keywords": ["疼痛", "晕倒", "昏迷", "死亡"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(×_×)⌒☆",
+    "keywords": ["疼痛", "被打", "晕倒", "受伤"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(x_x)⌒☆",
+    "keywords": ["疼痛", "被打", "晕倒", "受伤"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(×﹏×)",
+    "keywords": ["疼痛", "痛苦", "难受", "晕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "☆(＃××)",
+    "keywords": ["疼痛", "被打", "晕倒", "受伤"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(＋_＋)",
+    "keywords": ["疼痛", "晕", "眩晕", "不适"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "[ ± _ ± ]",
+    "keywords": ["疼痛", "晕", "眩晕", "不适"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "٩(× ×)۶",
+    "keywords": ["疼痛", "晕倒", "昏迷", "受伤"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "_:(´ཀ`」 ∠):_",
+    "keywords": ["疼痛", "累", "无力", "倒下", "吐血"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ノωヽ)",
+    "keywords": ["恐惧", "害怕", "遮脸", "惊恐"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(／。＼)",
+    "keywords": ["恐惧", "害怕", "遮脸", "不敢看"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(ﾉ_ヽ)",
+    "keywords": ["恐惧", "害怕", "遮脸", "羞愧"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "..・ヾ(。＞＜)シ",
+    "keywords": ["恐惧", "害怕", "逃跑", "惊恐", "跑"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(″ロ゛)",
+    "keywords": ["恐惧", "惊恐", "害怕", "颤抖"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(;;;*_*)",
+    "keywords": ["恐惧", "害怕", "紧张", "冷汗"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(・人・)",
+    "keywords": ["恐惧", "祈祷", "害怕", "求饶", "合掌"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "＼(〇_ｏ)／",
+    "keywords": ["恐惧", "惊恐", "举手投降", "害怕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(/ω＼)",
+    "keywords": ["恐惧", "害怕", "遮脸", "不敢看"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(/_＼)",
+    "keywords": ["恐惧", "害怕", "遮脸"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "〜(＞＜)〜",
+    "keywords": ["恐惧", "害怕", "颤抖", "惊恐"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "Σ(°△°|||)︴",
+    "keywords": ["恐惧", "惊恐", "震惊", "害怕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "(((＞＜)))",
+    "keywords": ["恐惧", "害怕", "颤抖", "瑟瑟发抖"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "{{ (>_<) }}",
+    "keywords": ["恐惧", "害怕", "颤抖", "瑟瑟发抖"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "＼(º □ º l|l)/",
+    "keywords": ["恐惧", "惊恐", "吓坏了", "害怕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "〣( ºΔº )〣",
+    "keywords": ["恐惧", "惊恐", "颤抖", "害怕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "▓▒░(°◡°)░▒▓",
+    "keywords": ["恐惧", "隐藏", "躲藏", "害怕"],
+    "weight": 1.0,
+    "category": "消极情绪"
+  },
+  {
+    "kaomoji": "ヽ(ー_ー )ノ",
+    "keywords": ["无所谓", "无奈", "耸肩", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ヽ(´ー` )┌",
+    "keywords": ["无所谓", "耸肩", "随便", "无奈"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐('～` )┌",
+    "keywords": ["无所谓", "耸肩", "无奈", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ヽ(　￣д￣)ノ",
+    "keywords": ["无所谓", "无语", "无奈"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐(￣ヘ￣)┌",
+    "keywords": ["无所谓", "1.1耸肩", "不屑", "1.2随便", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ヽ(￣～￣　)ノ",
+    "keywords": ["无所谓", "耸肩", "随便", "无奈", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮(￣_￣)╭",
+    "keywords": ["无所谓", "耸肩", "随便", "无奈", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ヽ(ˇヘˇ)ノ",
+    "keywords": ["无所谓", "耸肩", "随便", "无奈"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐(￣～￣)┌",
+    "keywords": ["无所谓", "耸肩", "随便", "无奈", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐(︶▽︶)┌",
+    "keywords": ["无所谓", "耸肩", "开心", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮(￣～￣)╭",
+    "keywords": ["无所谓", "耸肩", "随便", "无奈", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "¯\\_(ツ)_/¯",
+    "keywords": ["无所谓", "耸肩", "不知道", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐( ´ д ` )┌",
+    "keywords": ["无所谓", "耸肩", "无语", "无奈"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮(︶︿︶)╭",
+    "keywords": ["无所谓", "耸肩", "无奈", "难过"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐(￣∀￣)┌",
+    "keywords": ["无所谓", "耸肩", "开心", "随便", "看戏"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐( ˘ ､ ˘ )┌",
+    "keywords": ["无所谓", "耸肩", "无奈", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮(︶▽︶)╭",
+    "keywords": ["无所谓", "耸肩", "开心", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮( ˘ ､ ˘ )╭",
+    "keywords": ["无所谓", "耸肩", "无奈", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐( ˘_˘ )┌",
+    "keywords": ["无所谓", "耸肩", "无奈", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮( ˘_˘ )╭",
+    "keywords": ["无所谓", "耸肩", "无奈", "随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐(￣ヮ￣)┌",
+    "keywords": ["无所谓", "耸肩", "开心", "1.05随便"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ᕕ( ᐛ )ᕗ",
+    "keywords": ["无所谓", "开心", "随便", "走路"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(￣ω￣;)",
+    "keywords": ["困惑", "思考", "流汗", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "σ(￣、￣〃)",
+    "keywords": ["困惑", "思考", "疑问", "挠头", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(￣～￣;)",
+    "keywords": ["困惑", "疑问", "无奈", "流汗", "撇嘴"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(-_-;)・・・",
+    "keywords": ["困惑", "无语", "思考", "无奈", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐('～`;)┌",
+    "keywords": ["困惑", "耸肩", "无奈", "流汗"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(・_・ヾ",
+    "keywords": ["困惑", "挠头", "思考", "1.05疑问", "懵"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(〃￣ω￣〃ゞ",
+    "keywords": ["困惑", "挠头", "害羞", "不好意思"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "┐(￣ヘ￣;)┌",
+    "keywords": ["困惑", "1.1耸肩", "无奈", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(・_・;)",
+    "keywords": ["困惑", "流汗", "尴尬", "无奈"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(￣_￣)・・・",
+    "keywords": ["困惑", "思考", "无语", "疑问"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "╮(￣ω￣;)╭",
+    "keywords": ["困惑", "耸肩", "无奈", "流汗"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(¯ . ¯;)",
+    "keywords": ["困惑", "无奈", "流汗", "尴尬"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(＠_＠)",
+    "keywords": ["困惑", "晕", "不解", "迷糊"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(・・;)ゞ",
+    "keywords": ["困惑", "挠头", "流汗", "尴尬"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "Σ(￣。￣ﾉ)",
+    "keywords": ["困惑", "惊讶", "疑问", "不解"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(・・ ) ?",
+    "keywords": ["困惑", "1.1疑问", "不解", "好奇"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(•ิ_•ิ)?",
+    "keywords": ["困惑", "疑问", "好奇", "不解", "认真"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(◎ ◎)ゞ",
+    "keywords": ["困惑", "挠头", "迷糊", "晕"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(ーー;)",
+    "keywords": ["困惑", "无语", "无奈", "流汗"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ლ(ಠ_ಠ ლ)",
+    "keywords": ["困惑", "无语", "疑问", "不解"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ლ(¯ロ¯''ლ)",
+    "keywords": ["困惑", "无语", "疑问", "无奈", "张嘴"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(¯ . ¯٥)",
+    "keywords": ["困惑", "无奈", "疲惫", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(¯ ¯٥)",
+    "keywords": ["困惑", "无奈", "疲惫", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(￢_￢)",
+    "keywords": ["怀疑", "不信", "质疑", "斜眼", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(→_→)",
+    "keywords": ["怀疑", "斜眼", "不屑", "鄙视"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(￢ ￢)",
+    "keywords": ["怀疑", "不信", "质疑", "斜眼", "无语"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(￢‿￢ )",
+    "keywords": ["怀疑", "不信", "坏笑", "狡黠"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(↼_↼)",
+    "keywords": ["怀疑", "斜眼", "不屑", "质疑"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(⇀_⇀)",
+    "keywords": ["怀疑", "斜眼", "不屑", "质疑"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(ᓀ ᓀ)",
+    "keywords": ["怀疑", "斜眼", "质疑", "好奇"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "w(°ｏ°)w",
+    "keywords": ["惊讶", "震惊", "吃惊", "哇"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "ヽ(°〇°)ﾉ",
+    "keywords": ["惊讶", "震惊", "吃惊", "举手", "张嘴"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "Σ(O_O)",
+    "keywords": ["惊讶", "震惊", "吃惊", "意外"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "Σ(°ロ°)",
+    "keywords": ["惊讶", "震惊", "吃惊", "意外", "张嘴"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(⊙_⊙)",
+    "keywords": ["惊讶", "震惊", "瞪眼", "吃惊"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(o_O)",
+    "keywords": ["惊讶", "疑惑", "吃惊", "好奇", "大小眼", "观察"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(O_O;)",
+    "keywords": ["惊讶", "震惊", "紧张", "流汗"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(O.O)",
+    "keywords": ["惊讶", "震惊", "瞪眼", "吃惊"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(°ロ°) !",
+    "keywords": ["惊讶", "震惊", "吃惊", "意外"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(o_O) !",
+    "keywords": ["惊讶", "震惊", "吃惊", "疑惑"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(□_□)",
+    "keywords": ["惊讶", "震惊", "瞪眼", "呆滞"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "Σ(□_□)",
+    "keywords": ["惊讶", "震惊", "吃惊", "呆滞"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "∑(O_O;)",
+    "keywords": ["惊讶", "震惊", "吃惊", "紧张"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "( : ౦ ‸ ౦ : )",
+    "keywords": ["惊讶", "震惊", "吃惊", "难过"],
+    "weight": 1.0,
+    "category": "中性情绪"
+  },
+  {
+    "kaomoji": "(=^･ω･^=)",
+    "keywords": ["猫", "可爱", "萌", "卖萌", "猫咪"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=^･ｪ･^=)",
+    "keywords": ["猫", "可爱", "萌", "好奇", "猫咪"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=①ω①=)",
+    "keywords": ["猫", "可爱", "萌", "圆眼", "猫咪", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( =ω=)..nyaa",
+    "keywords": ["猫", "可爱", "萌", "喵", "叫声", "猫咪", "卖萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(= ; ｪ ; =)",
+    "keywords": ["猫", "可爱", "萌", "委屈", "猫咪", "流汗"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=`ω´=)",
+    "keywords": ["猫", "生气", "凶", "萌", "猫咪", "不满"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=^‥^=)",
+    "keywords": ["猫", "可爱", "萌", "呆萌", "猫咪"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( =ノωヽ=)",
+    "keywords": ["猫", "可爱", "萌", "害羞", "猫咪", "遮脸"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=⌒‿‿⌒=)",
+    "keywords": ["猫", "可爱", "开心", "微笑", "猫咪", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=^ ◡ ^=)",
+    "keywords": ["猫", "可爱", "开心", "微笑", "猫咪", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(=^-ω-^=)",
+    "keywords": ["猫", "可爱", "满足", "闭眼", "猫咪", "舒适"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヾ(=`ω´=)ノ\"",
+    "keywords": ["猫", "生气", "凶", "抗议", "猫咪", "不满"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(＾• ω •＾)",
+    "keywords": ["猫", "可爱", "开心", "萌", "猫咪", "温柔"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(/ =ω=)/",
+    "keywords": ["猫", "可爱", "举手", "打招呼", "猫咪", "欢迎"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ฅ(•ㅅ•❀)ฅ",
+    "keywords": ["猫", "可爱", "萌", "猫爪", "猫咪", "花", "举爪", "卖萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ฅ(• ɪ •)ฅ",
+    "keywords": ["猫", "可爱", "萌", "猫爪", "猫咪", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ଲ(ⓛ ω ⓛ)ଲ",
+    "keywords": ["猫", "可爱", "萌", "猫咪", "喜欢", "举爪", "卖萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(^=◕ᴥ◕=^)",
+    "keywords": ["猫", "可爱", "萌", "开心", "猫咪", "豆豆眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( =ω= )",
+    "keywords": ["猫", "可爱", "满足", "舒适", "猫咪", "惬意"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(^˵◕ω◕˵^)",
+    "keywords": ["猫", "可爱", "萌", "开心", "猫咪", "豆豆眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(^◔ᴥ◔^)",
+    "keywords": ["猫", "可爱", "萌", "呆萌", "猫咪", "豆豆眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(^◕ᴥ◕^)",
+    "keywords": ["猫", "可爱", "萌", "开心", "猫咪", "豆豆眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ต(=ω=)ต",
+    "keywords": ["猫", "可爱", "萌", "猫爪", "猫咪", "举手", "困"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( Φ ω Φ )",
+    "keywords": ["猫", "可爱", "萌", "认真", "猫咪", "注视", "盯", "看"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ฅ(^◕ᴥ◕^)ฅ",
+    "keywords": ["猫", "可爱", "萌", "猫爪", "猫咪", "开心"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( ´(ｴ)ˋ )",
+    "keywords": ["熊", "可爱", "萌", "小熊", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(*￣(ｴ)￣*)",
+    "keywords": ["熊", "可爱", "满足", "小熊", "开心", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヽ(￣(ｴ)￣)ﾉ",
+    "keywords": ["熊", "可爱", "举手", "小熊", "打招呼", "欢呼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(／￣(ｴ)￣)／",
+    "keywords": ["熊", "可爱", "举手", "小熊", "欢迎", "拥抱"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(￣(ｴ)￣)",
+    "keywords": ["熊", "可爱", "满足", "小熊", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヽ( ˋ(ｴ)´ )ﾉ",
+    "keywords": ["熊", "生气", "凶", "小熊", "不满", "抗议"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "⊂(￣(ｴ)￣)⊃",
+    "keywords": ["熊", "可爱", "拥抱", "小熊", "抱抱", "温暖"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(／(ｴ)＼)",
+    "keywords": ["熊", "可爱", "害羞", "小熊", "遮脸", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "⊂(´(ェ)ˋ)⊃",
+    "keywords": ["熊", "可爱", "拥抱", "小熊", "抱抱", "温柔"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(/-(ｴ)-＼)",
+    "keywords": ["熊", "可爱", "害羞", "小熊", "遮脸", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(/°(ｴ)°)/",
+    "keywords": ["熊", "可爱", "举手", "小熊", "惊讶", "打招呼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ʕ ᵔᴥᵔ ʔ",
+    "keywords": ["熊", "可爱", "开心", "小熊", "微笑", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ʕ •ᴥ• ʔ",
+    "keywords": ["熊", "可爱", "萌", "小熊", "呆萌", "豆豆眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ʕ •̀ ω •́ ʔ",
+    "keywords": ["熊", "可爱", "认真", "小熊", "萌", "坚定"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ʕ •̀ o •́ ʔ",
+    "keywords": ["熊", "可爱", "惊讶", "小熊", "张嘴", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ʕಠᴥಠʔ",
+    "keywords": ["熊", "可爱", "认真", "小熊", "严肃", "注视"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "∪＾ェ＾∪",
+    "keywords": ["狗", "可爱", "开心", "小狗", "微笑", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "∪･ω･∪",
+    "keywords": ["狗", "可爱", "萌", "小狗", "呆萌", "温柔"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "∪￣-￣∪",
+    "keywords": ["狗", "可爱", "无语", "小狗", "无奈", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "∪･ｪ･∪",
+    "keywords": ["狗", "可爱", "萌", "小狗", "好奇", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "Ｕ^皿^Ｕ",
+    "keywords": ["狗", "可爱", "开心", "小狗", "大笑", "兴奋"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ＵＴｪＴＵ",
+    "keywords": ["狗", "可爱", "哭泣", "小狗", "委屈", "伤心"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "U^ｪ^U",
+    "keywords": ["狗", "可爱", "开心", "小狗", "微笑", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "V●ᴥ●V",
+    "keywords": ["狗", "可爱", "萌", "小狗", "圆眼", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "U・ᴥ・U",
+    "keywords": ["狗", "可爱", "萌", "小狗", "呆萌", "豆豆眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(≧ x ≦)＼",
+    "keywords": ["兔子", "可爱", "萌", "小兔", "兔耳", "开心"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(･ × ･)＼",
+    "keywords": ["兔子", "可爱", "萌", "小兔", "兔耳", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(=´x`=)＼",
+    "keywords": ["兔子", "可爱", "萌", "小兔", "兔耳", "满足"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(^ x ^)＼",
+    "keywords": ["兔子", "可爱", "开心", "小兔", "兔耳", "微笑"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(=･ x ･=)＼",
+    "keywords": ["兔子", "可爱", "萌", "小兔", "兔耳", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(^ × ^)＼",
+    "keywords": ["兔子", "可爱", "开心", "小兔", "兔耳", "微笑"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(＞×＜)＼",
+    "keywords": ["兔子", "可爱", "难过", "小兔", "兔耳", "委屈"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "／(˃ᆺ˂)＼",
+    "keywords": ["兔子", "可爱", "开心", "小兔", "兔耳", "兴奋"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( ´(00)ˋ )",
+    "keywords": ["猪", "可爱", "萌", "小猪", "猪鼻", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(￣(ω)￣)",
+    "keywords": ["猪", "可爱", "满足", "小猪", "猪鼻", "惬意"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヽ( ˋ(00)´ )ノ",
+    "keywords": ["猪", "生气", "凶", "小猪", "猪鼻", "不满"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( ´(oo)ˋ )",
+    "keywords": ["猪", "可爱", "萌", "小猪", "猪鼻", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "＼(￣(oo)￣)／",
+    "keywords": ["猪", "可爱", "举手", "小猪", "猪鼻", "欢呼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "｡ﾟ(ﾟ´(00)`ﾟ)ﾟ｡",
+    "keywords": ["猪", "可爱", "哭泣", "小猪", "猪鼻", "伤心"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(￣(00)￣)",
+    "keywords": ["猪", "可爱", "满足", "小猪", "猪鼻", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(ˆ(oo)ˆ)",
+    "keywords": ["猪", "可爱", "开心", "小猪", "猪鼻", "微笑"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(￣Θ￣)",
+    "keywords": ["鸟", "可爱", "萌", "小鸟", "鸟嘴", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(`･Θ･´)",
+    "keywords": ["鸟", "可爱", "认真", "小鸟", "鸟嘴", "严肃"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "( ˋ Θ ´ )",
+    "keywords": ["鸟", "生气", "凶", "小鸟", "鸟嘴", "不满"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(◉Θ◉)",
+    "keywords": ["鸟", "可爱", "惊讶", "小鸟", "鸟嘴", "瞪眼"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "＼( ˋ Θ ´ )／",
+    "keywords": ["鸟", "生气", "举手", "小鸟", "鸟嘴", "抗议"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(･θ･)",
+    "keywords": ["鸟", "可爱", "萌", "小鸟", "鸟嘴", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(・Θ・)",
+    "keywords": ["鸟", "可爱", "萌", "小鸟", "鸟嘴", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヾ(￣◇￣)ノ〃",
+    "keywords": ["可爱", "举手", "鸟", "打招呼", "挥手", "0.7无奈"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(°)#))<<",
+    "keywords": ["鱼", "可爱", "萌", "小鱼", "游泳", "海洋"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "<・ )))><<",
+    "keywords": ["鱼", "可爱", "萌", "小鱼", "游泳", "海洋"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ζ°)))彡",
+    "keywords": ["鱼", "可爱", "萌", "小鱼", "游泳", "快速"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": ">°))))彡",
+    "keywords": ["鱼", "可爱", "萌", "小鱼", "游泳", "快速"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "(°))<<",
+    "keywords": ["鱼", "可爱", "萌", "小鱼", "游泳", "海洋"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": ">^)))<～～",
+    "keywords": ["鱼", "可爱", "开心", "小鱼", "游泳", "海洋"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "≧( ° ° )≦",
+    "keywords": ["鱼", "可爱", "惊讶", "小鱼", "瞪眼", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\╭(ఠఠ益ఠఠ)╮/\\╱\\",
+    "keywords": ["蜘蛛", "恐怖", "多眼", "昆虫", "吓人", "凶"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\╭(ರರ⌓ರರ)╮/\\╱\\",
+    "keywords": ["蜘蛛", "恐怖", "多眼", "昆虫", "吓人", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\╭༼ ººل͟ºº ༽╮/\\╱\\",
+    "keywords": ["蜘蛛", "恐怖", "多眼", "昆虫", "吓人", "怪异"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\╭( ͡°͡° ͜ʖ ͡°͡°)╮/\\╱\\",
+    "keywords": ["蜘蛛", "恐怖", "多眼", "昆虫", "坏笑", "怪异"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\╭[ ᴼᴼ ౪ ᴼᴼ]╮/\\╱\\",
+    "keywords": ["蜘蛛", "恐怖", "多眼", "昆虫", "吓人", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\( •̀ ω •́ )/\\╱\\",
+    "keywords": ["蜘蛛", "可爱", "萌", "昆虫", "认真", "呆萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "/╲/\\╭[☉﹏☉]╮/\\╱\\",
+    "keywords": ["蜘蛛", "恐怖", "多眼", "昆虫", "害怕", "萌"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヾ(・ω・)メ(・ω・)ノ",
+    "keywords": ["双人", "朋友", "击掌", "打招呼", "互动", "默契"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "ヽ(∀° )人( °∀)ノ",
+    "keywords": ["双人", "朋友", "击掌", "开心", "庆祝", "欢呼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ( ⌒o⌒)人(⌒-⌒ )ﾉ",
+    "keywords": ["双人", "朋友", "击掌", "开心", "友谊", "团结"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*^ω^)八(⌒▽⌒)八(-‿‿- )ヽ",
+    "keywords": ["多人", "朋友", "击掌", "开心", "友谊", "聚会", "团结"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "＼(＾∀＾)メ(＾∀＾)ノ",
+    "keywords": ["双人", "朋友", "击掌", "开心", "庆祝", "兴奋"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヾ(￣ー￣(≧ω≦*)ゝ",
+    "keywords": ["双人", "朋友", "情侣", "安慰", "拥抱", "亲密", "温柔"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "ヽ( ⌒ω⌒)人(=^‥^= )ﾉ",
+    "keywords": ["双人", "朋友", "击掌", "人猫", "宠物", "可爱", "开心"],
+    "weight": 1.0,
+    "category": "动物"
+  },
+  {
+    "kaomoji": "ヽ(≧◡≦)八(o^ ^o)ノ",
+    "keywords": ["双人", "朋友", "击掌", "开心", "兴奋", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(*・∀・)爻(・∀・*)",
+    "keywords": ["双人", "朋友", "击掌", "交叉手", "开心", "默契", "约定"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "｡*:☆(・ω・人・ω・)｡:゜☆｡",
+    "keywords": ["双人", "朋友", "情侣", "亲密", "温柔", "幸福", "闪亮"],
+    "weight": 1.0,
+    "category": "爱与浪漫"
+  },
+  {
+    "kaomoji": "o(^^o)(o^^o)(o^^o)(o^^)o",
+    "keywords": ["多人", "朋友", "排队", "整齐", "可爱", "团结", "开心"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(((￣(￣(￣▽￣)￣)￣)))",
+    "keywords": ["多人", "朋友", "围在一起", "拥抱", "团结", "温暖", "聚会"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(°(°ω(°ω°(☆ω☆)°ω°)ω°)°)",
+    "keywords": ["多人", "朋友", "围在一起", "拥抱", "团结", "温暖", "可爱"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヾ(・ω・`)ノヾ(´・ω・)ノ゛",
+    "keywords": ["双人", "朋友", "挥手", "告别", "再见", "分离"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "Ψ( `∀)(∀´ )Ψ",
+    "keywords": ["双人", "朋友", "恶魔", "恶作剧", "坏笑", "调皮", "默契"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "(っ˘▽˘)(˘▽˘)˘▽˘ς)",
+    "keywords": ["多人", "朋友", "开心", "可爱", "温柔", "聚会", "幸福"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(((*°▽°*)八(*°▽°*)))",
+    "keywords": ["双人", "朋友", "击掌", "开心", "兴奋", "庆祝"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "☆ヾ(*´・∀・)ﾉヾ(・∀・`*)ﾉ☆",
+    "keywords": ["双人", "朋友", "挥手", "开心", "打招呼", "闪亮", "欢迎"],
+    "weight": 1.0,
+    "category": "打招呼"
+  },
+  {
+    "kaomoji": "(*＾ω＾)人(＾ω＾*)",
+    "keywords": ["双人", "朋友", "击掌", "开心", "可爱", "友谊"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "٩(๑･ิᴗ･ิ)۶٩(･ิᴗ･ิ๑)۶",
+    "keywords": ["双人", "朋友", "举手", "开心", "庆祝", "欢呼", "兴奋"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "(☞°ヮ°)☞ ☜(°ヮ°☜)",
+    "keywords": ["双人", "朋友", "互相指", "俏皮", "调皮", "玩耍", "默契"],
+    "weight": 1.0,
+    "category": "俏皮可爱"
+  },
+  {
+    "kaomoji": "＼(▽￣ \\ (￣▽￣) / ￣▽)／",
+    "keywords": ["多人", "朋友", "举手", "开心", "庆祝", "欢呼", "聚会"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "\\( ˙▿˙ )/\\( ˙▿˙ )/",
+    "keywords": ["双人", "朋友", "举手", "开心", "庆祝", "欢呼"],
+    "weight": 1.0,
+    "category": "积极情绪"
+  },
+  {
+    "kaomoji": "ヽ( ･∀･)ﾉ_θ彡☆Σ(ノ `Д´)ノ",
+    "keywords": ["双人", "打斗", "扔球", "攻击", "被打", "特效", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(*´∇`)┌θ☆(ﾉ>_<)ﾉ",
+    "keywords": ["双人", "打斗", "扔球", "攻击", "被打", "特效", "难受"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "( ￣ω￣)ノﾞ⌒☆ﾐ(o _ _)o",
+    "keywords": ["双人", "打斗", "攻击", "特效", "昏迷", "晕倒", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(*`0´)θ☆(メ°皿°)ﾉ",
+    "keywords": ["双人", "打斗", "攻击", "扔球", "愤怒", "生气", "特效"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(o¬‿¬o )...☆ﾐ(*x_x)",
+    "keywords": ["双人", "打斗", "偷袭", "攻击", "昏迷", "坏笑", "特效"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(╬￣皿￣)=○＃(￣#)３￣)",
+    "keywords": ["双人", "打斗", "出拳", "攻击", "被打", "愤怒", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(; -_-)――――――C<―_-)",
+    "keywords": ["双人", "打斗", "刺", "攻击", "武器", "冷漠", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "＜( ￣︿￣)︵θ︵θ︵☆(＞口＜－)",
+    "keywords": ["双人", "打斗", "连续攻击", "扔球", "特效", "不满", "被打"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(￣ε(#￣)☆╰╮o(￣▽￣///)",
+    "keywords": ["双人", "打斗", "亲吻", "攻击", "出拳", "玩笑", "戏谑"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "ヽ(>_<ヽ) ―⊂|=0ヘ(^‿^ )",
+    "keywords": ["双人", "打斗", "攻击", "防御", "武器", "反差", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "ヘ(>_<ヘ) ￢o(￣‿￣ﾒ)",
+    "keywords": ["双人", "打斗", "攻击", "防御", "坏笑", "调皮", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": ",,((( ￣□)_／ ＼_(○￣ ))),,",
+    "keywords": ["双人", "打斗", "踢腿", "飞踢", "对踢", "战斗", "震动"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(҂` ﾛ ´)︻デ═一 ＼(º □ º l|l)/",
+    "keywords": ["双人", "打斗", "枪击", "武器", "惊恐", "攻击", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(╯°Д°)╯︵ /(.□ . ＼)",
+    "keywords": ["双人", "打斗", "掀翻", "愤怒", "攻击", "被打", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(¬_¬'')ԅ(￣ε￣ԅ)",
+    "keywords": ["双人", "打斗", "戳", "调戏", "嘟嘴", "玩笑", "互动"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "/( .□.)＼ ︵╰(°益°)╯︵ /(.□. /)",
+    "keywords": ["多人", "打斗", "掀翻", "混乱", "愤怒", "战斗", "群殴"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(ﾉ-.-)ﾉ….((((((((((((●~* ( >_<)",
+    "keywords": ["双人", "打斗", "扔球", "攻击", "特效", "难受", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "!!(ﾒ￣ ￣)_θ☆°0°)/",
+    "keywords": ["双人", "打斗", "扔球", "攻击", "特效", "惊讶", "被打"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(`⌒*)O-(`⌒´Q)",
+    "keywords": ["双人", "打斗", "出拳", "攻击", "咬牙", "愤怒", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(((ง'ω')و三 ง'ω')ڡ≡　☆⌒ﾐ((x_x)",
+    "keywords": ["多人", "打斗", "连击", "攻击", "昏迷", "特效", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(งಠ_ಠ)ง　σ( •̀ ω •́ σ)",
+    "keywords": ["双人", "打斗", "对峙", "准备战斗", "认真", "反差", "战斗"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(っ•﹏•)っ ✴==≡눈٩(`皿´҂)ง",
+    "keywords": ["双人", "打斗", "发射", "攻击", "委屈", "愤怒", "特效"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "(｢• ω •)｢ (⌒ω⌒`)",
+    "keywords": ["双人", "打斗", "推", "玩闹", "可爱", "互动", "温柔"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "( °ᴗ°)~ð (/❛o❛\\)",
+    "keywords": ["双人", "打斗", "弹", "攻击", "惊讶", "玩笑", "互动"],
+    "weight": 1.0,
+    "category": "战斗互动"
+  },
+  {
+    "kaomoji": "( ・∀・)・・・--------☆",
+    "keywords": ["发射激光", "攻击", "特效", "开心", "武器", "射击"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(/-_・)/D・・・・・------ →",
+    "keywords": ["射箭", "弓箭", "攻击", "武器", "瞄准", "射击"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(^ω^)ノﾞ(((((((((●～*",
+    "keywords": ["扔炸弹", "攻击", "开心", "爆炸", "武器", "投掷"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "( -ω-)／占~~~~~",
+    "keywords": ["喷雾", "攻击", "嫌弃", "防身", "辣椒喷雾", "武器"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(/・・)ノ　　 (( く ((へ",
+    "keywords": ["扔回旋镖", "攻击", "武器", "飞去来器", "投掷"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "―⊂|=0ヘ(^^ )",
+    "keywords": ["注射器", "攻击", "武器", "医疗", "刺", "双人", "打针"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "○∞∞∞∞ヽ(^ー^ )",
+    "keywords": ["挥舞锁链", "攻击", "武器", "开心", "甩动", "铁链"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(; ・_・)――――C",
+    "keywords": ["抓取器", "攻击", "武器", "抓", "伸手", "钩子"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(ಠ o ಠ)¤=[]:::::>",
+    "keywords": ["拿剑", "武器", "攻击", "惊讶", "持剑", "战斗"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(*＾＾)/~~~~~~~~~~◎",
+    "keywords": ["悠悠球", "玩具", "武器", "开心", "甩动", "玩耍"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "￢o(￣-￣ﾒ)",
+    "keywords": ["枪", "武器", "攻击", "瞄准", "射击", "手枪"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "―(T_T)→",
+    "keywords": ["被箭射中", "受伤", "哭泣", "被攻击", "痛苦", "中箭"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "((( ￣□)_／",
+    "keywords": ["挥剑", "攻击", "武器", "剑术", "战斗", "砍"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(ﾒ` ﾛ ´)︻デ═一",
+    "keywords": ["步枪", "武器", "攻击", "射击", "愤怒", "枪"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "( ´-ω･)︻┻┳══━一",
+    "keywords": ["狙击枪", "武器", "攻击", "狙击", "瞄准", "枪"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(ﾒ￣▽￣)︻┳═一",
+    "keywords": ["霰弹枪", "武器", "攻击", "射击", "得意", "枪"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "✴==≡눈٩(`皿´҂)ง",
+    "keywords": ["发射机枪", "攻击", "武器", "愤怒", "连射", "特效", "枪"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "Q(`⌒´Q)",
+    "keywords": ["拳击手套", "拳击", "战斗", "攻击", "准备", "愤怒"],
+    "weight": 1.0,
+    "category": "武器动作"
+  },
+  {
+    "kaomoji": "(ノ ˘_˘)ノ　ζ|||ζ　ζ|||ζ　ζ|||ζ",
+    "keywords": ["召唤", "魔法", "诅咒", "幽灵", "施法", "特效"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(ﾉ≧∀≦)ﾉ ‥…━━━★",
+    "keywords": ["发射魔法", "闪亮", "特效", "开心", "施法", "星星", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(ﾉ>ω<)ノ :｡･:*:･ﾟ'★,｡･:*:･ﾟ'☆",
+    "keywords": ["施展魔法", "闪亮", "特效", "兴奋", "星星", "华丽", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(ノ°∀°)ノ⌒･*:.｡. .｡.:*･゜ﾟ･*☆",
+    "keywords": ["撒魔法", "闪亮", "特效", "开心", "施法", "星星", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "╰( ͡° ͜ʖ ͡° )つ──☆*:・ﾟ",
+    "keywords": ["施魔法", "魔杖", "坏笑", "特效", "闪亮", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(＃￣□￣)o━∈・・━━━━☆",
+    "keywords": ["施展魔法", "三叉戟", "愤怒", "攻击", "特效", "武器", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(⊃｡•́‿•̀｡)⊃━✿✿✿✿✿✿",
+    "keywords": ["施展魔法", "花朵", "可爱", "特效", "治愈", "温柔", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(∩ᄑ_ᄑ)⊃━☆ﾟ*･｡*･:≡( ε:)",
+    "keywords": ["双人", "施魔法", "特效", "攻击", "被打", "魔法对决", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(/￣ー￣)/~~☆'.･.･:★'.･.･:☆",
+    "keywords": ["施展魔法", "闪亮", "特效", "星星", "华丽", "撒", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(∩` ﾛ ´)⊃━炎炎炎炎炎",
+    "keywords": ["火魔法", "火焰", "攻击", "愤怒", "特效", "燃烧", "魔法"],
+    "weight": 1.0,
+    "category": "魔法特效"
+  },
+  {
+    "kaomoji": "(っ˘ڡ˘ς)",
+    "keywords": ["吃", "美味", "满足", "享受", "食物", "好吃", "舔嘴唇"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( o˘◡˘o) ┌iii┐",
+    "keywords": ["蛋糕", "生日", "庆祝", "食物", "甜点", "派对"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "(　'ω')旦~~",
+    "keywords": ["茶", "热饮", "享受", "茶", "惬意", "休闲"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ˘▽˘)っ♨",
+    "keywords": ["热饮", "温暖", "开心", "食物", "享受", "饮料"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "♨o(>_<)o♨",
+    "keywords": ["烫", "热饮", "食物", "难受", "惊讶", "烫手"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ・ω・)o-{{[〃]}}",
+    "keywords": ["吃寿司", "食物", "日本料理", "享受", "美味"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "(　・ω・)⊃-[二二]",
+    "keywords": ["拿食物", "便当", "享受", "日本料理", "盒饭"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ・・)つ―{}@{}@{}-",
+    "keywords": ["烤串", "食物", "烧烤", "美味", "享受", "串烧"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ・・)つ-●●●",
+    "keywords": ["丸子", "食物", "美味", "享受", "串", "团子"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "(*´ー`)旦 旦(￣ω￣*)",
+    "keywords": ["双人", "茶", "聊天", "惬意", "社交", "对坐"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "(*´з`)口ﾟ｡ﾟ口(・∀・ )",
+    "keywords": ["双人", "吃东西", "分享", "开心", "美味", "喂食"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( o^ ^o)且 且(´ω`*)",
+    "keywords": ["双人", "茶", "聊天", "惬意", "温柔", "对坐"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ￣▽￣)[] [](≧▽≦ )",
+    "keywords": ["双人", "干杯", "庆祝", "开心", "喝酒", "碰杯"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( *^^)o∀*∀o(^^* )",
+    "keywords": ["双人", "吃东西", "开心", "分享", "美味", "享受"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ^^)_旦~~　 ~~U_(^^ )",
+    "keywords": ["双人", "茶", "聊天", "惬意", "对坐", "热饮"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "(*￣▽￣)旦 且(´∀`*)",
+    "keywords": ["双人", "茶", "聊天", "开心", "惬意", "对坐"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "-●●●-ｃ(・・ )",
+    "keywords": ["吃串", "食物", "美味", "丸子", "享受", "团子"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "( ・・)つ―●○◎-",
+    "keywords": ["烤串", "食物", "烧烤", "美味", "享受", "串烧"],
+    "weight": 1.0,
+    "category": "饮食生活"
+  },
+  {
+    "kaomoji": "ヾ(´〇`)ﾉ♪♪♪",
+    "keywords": ["唱歌", "音乐", "开心", "演唱", "兴奋", "大声"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "ヘ(￣ω￣ヘ)",
+    "keywords": ["跳舞", "舞蹈", "音乐", "摇摆", "享受", "左摆"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(〜￣▽￣)〜",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "左摇"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "ヽ(o´∀`)ﾉ♪♬",
+    "keywords": ["唱歌", "音乐", "开心", "兴奋", "演唱", "举手"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(ﾉ≧∀≦)ﾉ",
+    "keywords": ["举手", "音乐", "开心", "兴奋", "欢呼", "庆祝"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "♪ヽ(^^ヽ)♪",
+    "keywords": ["跳舞", "音乐", "开心", "舞蹈", "享受", "摇摆"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "♪(/_ _ )/♪",
+    "keywords": ["鞠躬", "音乐", "表演", "谢幕", "礼貌", "感谢"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "♪♬((d⌒ω⌒b))♬♪",
+    "keywords": ["听音乐", "耳机", "享受", "开心", "放松", "陶醉"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "└(￣-￣└))",
+    "keywords": ["跳舞", "舞蹈", "音乐", "摇摆", "动作", "侧身"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "((┘￣ω￣)┘",
+    "keywords": ["跳舞", "舞蹈", "音乐", "摇摆", "动作", "侧身", "开心"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "√(￣‥￣√)",
+    "keywords": ["跳舞", "舞蹈", "音乐", "摇摆", "动作", "姿势"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "└(＾＾)┐",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "动作", "摇摆"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "＼(￣▽￣)＼",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "左摆"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "／(￣▽￣)／",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "右摆"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(￣▽￣)/♫•*¨*•.¸¸♪",
+    "keywords": ["唱歌", "音乐", "开心", "演唱", "特效", "音符"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(^_^♪)",
+    "keywords": ["音乐", "开心", "享受", "愉快", "唱歌", "哼歌"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(~˘▽˘)~",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "左摇"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "~(˘▽˘~)",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "右摇"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "ヾ(⌐■_■)ノ♪",
+    "keywords": ["唱歌", "音乐", "墨镜", "酷", "自信", "潮"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(〜￣△￣)〜",
+    "keywords": ["跳舞", "舞蹈", "音乐", "摇摆", "享受", "放松"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(~‾▽‾)~",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "左摇"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "~(˘▽˘)~",
+    "keywords": ["跳舞", "舞蹈", "音乐", "开心", "摇摆", "对称"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "乁( • ω •乁)",
+    "keywords": ["跳舞", "舞蹈", "音乐", "可爱", "摇摆", "萌"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(｢• ω •)｢",
+    "keywords": ["跳舞", "舞蹈", "音乐", "可爱", "推", "动作"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "⁽⁽◝( • ω • )◜⁾⁾",
+    "keywords": ["跳舞", "舞蹈", "音乐", "可爱", "旋转", "转圈"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "✺◟( • ω • )◞✺",
+    "keywords": ["跳舞", "啦啦队", "音乐", "加油", "助威", "彩球"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "♬♫♪◖(● o ●)◗♪♫♬",
+    "keywords": ["唱歌", "音乐", "大声", "演唱", "兴奋", "高歌"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "( ˘ ɜ˘) ♬♪♫",
+    "keywords": ["唱歌", "音乐", "享受", "嘟嘴", "哼歌", "陶醉"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "♪♪♪ ヽ(ˇ∀ˇ )ゞ",
+    "keywords": ["唱歌", "音乐", "开心", "演唱", "摆手", "节奏"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "(ˇ▽ˇ)ノ♪♬♫",
+    "keywords": ["唱歌", "音乐", "开心", "挥手", "演唱", "音符"],
+    "weight": 1.0,
+    "category": "音乐娱乐"
+  },
+  {
+    "kaomoji": "( ^^)p_____|_o____q(^^ )",
+    "keywords": ["双人", "乒乓球", "运动", "比赛", "打球", "对战"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "(／o^)/ °⊥ ＼(^o＼)",
+    "keywords": ["双人", "排球", "运动", "比赛", "打球", "垫球"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "!(;ﾟoﾟ)o/￣￣￣￣￣￣￣~ >ﾟ))))彡",
+    "keywords": ["钓鱼", "运动", "休闲", "惊讶", "钓到鱼", "上钩"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "ヽ(^o^)ρ┳┻┳°σ(^o^)ノ",
+    "keywords": ["双人", "乒乓球", "运动", "开心", "比赛", "对战"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "(／_^)／　　●　＼(^_＼)",
+    "keywords": ["双人", "篮球", "运动", "传球", "比赛", "投篮"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "\"( (≡|≡))_／ ＼_((≡|≡) )\"",
+    "keywords": ["双人", "剑道", "运动", "对决", "战斗", "武术"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "( ノ-_-)ノﾞ_□ VS □_ヾ(^-^ヽ)",
+    "keywords": ["双人", "游戏", "对战", "电子游戏", "PK", "手柄"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "ヽ(；^ ^)ノﾞ ．．．...___〇",
+    "keywords": ["保龄球", "运动", "投球", "休闲", "玩", "滚球"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "(=O*_*)=O Q(*_*Q)",
+    "keywords": ["双人", "拳击", "运动", "对决", "战斗", "出拳"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  },
+  {
+    "kaomoji": "Ю　○三　＼(￣^￣＼)",
+    "keywords": ["足球", "运动", "射门", "踢球", "比赛", "进球"],
+    "weight": 1.0,
+    "category": "运动游戏"
+  }
+]
