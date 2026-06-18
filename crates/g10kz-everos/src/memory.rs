@@ -28,10 +28,10 @@ const APP_ID:     &str = "default";
 const PROJECT_ID: &str = "default";
 const AGENT_ID:   &str = "g10kz";
 
-const CIRCUIT_THRESHOLD: u32 = 3;
+const CIRCUIT_THRESHOLD: u32 = 5;
 const CIRCUIT_RESET_SECS: u64 = 30;
-const SEARCH_TIMEOUT_MS: u64 = 1500;
-const WRITE_TIMEOUT_MS:  u64 = 8000;   // flush triggers LLM extraction
+const SEARCH_TIMEOUT_MS: u64 = 3000;
+const WRITE_TIMEOUT_MS:  u64 = 20000;  // add() only; flush is fire-and-forget
 const CACHE_TTL_SECS:    u64 = 30;
 
 // ─── MemoryEntry ───────────────────────────────────────────────────────────
@@ -108,8 +108,8 @@ struct AddMsg<'a> {
 }
 
 #[derive(Serialize)]
-struct FlushReq<'a> {
-    session_id:  &'a str,
+struct FlushReq {
+    session_id:  String,
     app_id:      &'static str,
     project_id:  &'static str,
 }
@@ -269,21 +269,25 @@ impl EverosMemory {
             Ok(_) => { debug!("EverOS add_turn: accumulated"); }
         }
 
-        // Force boundary extraction so the memory is searchable immediately.
-        let flush_body = FlushReq { session_id, app_id: APP_ID, project_id: PROJECT_ID };
-        match self.write_client
-            .post(self.url("/api/v1/memory/flush"))
-            .json(&flush_body)
-            .send()
-            .await
-        {
-            Err(e) => warn!("EverOS flush error: {e}"),
-            Ok(r) if !r.status().is_success() => warn!("EverOS flush HTTP {}", r.status()),
-            Ok(_) => {
-                self.record_ok();
-                debug!(session_id, "EverOS add_turn: flushed");
+        // Fire-and-forget flush — EverOS processes extraction asynchronously anyway;
+        // we don't need to wait (and waiting risks timeout when EverOS is busy).
+        self.record_ok();
+        let flush_client = Arc::clone(&self.write_client);
+        let flush_url   = self.url("/api/v1/memory/flush");
+        let flush_body  = FlushReq {
+            session_id:  session_id.to_string(),
+            app_id:      APP_ID,
+            project_id:  PROJECT_ID,
+        };
+        tokio::spawn(async move {
+            match flush_client.post(&flush_url).json(&flush_body).send().await {
+                Err(e) => debug!("EverOS flush fire-and-forget error: {e}"),
+                Ok(r) if !r.status().is_success() => {
+                    debug!("EverOS flush HTTP {} (non-fatal)", r.status());
+                }
+                Ok(_) => debug!("EverOS flush ok"),
             }
-        }
+        });
     }
 }
 
