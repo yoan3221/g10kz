@@ -11,7 +11,7 @@ use g10kz_kernel::persona::PersonaCard;
 use g10kz_kernel::PersonalityState;
 use g10kz_llm::Provider;
 use g10kz_tools::ToolBox;
-use g10kz_engine::EmbeddingRouter;
+use g10kz_engine::{EmbeddingRouter, PromptGuardClient};
 
 /// Maximum conversation exchanges per channel kept in the ring buffer.
 pub const RING_SIZE: usize = 30;
@@ -36,6 +36,8 @@ pub struct BotState {
     pub persona: Arc<RwLock<PersonaCard>>,
     /// Semantic route refinement router (warmed up at startup).
     pub embed_router: Arc<EmbeddingRouter>,
+    /// ML prompt-injection guard client.
+    pub prompt_guard: Arc<PromptGuardClient>,
     /// Per-channel conversation ring buffer (last RING_SIZE exchanges).
     pub channel_ctx: Mutex<HashMap<ChannelId, VecDeque<ContextEntry>>>,
     /// In-flight message IDs — prevents double-processing on reshard.
@@ -62,6 +64,7 @@ impl BotState {
         embed_router: EmbeddingRouter,
         everos: Option<EverosMemory>,
     ) -> Arc<Self> {
+        let prompt_guard_url = config.prompt_guard_url.clone();
         Arc::new(Self {
             config: Arc::new(config),
             provider: Arc::new(provider),
@@ -69,6 +72,7 @@ impl BotState {
             toolbox: Arc::new(toolbox),
             persona: Arc::new(RwLock::new(persona)),
             embed_router: Arc::new(embed_router),
+            prompt_guard: Arc::new(PromptGuardClient::new(&prompt_guard_url)),
             channel_ctx: Mutex::new(HashMap::new()),
             in_flight: Mutex::new(HashSet::new()),
             cancel_map: Mutex::new(HashMap::new()),

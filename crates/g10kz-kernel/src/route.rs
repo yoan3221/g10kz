@@ -113,41 +113,24 @@ pub fn is_search_trigger(text: &str) -> bool {
 // ─── Complexity signals ───────────────────────────────────────────────────────
 
 /// Minimum character count to consider a message "long" (→ reason path).
-const LONG_TEXT_THRESHOLD: usize = 250;
-
-/// Minimum number of `?` characters to flag as multi-question.
-const MULTI_QUESTION_THRESHOLD: usize = 3;
+const LONG_TEXT_THRESHOLD: usize = 350;
 
 /// Analytical keywords that suggest the reason path.
 static ANALYTICAL_KEYWORDS: &[&str] = &[
+    // Strong "definitely needs the strong model" signals only.
+    // Soft analytical words (解釋/比較/評估/explain/compare…) now fall through to
+    // Social, where the cheap model self-escalates via the [[ESCALATE]] sentinel.
     // Chinese
-    "分析",
-    "解釋",
-    "比較",
-    "評估",
-    "推理",
-    "論述",
-    "說明為何",
-    "如何理解",
-    "機制是什麼",
-    "邏輯是",
     "寫一篇",
     "寫一段",
     "寫程式",
     "幫我寫",
+    "重構",
+    "逐步推導",
     // English
-    "analyze",
-    "analyse",
-    "explain why",
-    "compare",
-    "evaluate",
-    "reason about",
     "step by step",
-    "write a",
-    "write me",
-    "pros and cons",
-    "trade-offs",
-    "tradeoffs",
+    "write a ",
+    "write me ",
     "debug",
     "refactor",
     "implement",
@@ -155,25 +138,21 @@ static ANALYTICAL_KEYWORDS: &[&str] = &[
 
 /// Returns `true` if text exhibits complexity signals warranting the reason path.
 pub fn is_complex(text: &str) -> bool {
-    // Long text
+    // Long text → strong model.
     if text.chars().count() > LONG_TEXT_THRESHOLD {
         return true;
     }
 
     let scanned = normalize_for_scan(text);
 
-    // Multiple question marks → multi-part question
-    if scanned.chars().filter(|&c| c == '?').count() >= MULTI_QUESTION_THRESHOLD {
-        return true;
-    }
-
-    // Analytical keywords
+    // Strong analytical / coding keywords only.
     if ANALYTICAL_KEYWORDS.iter().any(|kw| scanned.contains(*kw)) {
         return true;
     }
 
-    // Code block
-    if text.contains("```") || text.contains("`") {
+    // Fenced code block (triple backtick) — pasted code almost always needs
+    // the strong model. A lone inline backtick no longer triggers Reason.
+    if text.contains("```") {
         return true;
     }
 
@@ -345,22 +324,27 @@ mod tests {
 
     #[test]
     fn long_text_routes_reason() {
-        let long = "這是一個很長的問題，".repeat(30); // > 250 chars
+        let long = "這是一個很長的問題，".repeat(40); // > 350 chars
         assert_eq!(route(&cfg(), &long, false), RouteDecision::Reason);
     }
 
     #[test]
     fn analytical_keyword_zh_routes_reason() {
+        // 分析 is now a soft signal (→ Social); 寫程式 stays a hard Reason signal.
         assert_eq!(
-            route(&cfg(), "請分析這個演算法的複雜度", false),
+            route(&cfg(), "幫我寫程式解這個演算法", false),
             RouteDecision::Reason
+        );
+        assert_eq!(
+            route(&cfg(), "請分析這個演算法", false),
+            RouteDecision::Social
         );
     }
 
     #[test]
     fn analytical_keyword_en_routes_reason() {
         assert_eq!(
-            route(&cfg(), "analyze the trade-offs between A and B", false),
+            route(&cfg(), "walk me through it step by step", false),
             RouteDecision::Reason
         );
     }
@@ -382,10 +366,11 @@ mod tests {
     }
 
     #[test]
-    fn multi_question_routes_reason() {
+    fn multi_question_now_routes_social() {
+        // Multi-question heuristic removed; cheap model self-escalates instead.
         assert_eq!(
             route(&cfg(), "A是什麼? B是什麼? C是什麼?", false),
-            RouteDecision::Reason
+            RouteDecision::Social
         );
     }
 

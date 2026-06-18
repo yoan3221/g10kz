@@ -1,31 +1,40 @@
 //! `Provider` trait — the single abstraction for all LLM backends.
-//!
-//! Uses `BoxFuture` (= `Pin<Box<dyn Future + Send>>`) so the trait is
-//! **object-safe**: callers can hold `&dyn Provider` or `Box<dyn Provider>`
-//! and swap between mock / real / Fusion at runtime.
 
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::types::{CompletionParams, Message, Usage};
+use futures::Stream;
+use tokio_util::sync::CancellationToken;
+
+use crate::types::{CompletionParams, Message, StreamItem, Usage};
 
 /// `Pin<Box<dyn Future<Output = T> + Send + 'a>>` — shorthand used by the trait.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-/// Async LLM completion provider.
-///
-/// **Object-safe**: use `&dyn Provider` or `Box<dyn Provider>` for dynamic
-/// dispatch between `MockProvider`, `OpenRouterProvider`, and `FusionProvider`.
-///
-/// Implementors must wrap their async body in `Box::pin(async move { ... })`.
+/// `Pin<Box<dyn Stream<Item = T> + Send + 'static>>` — streaming shorthand.
+pub type BoxStream<T> = Pin<Box<dyn Stream<Item = T> + Send + 'static>>;
+
+/// Async LLM completion provider. Object-safe via boxed futures/streams.
 pub trait Provider: Send + Sync {
-    /// Request a completion.
-    ///
-    /// Returns `(reply_text, usage)`.  On failure returns [`anyhow::Error`].
-    /// The engine layer applies retry / fallback / circuit-breaker logic.
+    /// Request a (non-streaming) completion. Returns `(reply_text, usage)`.
     fn complete<'a>(
         &'a self,
         messages: &'a [Message],
         params: &'a CompletionParams,
     ) -> BoxFuture<'a, anyhow::Result<(String, Usage)>>;
+
+    /// Streaming completion. Yields incremental `StreamItem::Token` deltas, then
+    /// a final `StreamItem::Done` carrying token usage. `cancel` aborts mid-flight.
+    /// Default impl errors — only HTTP providers override it.
+    fn complete_stream(
+        &self,
+        messages: &[Message],
+        params: &CompletionParams,
+        cancel: CancellationToken,
+    ) -> BoxStream<anyhow::Result<StreamItem>> {
+        let _ = (messages, params, cancel);
+        Box::pin(futures::stream::once(async {
+            Err(anyhow::anyhow!("streaming not supported by this provider"))
+        }))
+    }
 }

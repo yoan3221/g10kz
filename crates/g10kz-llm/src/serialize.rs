@@ -159,6 +159,31 @@ pub fn extract_reply(resp: CompletionResponse) -> anyhow::Result<(String, Usage)
     Ok((text, usage))
 }
 
+// ─── Streaming (SSE) chunk ───────────────────────────────────────────────────
+
+/// One `data: {...}` chunk from an OpenAI-compatible SSE stream.
+#[derive(Debug, Deserialize)]
+pub struct StreamChunk {
+    #[serde(default)]
+    pub choices: Vec<StreamChoice>,
+    #[serde(default)]
+    pub usage: Option<UsageRaw>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StreamChoice {
+    #[serde(default)]
+    pub delta: Delta,
+    #[serde(default)]
+    pub finish_reason: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Delta {
+    #[serde(default)]
+    pub content: Option<String>,
+}
+
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

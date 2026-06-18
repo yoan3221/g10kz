@@ -4,7 +4,8 @@
 //!
 //! # Modules
 //! - [`turn`]         — `TurnInput`, `TurnOutput`, `run_turn` entry point
-//! - [`embed_router`] — semantic route refinement via Ollama embeddings
+//! - [`embed_router`]     — semantic route refinement via Ollama embeddings
+//! - [`prompt_guard`]   — async ML prompt-injection guard client
 //! - [`stage`]        — `Stage` enum (state machine nodes)
 //! - [`tracer`]       — per-turn structured tracing span
 //!
@@ -25,11 +26,13 @@
 //! ```
 
 pub mod embed_router;
+pub mod prompt_guard;
 pub mod stage;
 pub mod tracer;
 pub mod turn;
 
 pub use embed_router::EmbeddingRouter;
+pub use prompt_guard::PromptGuardClient;
 pub use stage::Stage;
 pub use turn::{run_turn, serialize_user_line, TurnInput, TurnOutput};
 

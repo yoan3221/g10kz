@@ -25,6 +25,9 @@ pub struct Config {
     pub proactive_inactive_secs: u64,
     pub persona_card_path: String,
     pub embed_server_url: String,
+    /// URL of the ML prompt-injection guard service (e.g. http://localhost:8083).
+    /// Empty string disables the guard.
+    pub prompt_guard_url: String,
     /// Path to the Obscura headless browser binary for web search.
     /// Defaults to `/usr/local/bin/obscura`. Empty string disables page fetching.
     pub obscura_path: String,
@@ -81,6 +84,8 @@ impl Config {
             persona_card_path: std::env::var("PERSONA_CARD_PATH").unwrap_or_default(),
             embed_server_url: std::env::var("EMBED_SERVER_URL")
                 .unwrap_or_else(|_| "http://localhost:8082".into()),
+            prompt_guard_url: std::env::var("PROMPT_GUARD_URL")
+                .unwrap_or_else(|_| "http://localhost:8083".into()),
             obscura_path: std::env::var("OBSCURA_PATH")
                 .unwrap_or_else(|_| "/usr/local/bin/obscura".into()),
         })
@@ -104,6 +109,7 @@ impl Config {
             proactive_inactive_secs: 86400,
             persona_card_path: String::new(),
             embed_server_url: String::new(),
+            prompt_guard_url: String::new(),
             obscura_path: String::new(),
         }
     }

@@ -1,6 +1,9 @@
 //! serenity [`EventHandler`] implementation.
 
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
+use serenity::builder::EditMessage;
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
@@ -23,6 +26,19 @@ use crate::{
 
 /// How many recent channel messages to pull for group-channel context.
 const HISTORY_FETCH_LIMIT: u8 = 15;
+
+/// Minimum gap between progressive message edits during streaming.
+/// Discord allows ~5 edits / 5s per message; 1s keeps us well under the limit.
+const STREAM_EDIT_INTERVAL: Duration = Duration::from_millis(1000);
+
+/// Clip a string to Discord's 2000-character message limit (char-safe).
+fn clip2000(s: &str) -> String {
+    if s.chars().count() <= 2000 {
+        s.to_string()
+    } else {
+        s.chars().take(2000).collect()
+    }
+}
 
 pub struct Handler {
     pub state: Arc<BotState>,
@@ -182,11 +198,51 @@ impl EventHandler for Handler {
         turn_input.attachment_url = attachment_url;
         turn_input.cancel = cancel.clone();
         turn_input.embed_router = Some(self.state.embed_router.clone());
+        turn_input.prompt_guard = Some(self.state.prompt_guard.clone());
         turn_input.guild_name = guild_name;
         turn_input.channel_name = channel_name;
         turn_input.personality_modifier = personality_modifier;
 
+        // ── Streaming: lazily create a placeholder message and progressively
+        // edit it as the engine streams cumulative-text snapshots. The consumer
+        // ends when the sender (held inside turn_input) is dropped after the
+        // turn completes. Non-streaming paths never send a snapshot, so no
+        // placeholder is created and the reply is sent normally below.
+        let (stream_tx, mut stream_rx) = mpsc::channel::<String>(32);
+        let stream_http = ctx.http.clone();
+        let stream_consumer = tokio::spawn(async move {
+            let mut placeholder: Option<DiscordMessage> = None;
+            let mut last_edit = Instant::now();
+            while let Some(snap) = stream_rx.recv().await {
+                let content = clip2000(&snap);
+                if content.is_empty() {
+                    continue;
+                }
+                match placeholder.as_mut() {
+                    None => {
+                        if let Ok(m) = channel_id.say(&stream_http, content).await {
+                            placeholder = Some(m);
+                            last_edit = Instant::now();
+                        }
+                    }
+                    Some(m) => {
+                        if last_edit.elapsed() >= STREAM_EDIT_INTERVAL {
+                            let _ = m
+                                .edit(&stream_http, EditMessage::new().content(content))
+                                .await;
+                            last_edit = Instant::now();
+                        }
+                    }
+                }
+            }
+            placeholder
+        });
+        turn_input.stream_sink = Some(stream_tx);
+
         let result = run_turn(turn_input).await;
+
+        // The turn is done → its stream sender is dropped → consumer finishes.
+        let placeholder = stream_consumer.await.unwrap_or(None);
 
         typing_stop.cancel();
         self.state.cancel_map.lock().await.remove(&channel_id);
@@ -255,10 +311,30 @@ impl EventHandler for Handler {
         }
 
         let chunks = split_message(&reply_text);
-        for chunk in chunks {
-            if let Err(e) = channel_id.say(&ctx.http, &chunk).await {
-                warn!(error = %e, "reply send failed");
-                break;
+        if let Some(mut ph) = placeholder {
+            // Streamed: finalize the placeholder with the authoritative
+            // (sanitized) text, then send any overflow chunks as new messages.
+            if let Some(first) = chunks.first() {
+                if let Err(e) = ph
+                    .edit(&ctx.http, EditMessage::new().content(clip2000(first)))
+                    .await
+                {
+                    warn!(error = %e, "final edit failed");
+                }
+            }
+            for chunk in chunks.iter().skip(1) {
+                if let Err(e) = channel_id.say(&ctx.http, chunk).await {
+                    warn!(error = %e, "reply send failed");
+                    break;
+                }
+            }
+        } else {
+            // Non-streaming path: send the reply as new message(s).
+            for chunk in chunks {
+                if let Err(e) = channel_id.say(&ctx.http, &chunk).await {
+                    warn!(error = %e, "reply send failed");
+                    break;
+                }
             }
         }
     }

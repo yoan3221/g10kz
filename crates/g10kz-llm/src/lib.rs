@@ -24,8 +24,8 @@ pub mod types;
 pub use fusion::{all_drafts_agree, fusion_complete, jaccard_similarity, FusionConfig};
 pub use mock::MockProvider;
 pub use openrouter::OpenRouterProvider;
-pub use provider::{BoxFuture, Provider};
-pub use types::{CompletionParams, Message, Part, Role, Usage};
+pub use provider::{BoxFuture, BoxStream, Provider};
+pub use types::{CompletionParams, Message, Part, Role, StreamItem, Usage};
 
 // ─── error type ──────────────────────────────────────────────────────────────
 

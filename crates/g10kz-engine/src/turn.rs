@@ -20,9 +20,10 @@ use g10kz_kernel::{
     normalize_input, persona::PersonaCard, pre_guard, route, sanitize_output,
     GuardVerdict, RejectReason, RouteDecision, SanitizeResult,
 };
+use futures::StreamExt;
 use g10kz_llm::{
     fusion::{fusion_complete, FusionConfig},
-    types::{CompletionParams, Message, Part, Role, Usage},
+    types::{CompletionParams, Message, Part, Role, StreamItem, Usage},
     Provider,
 };
 use g10kz_tools::{
@@ -76,6 +77,10 @@ pub struct TurnInput<'a> {
     /// Pre-rendered reply context for the current message, e.g. `Alice「…」`.
     /// Only set in group channels when the message replies to another message.
     pub reply_context: Option<String>,
+    /// Optional streaming sink. When present, the Social path streams the reply
+    /// as cumulative-text snapshots so the Discord layer can progressively edit
+    /// a placeholder message. `None` → non-streaming (tests, once-mode).
+    pub stream_sink: Option<tokio::sync::mpsc::Sender<String>>,
 }
 
 impl<'a> TurnInput<'a> {
@@ -110,6 +115,7 @@ impl<'a> TurnInput<'a> {
             channel_name: None,
             personality_modifier: None,
             reply_context: None,
+            stream_sink: None,
         }
     }
 
@@ -403,18 +409,142 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 
 // ─── Path implementations ─────────────────────────────────────────────────────
 
+/// Static system instruction that lets the cheap model self-escalate: if the
+/// task is beyond it, the model emits `[[ESCALATE]]` on the first line instead
+/// of answering, and the engine re-issues the turn on the strong (opus) model.
+/// Appended only on the Social path, folded into the cacheable static prefix.
+const ESCALATE_NOTE: &str = "\n\n[升級規則]\n若這則訊息需要深入推理、查資料、寫程式、長篇分析或超出你的能力，請第一行只輸出 [[ESCALATE]] 再停止，不要嘗試作答；一般日常對話、閒聊、簡單問題就照常正常回覆。";
+
+/// True if `text` opens with the escalation sentinel.
+fn wants_escalation(text: &str) -> bool {
+    text.trim_start().starts_with("[[ESCALATE")
+}
+
+/// Social path. Streams via `stream_sink` when present (Discord), otherwise a
+/// single blocking completion (tests / once-mode). Both honour `[[ESCALATE]]`
+/// self-escalation to the strong model.
 async fn path_social(
     input: &TurnInput<'_>,
     display_text: &str,
 ) -> Result<(String, Usage), EngineError> {
+    if input.stream_sink.is_some() {
+        return path_social_streaming(input, display_text).await;
+    }
+
+    // Non-streaming: cheap model first, escalate on sentinel.
+    let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    messages.extend(input.history.clone());
+    messages.push(Message::text(Role::User, input.labeled(display_text)));
+    let params = CompletionParams::social(&input.config.llm_model_social);
+
+    let (reply, usage) = tokio::select! {
+        r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm)?,
+        _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+    };
+    if wants_escalation(&reply) {
+        debug!("social self-escalated to reason model (non-streaming)");
+        return escalate_opus(input, display_text, None).await;
+    }
+    Ok((reply, usage))
+}
+
+/// Streaming Social path. Buffers the first line to detect `[[ESCALATE]]`
+/// before showing anything; if not escalating, forwards cumulative-text
+/// snapshots to the sink. On escalation, cancels the cheap stream and
+/// re-streams the strong model into the same sink.
+async fn path_social_streaming(
+    input: &TurnInput<'_>,
+    display_text: &str,
+) -> Result<(String, Usage), EngineError> {
+    let sink = input.stream_sink.clone().expect("stream_sink present");
+
+    let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    messages.extend(input.history.clone());
+    messages.push(Message::text(Role::User, input.labeled(display_text)));
+    let params = CompletionParams::social(&input.config.llm_model_social);
+
+    let child = input.cancel.child_token();
+    let mut stream = input.provider.complete_stream(&messages, &params, child.clone());
+
+    let mut buf = String::new();
+    let mut decided = false;
+    let mut usage = Usage::default();
+
+    loop {
+        let item = tokio::select! {
+            it = stream.next() => it,
+            _ = input.cancel.cancelled() => { child.cancel(); return Err(EngineError::Cancelled); }
+        };
+        let Some(item) = item else { break };
+        match item.map_err(EngineError::Llm)? {
+            StreamItem::Token(t) => {
+                buf.push_str(&t);
+                if !decided {
+                    // Wait for the first line (or enough chars) before revealing
+                    // anything, so the sentinel never flashes on screen.
+                    if buf.contains('\n') || buf.chars().count() >= 12 {
+                        decided = true;
+                        if wants_escalation(&buf) {
+                            child.cancel();
+                            drop(stream);
+                            debug!("social self-escalated to reason model (streaming)");
+                            return escalate_opus(input, display_text, Some(sink)).await;
+                        }
+                        let _ = sink.try_send(buf.clone());
+                    }
+                } else {
+                    let _ = sink.try_send(buf.clone());
+                }
+            }
+            StreamItem::Done(u) => { usage = u; }
+        }
+    }
+
+    // Very short reply that never crossed the decision threshold.
+    if !decided && !buf.is_empty() {
+        if wants_escalation(&buf) {
+            return escalate_opus(input, display_text, Some(sink)).await;
+        }
+        let _ = sink.try_send(buf.clone());
+    }
+    Ok((buf, usage))
+}
+
+/// Escalated answer on the strong (reason/opus) model. If `sink` is `Some`,
+/// streams cumulative snapshots into it; otherwise returns the full reply.
+async fn escalate_opus(
+    input: &TurnInput<'_>,
+    display_text: &str,
+    sink: Option<tokio::sync::mpsc::Sender<String>>,
+) -> Result<(String, Usage), EngineError> {
     let mut messages = vec![input.system_message("")];
     messages.extend(input.history.clone());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
+    let params = CompletionParams::reason(&input.config.llm_model_reason);
 
-    let params = CompletionParams::social(&input.config.llm_model_social);
-    tokio::select! {
-        r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
-        _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
+    match sink {
+        None => tokio::select! {
+            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
+            _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
+        },
+        Some(sink) => {
+            let child = input.cancel.child_token();
+            let mut stream = input.provider.complete_stream(&messages, &params, child.clone());
+            let mut buf = String::new();
+            let mut usage = Usage::default();
+            loop {
+                let item = tokio::select! {
+                    it = stream.next() => it,
+                    _ = input.cancel.cancelled() => { child.cancel(); return Err(EngineError::Cancelled); }
+                };
+                let Some(item) = item else { break };
+                match item.map_err(EngineError::Llm)? {
+                    StreamItem::Token(t) => { buf.push_str(&t); let _ = sink.try_send(buf.clone()); }
+                    StreamItem::Done(u) => { usage = u; }
+                }
+            }
+            Ok((buf, usage))
+        }
     }
 }
 
@@ -629,7 +759,11 @@ mod tests {
             embed_router: None,
             prompt_guard: None,
             is_dm: false,
+            guild_name: None,
+            channel_name: None,
+            personality_modifier: None,
             reply_context: None,
+            stream_sink: None,
         };
         // route() will determine the path — if "搜尋" triggers Search route
         let out = run_turn(input).await.unwrap();
@@ -658,7 +792,11 @@ mod tests {
             embed_router: None,
             prompt_guard: None,
             is_dm: false,
+            guild_name: None,
+            channel_name: None,
+            personality_modifier: None,
             reply_context: None,
+            stream_sink: None,
         };
         let out = run_turn(input).await.unwrap();
         assert!(!out.reply.is_empty());
@@ -687,7 +825,11 @@ mod tests {
             embed_router: None,
             prompt_guard: None,
             is_dm: false,
+            guild_name: None,
+            channel_name: None,
+            personality_modifier: None,
             reply_context: None,
+            stream_sink: None,
         };
         let out = run_turn(input).await.unwrap();
         assert!(!out.reply.is_empty());

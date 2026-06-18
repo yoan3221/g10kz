@@ -15,10 +15,13 @@ use reqwest::Client;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
+use futures::StreamExt;
+use serde_json::json;
+
 use crate::{
-    provider::{BoxFuture, Provider},
-    serialize::{build_request, extract_reply},
-    types::{CompletionParams, Message, Usage},
+    provider::{BoxFuture, BoxStream, Provider},
+    serialize::{build_request, extract_reply, StreamChunk},
+    types::{CompletionParams, Message, StreamItem, Usage},
     LlmError,
 };
 
@@ -235,6 +238,103 @@ impl Provider for OpenRouterProvider {
         Box::pin(async move {
             self.complete_with_cancel(messages, params, cancel).await
         })
+    }
+
+    /// Streaming completion over OpenAI-compatible SSE (`stream: true`).
+    /// Clones inputs into a spawned task and bridges the byte stream into a
+    /// `StreamItem` channel. No retry/circuit-breaker on the streaming path.
+    fn complete_stream(
+        &self,
+        messages: &[Message],
+        params: &CompletionParams,
+        cancel: CancellationToken,
+    ) -> BoxStream<anyhow::Result<StreamItem>> {
+        // Build the owned request body up front (borrows end here).
+        let body = build_request(
+            messages,
+            params,
+            Some(json!({ "stream": true, "stream_options": { "include_usage": true } })),
+        );
+        let client = self.client.clone();
+        let api_key = self.api_key.clone();
+        let url = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<anyhow::Result<StreamItem>>(64);
+
+        tokio::spawn(async move {
+            let request = client
+                .post(&url)
+                .bearer_auth(&api_key)
+                .header("HTTP-Referer", "https://github.com/EverMind-AI/g10kz")
+                .header("X-Title", "g10kz")
+                .json(&body);
+
+            let resp = tokio::select! {
+                r = request.send() => r,
+                _ = cancel.cancelled() => return,
+            };
+            let resp = match resp {
+                Ok(r) => r,
+                Err(e) => { let _ = tx.send(Err(e.into())).await; return; }
+            };
+            let status = resp.status();
+            if !status.is_success() {
+                let txt = resp.text().await.unwrap_or_default();
+                let _ = tx
+                    .send(Err(LlmError::Request(format!("HTTP {status}: {txt}")).into()))
+                    .await;
+                return;
+            }
+
+            let mut byte_stream = resp.bytes_stream();
+            let mut buf = String::new();
+            let mut usage = Usage::default();
+
+            loop {
+                let chunk = tokio::select! {
+                    c = byte_stream.next() => c,
+                    _ = cancel.cancelled() => break,
+                };
+                let Some(chunk) = chunk else { break };
+                let bytes = match chunk {
+                    Ok(b) => b,
+                    Err(e) => { let _ = tx.send(Err(e.into())).await; return; }
+                };
+                buf.push_str(&String::from_utf8_lossy(&bytes));
+
+                // Drain complete SSE lines.
+                while let Some(nl) = buf.find('\n') {
+                    let line: String = buf[..nl].trim().to_string();
+                    buf.drain(..=nl);
+                    let Some(payload) = line.strip_prefix("data:") else { continue };
+                    let payload = payload.trim();
+                    if payload.is_empty() { continue; }
+                    if payload == "[DONE]" {
+                        let _ = tx.send(Ok(StreamItem::Done(usage.clone()))).await;
+                        return;
+                    }
+                    if let Ok(sc) = serde_json::from_str::<StreamChunk>(payload) {
+                        if let Some(u) = sc.usage {
+                            usage.prompt_tokens = u.prompt_tokens;
+                            usage.completion_tokens = u.completion_tokens;
+                            usage.cost_usd = u.cost.unwrap_or(usage.cost_usd);
+                        }
+                        if let Some(choice) = sc.choices.into_iter().next() {
+                            if let Some(txt) = choice.delta.content {
+                                if !txt.is_empty()
+                                    && tx.send(Ok(StreamItem::Token(txt))).await.is_err()
+                                {
+                                    return; // receiver dropped
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            let _ = tx.send(Ok(StreamItem::Done(usage))).await;
+        });
+
+        Box::pin(futures::stream::poll_fn(move |cx| rx.poll_recv(cx)))
     }
 }
 

@@ -125,6 +125,17 @@ pub struct Usage {
     pub cached: bool,
 }
 
+// ─── StreamItem ──────────────────────────────────────────────────────────────
+
+/// One event from a streaming completion.
+#[derive(Debug, Clone)]
+pub enum StreamItem {
+    /// An incremental text delta (one or more tokens).
+    Token(String),
+    /// Terminal event carrying final token usage.
+    Done(Usage),
+}
+
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
