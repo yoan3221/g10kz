@@ -18,7 +18,7 @@ use g10kz_config::Config;
 use g10kz_everos::Memory;
 use g10kz_kernel::{
     normalize_input, persona::PersonaCard, pre_guard, route, sanitize_output,
-    GuardVerdict, RouteDecision, SanitizeResult,
+    GuardVerdict, RejectReason, RouteDecision, SanitizeResult,
 };
 use g10kz_llm::{
     fusion::{fusion_complete, FusionConfig},
@@ -29,7 +29,7 @@ use g10kz_tools::{
     media, run_tool_loop, tool_schema_snippet, ToolBox, ToolCall,
 };
 
-use crate::{embed_router::EmbeddingRouter, stage::Stage, tracer::TurnTracer, EngineError};
+use crate::{embed_router::EmbeddingRouter, prompt_guard::PromptGuardClient, stage::Stage, tracer::TurnTracer, EngineError};
 
 // ─── TurnInput ───────────────────────────────────────────────────────────────
 
@@ -60,6 +60,9 @@ pub struct TurnInput<'a> {
     /// `Social` decisions to `Search` or `Reason` based on cosine similarity.
     /// `None` disables semantic routing (offline tests, once-mode).
     pub embed_router: Option<Arc<EmbeddingRouter>>,
+    /// Optional ML prompt-injection guard. Calls the ONNX guard service before
+    /// each turn. Fail-open: `None` or service errors never block the turn.
+    pub prompt_guard: Option<Arc<PromptGuardClient>>,
     /// True when this turn happens in a 1:1 DM (suppresses speaker labels).
     pub is_dm: bool,
     /// Discord guild (server) name — injected into system prompt for env awareness.
@@ -101,6 +104,7 @@ impl<'a> TurnInput<'a> {
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
+            prompt_guard: None,
             is_dm: false,
             guild_name: None,
             channel_name: None,
@@ -178,7 +182,7 @@ impl<'a> TurnInput<'a> {
         "\n\n[Discord Markdown 速查]\n強調：**粗** *斜* __底線__ ~~刪除~~ ***粗斜*** __**粗底**__ __*斜底*__\n代碼（程式碼/命令/變數專用）：`行內碼`　```lang
 代碼塊
 ```
-區塊：> 引用　>>> 多行引用\n結構：# H1　## H2　### H3　- 列表　1. 編號　[文字](url)\n特效：||暗文/劇透||　-# 小字（副文字）\n聊天中可活用以上格式；**強調詞用粗體或斜體**，反引號代碼格式只給程式碼用；視情況使用，勿每句都套。\n日常聊天口語化：句子短、可省主語、不用每句加句號，像在傳訊息不像寫作文；勿套格式、勿長篇大論，1～3 句夠了。技術說明或列舉才適度加長。"
+區塊：> 引用　>>> 多行引用\n結構：# H1　## H2　### H3　- 列表　1. 編號　[文字](url)\n特效：||暗文/劇透||　-# 小字（副文字）\n聊天中可活用以上格式；**強調詞用粗體或斜體**，反引號代碼格式只給程式碼用；視情況使用，勿每句都套。\n日常聊天口語化：句子短、可省主語、不用每句加句號，像在傳訊息不像寫作文；勿套格式、勿長篇大論，1～3 句夠了。技術說明或列舉才適度加長。\n動作與說話區分：*斜體* 包動作／神情描述（無對白的部分）；純文字說話；-# 包內心獨白或旁白。可交替，例：*側頭看你* 這什麼意思？　-# 有點在意"
     }
     /// Inject guild/channel name into system prompt for server-aware responses.
     /// Empty string in DMs.
@@ -274,6 +278,22 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
             });
         }
     };
+
+    // ── ML Prompt Guard (fail-open) ──────────────────────────────────────────
+    if let Some(pg) = &input.prompt_guard {
+        if pg.is_injection(&input.text).await {
+            let msg = g10kz_kernel::reject::canned_response(
+                &RejectReason::InjectionKeyword,
+                input.user_id,
+            );
+            tracer.trace.path = "ml-guard-rejected".into();
+            return Ok(TurnOutput {
+                reply: msg.to_owned(),
+                path: RouteDecision::Social,
+                usage: Usage::default(),
+            });
+        }
+    }
 
     // ── Normalize ────────────────────────────────────────────────────────────
     tracer.enter_stage(&Stage::Normalize);
@@ -607,6 +627,7 @@ mod tests {
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
+            prompt_guard: None,
             is_dm: false,
             reply_context: None,
         };
@@ -635,6 +656,7 @@ mod tests {
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
+            prompt_guard: None,
             is_dm: false,
             reply_context: None,
         };
@@ -663,6 +685,7 @@ mod tests {
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
+            prompt_guard: None,
             is_dm: false,
             reply_context: None,
         };
