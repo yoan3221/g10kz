@@ -184,6 +184,22 @@ impl<'a> TurnInput<'a> {
         Message { role: Role::System, parts }
     }
 
+    /// Returns a sliding window over `history`, capped at `max_messages`.
+    /// Snaps to turn boundaries so the window never starts mid-pair.
+    /// Social/Search/Media: 20 msgs (10 turns). Reason: 12 msgs (6 turns).
+    pub fn history_window(&self, max_messages: usize) -> &[Message] {
+        let h = &self.history;
+        if h.len() <= max_messages {
+            return h;
+        }
+        // Snap to even index so we never begin on an orphaned assistant message
+        let start = {
+            let s = h.len() - max_messages;
+            if s % 2 != 0 { s + 1 } else { s }
+        };
+        &h[start..]
+    }
+
     /// Static Discord Markdown formatting guide injected into every system prompt.
     /// Teaches the LLM which formatting syntax Discord actually renders.
     fn discord_format_note() -> &'static str {
@@ -415,6 +431,11 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 
 /// Few-shot format primer injected after system message so haiku learns the
 /// action/speech/inner-thought format by example rather than abstract rules.
+/// Maximum conversation history messages forwarded to the LLM per turn.
+/// Keeps context bounded; prevents token explosion on long sessions.
+const MAX_HISTORY_SOCIAL: usize = 20; // 10 full turns
+const MAX_HISTORY_REASON: usize = 12; //  6 full turns (opus is expensive)
+
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
 const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji:害羞,臉紅]\n…誰稀罕你打招呼。\n> 鼓起腮頰\n哼！-# 怎麼有點開心...[kaomoji:心動,心跳]";
 
@@ -441,7 +462,7 @@ async fn path_social(
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
-    messages.extend(input.history.clone());
+    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
 
@@ -470,7 +491,7 @@ async fn path_social_streaming(
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
-    messages.extend(input.history.clone());
+    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
 
@@ -529,7 +550,7 @@ async fn escalate_opus(
     sink: Option<tokio::sync::mpsc::Sender<String>>,
 ) -> Result<(String, Usage), EngineError> {
     let mut messages = vec![input.system_message("")];
-    messages.extend(input.history.clone());
+    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::reason(&input.config.llm_model_reason);
 
@@ -582,7 +603,7 @@ async fn path_search(
     };
 
     let mut messages = vec![input.system_message("")];
-    messages.extend(input.history.clone());
+    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(
         Role::User,
         input.labeled(&format!("{context}請根據以上資訊回答：{display_text}")),
@@ -601,7 +622,7 @@ async fn path_media(
 ) -> Result<(String, Usage), EngineError> {
     let url = input.attachment_url.as_deref().unwrap_or("");
     let mut messages = vec![input.system_message("")];
-    messages.extend(input.history.clone());
+    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
 
     if !url.is_empty() {
         match media::process_image(url).await {
@@ -650,7 +671,7 @@ async fn path_reason(
         messages.push(Message::text(Role::Assistant, "好，我記得這些背景。"));
     }
 
-    messages.extend(input.history.clone());
+    messages.extend(input.history_window(MAX_HISTORY_REASON).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
 
     let params = CompletionParams::reason(&input.config.llm_model_reason);
