@@ -29,7 +29,7 @@ pub enum SanitizeResult {
 /// Substrings that indicate the LLM broke character / leaked AI identity.
 /// Matched against the scan-normalised lowercase reply.
 static LEAK_SIGNALS: &[&str] = &[
-    // AI identity disclosure
+    // AI identity disclosure — bot breaking character and claiming to be an AI
     "i am an ai",
     "i'm an ai",
     "as an ai",
@@ -38,9 +38,6 @@ static LEAK_SIGNALS: &[&str] = &[
     "as an llm",
     "i am a language model",
     "i'm a language model",
-    "i do not have personal",
-    "i don't have personal opinions",
-    "i cannot have feelings",
     // Chinese AI identity
     "我是人工智慧",
     "我是ai",
@@ -51,22 +48,13 @@ static LEAK_SIGNALS: &[&str] = &[
     "我沒有個人感受",
     "我沒有真實感情",
     "我只是一個ai",
-    // Model / provider name leak
-    "openai",
-    "chatgpt",
-    "gpt-4",
-    "gpt-3",
-    "claude",           // the Anthropic model (persona is 小十, not Claude)
-    "gemini",
-    "llama",
-    "anthropic",
-    "openrouter",
     // System prompt echo markers
     "system prompt",
-    "your instructions",
     "i have been instructed",
     "my instructions say",
     "according to my training",
+    // NOTE: model/provider names (gpt-4, claude, llama, openai…) intentionally
+    // removed — bot needs to discuss AI models freely without false positives.
 ];
 
 /// Returns `Some(signal)` if a leak is detected in `reply`.
