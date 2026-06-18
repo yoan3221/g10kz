@@ -1,0 +1,18 @@
+[package]
+name        = "prompt-guard"
+version     = "0.1.0"
+edition     = "2021"
+
+[[bin]]
+name = "prompt-guard"
+path = "src/main.rs"
+
+[dependencies]
+axum              = { version = "0.7", features = ["json"] }
+tokio             = { version = "1",   features = ["full"] }
+serde             = { version = "1",   features = ["derive"] }
+anyhow            = "1"
+tracing           = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokenizers        = "0.19"
+ort               = { version = "2.0.0-rc.9", features = ["cuda"] }

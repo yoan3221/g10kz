@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/g10kz-config",
+    "crates/prompt-guard",
     "crates/g10kz-kernel",
     "crates/g10kz-llm",
     "crates/g10kz-everos",
