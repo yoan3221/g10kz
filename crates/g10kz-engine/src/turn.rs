@@ -161,8 +161,8 @@ impl<'a> TurnInput<'a> {
         if let Some(modifier) = &self.personality_modifier {
             s.push_str(modifier);
         }
-        // 格式提醒放最後 — model 最後讀到的指令，注意力最高
-        s.push_str("\n\n[RP格式] 動作/神情描述每行開頭加 > (blockquote)；對白純文字；-# 內心獨白。1～3句為主。");
+        // 簡短提醒放最後（最高注意力位置）；RP 動作/對白格式交給 few-shot primer，不在此重述
+        s.push_str("\n\n[簡短] 回覆 1～3 句為主，勿長篇；技術說明才適度加長。");
         s
     }
 
@@ -187,10 +187,7 @@ impl<'a> TurnInput<'a> {
     /// Static Discord Markdown formatting guide injected into every system prompt.
     /// Teaches the LLM which formatting syntax Discord actually renders.
     fn discord_format_note() -> &'static str {
-        "\n\n[Discord Markdown 速查]\n強調：**粗** *斜* __底線__ ~~刪除~~ ***粗斜*** __**粗底**__ __*斜底*__\n代碼（程式碼/命令/變數專用）：`行內碼`　```lang
-代碼塊
-```
-區塊：> 引用　>>> 多行引用\n結構：# H1　## H2　### H3　- 列表　1. 編號　[文字](url)\n特效：||暗文/劇透||　-# 小字（副文字）\n聊天中可活用以上格式；**強調詞用粗體或斜體**，反引號代碼格式只給程式碼用；視情況使用，勿每句都套。\n日常聊天 1～3 句為主，勿長篇鋪陳；技術說明或列舉才適度加長。\n【動作與說話格式】動作/神情描述用 > blockquote（每行開頭加 >）；對白純文字；內心獨白 -# 小字。\n例：\n> 側頭看你一眼\n這什麼意思？-# 有點在意"
+        "\n\n[Discord格式] **粗** *斜* ~~刪~~ `碼` ```塊``` ||劇透|| -# 小字 > 引用 [字](url) # 標題 - 列表。視情況用、勿濫用。"
     }
     /// Inject guild/channel name into system prompt for server-aware responses.
     /// Empty string in DMs.

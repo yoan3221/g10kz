@@ -127,6 +127,14 @@ pub struct ChoiceMessage {
     pub content: Option<String>,
 }
 
+/// Cached-token breakdown (OpenAI-style `prompt_tokens_details`). Lets us
+/// observe prefix-cache hits when the upstream gateway reports them.
+#[derive(Debug, Default, Deserialize)]
+pub struct PromptTokensDetails {
+    #[serde(default)]
+    pub cached_tokens: u32,
+}
+
 /// Raw token usage from the API response.
 #[derive(Debug, Deserialize)]
 pub struct UsageRaw {
@@ -134,6 +142,8 @@ pub struct UsageRaw {
     pub completion_tokens: u32,
     #[serde(default)]
     pub cost: Option<f64>, // OpenRouter-specific field
+    #[serde(default)]
+    pub prompt_tokens_details: Option<PromptTokensDetails>, // cache-hit observability
 }
 
 /// Extract reply text and [`Usage`] from a parsed [`CompletionResponse`].
@@ -149,11 +159,17 @@ pub fn extract_reply(resp: CompletionResponse) -> anyhow::Result<(String, Usage)
         .content
         .unwrap_or_default();
 
-    let usage = resp.usage.map(|u| Usage {
-        prompt_tokens: u.prompt_tokens,
-        completion_tokens: u.completion_tokens,
-        cost_usd: u.cost.unwrap_or(0.0),
-        cached: false, // updated by caller if cache-hit header present
+    let usage = resp.usage.map(|u| {
+        let cached = u
+            .prompt_tokens_details
+            .as_ref()
+            .is_some_and(|d| d.cached_tokens > 0);
+        Usage {
+            prompt_tokens: u.prompt_tokens,
+            completion_tokens: u.completion_tokens,
+            cost_usd: u.cost.unwrap_or(0.0),
+            cached,
+        }
     }).unwrap_or_default();
 
     Ok((text, usage))

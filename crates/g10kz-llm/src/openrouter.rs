@@ -318,6 +318,10 @@ impl Provider for OpenRouterProvider {
                             usage.prompt_tokens = u.prompt_tokens;
                             usage.completion_tokens = u.completion_tokens;
                             usage.cost_usd = u.cost.unwrap_or(usage.cost_usd);
+                            usage.cached = u
+                                .prompt_tokens_details
+                                .as_ref()
+                                .is_some_and(|d| d.cached_tokens > 0);
                         }
                         if let Some(choice) = sc.choices.into_iter().next() {
                             if let Some(txt) = choice.delta.content {
