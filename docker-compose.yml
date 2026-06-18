@@ -1,35 +1,14 @@
 # g10kz v5 — docker-compose for production (.94)
 # Usage:
-#   docker compose up -d          # start all
+#   docker compose up -d          # start bot
 #   docker compose logs -f bot    # tail bot logs
 #   docker compose down           # stop
 #
 # Networking: host mode so the bot reaches the co-located new-api gateway
 # (localhost:3000) and the EverOS memory sidecar (localhost:8000) directly.
 # EverOS runs as a separate stack; this compose only manages the bot.
-# prompt-cache runs on :8080, proxies bot requests to new-api at :3000.
 
 services:
-  prompt-cache:
-    build:
-      context: ./prompt-cache
-    image: g10kz-prompt-cache:latest
-    container_name: g10kz-prompt-cache
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - PORT=8181
-      - EMBEDDING_PROVIDER=openai
-      - OPENAI_API_KEY=${LLM_API_KEY}
-      - OPENAI_EMBED_MODEL=qwen3-embed.gguf
-      - OPENAI_BASE_URL=http://localhost:3000/v1
-      - OPENAI_EMBED_BASE_URL=http://localhost:8082/v1
-      - CACHE_HIGH_THRESHOLD=0.88
-      - CACHE_LOW_THRESHOLD=0.75
-      - ENABLE_GRAY_ZONE_VERIFIER=false
-    volumes:
-      - ./prompt-cache/badger_data:/root/badger_data
-
   bot:
     build:
       context: .
@@ -44,5 +23,3 @@ services:
       # SillyTavern V2 character card, read-only
       - ./persona:/persona:ro
     command: daemon
-    depends_on:
-      - prompt-cache
