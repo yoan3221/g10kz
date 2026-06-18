@@ -10,6 +10,7 @@
 //! 5. Format normalisation     → trim, collapse newlines, strip leading junk
 //! 6. Return `Ok(cleaned)`
 
+use std::sync::OnceLock;
 use crate::normalize::normalize_for_scan;
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -92,6 +93,59 @@ pub fn is_repetitive_opener(reply: &str, recent_openers: &[&str]) -> bool {
         .any(|prev| extract_opener(prev) == opener)
 }
 
+
+// ─── Kaomoji placeholder replacement ─────────────────────────────────────────
+
+/// Emotion-keyed kaomoji pools, loaded once from the bundled JSON.
+#[derive(serde::Deserialize)]
+struct KaomojiPools {
+    tsundere: Vec<String>,
+    shy:      Vec<String>,
+    happy:    Vec<String>,
+    cry:      Vec<String>,
+    angry:    Vec<String>,
+    sweet:    Vec<String>,
+    love:     Vec<String>,
+}
+
+static KAOMOJI_DATA: &str = include_str!("kaomoji_pools.json");
+static POOLS: OnceLock<KaomojiPools> = OnceLock::new();
+
+fn kaomoji_pools() -> &'static KaomojiPools {
+    POOLS.get_or_init(|| {
+        serde_json::from_str(KAOMOJI_DATA).expect("kaomoji_pools.json parse failed")
+    })
+}
+
+/// Replace `{{情緒}}` placeholders the LLM inserts with a random kaomoji from
+/// the matching pool. Fast-path: skip entirely when `{{` is absent.
+fn replace_kaomoji_placeholders(s: &str) -> String {
+    if !s.contains("{{") {
+        return s.to_owned();
+    }
+    use rand::seq::SliceRandom;
+    let mut rng = rand::thread_rng();
+    let p = kaomoji_pools();
+    let pairs: &[(&str, &Vec<String>)] = &[
+        ("{{傲嬌}}", &p.tsundere),
+        ("{{害羞}}", &p.shy),
+        ("{{開心}}", &p.happy),
+        ("{{委屈}}", &p.cry),
+        ("{{生氣}}", &p.angry),
+        ("{{撒嬌}}", &p.sweet),
+        ("{{心動}}", &p.love),
+    ];
+    let mut out = s.to_owned();
+    for (placeholder, pool) in pairs {
+        if out.contains(placeholder) {
+            if let Some(k) = pool.choose(&mut rng) {
+                out = out.replace(placeholder, k);
+            }
+        }
+    }
+    out
+}
+
 // ─── Format normalisation ─────────────────────────────────────────────────────
 
 /// Format normalisation applied to clean replies before delivery.
@@ -109,7 +163,9 @@ pub fn format_output(reply: &str) -> String {
     let collapsed = collapse_blank_lines(stripped);
 
     // Normalise roleplay action lines (*動作*) into Discord blockquotes (> 動作)
-    actions_to_blockquote(&collapsed)
+    let blockquoted = actions_to_blockquote(&collapsed);
+    // Replace {{情緒}} placeholders with random kaomoji from curated pools
+    replace_kaomoji_placeholders(&blockquoted)
 }
 
 /// Convert whole-line single-asterisk italics into Discord blockquotes.
