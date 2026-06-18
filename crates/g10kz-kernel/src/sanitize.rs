@@ -432,18 +432,15 @@ pub fn format_output(reply: &str) -> String {
     replace_kaomoji_markers(&blockquoted)
 }
 
-/// Convert whole-line single-asterisk italics into Discord blockquotes.
+/// Convert action lines to Discord blockquotes.
 ///
-/// Small models default to `*動作*` italics for roleplay actions and ignore
-/// prompt/primer instructions to use `>` blockquotes (the training prior plus
-/// in-context imitation of channel history overwhelm a few-shot example).
-/// Rather than fight that, we normalise deterministically here — the one place
-/// it always holds, regardless of what the model emits.
-///
-/// A line counts as an action only when its trimmed form is wrapped in exactly
-/// one pair of `*` with non-empty inner text and no inner `*`. This leaves
-/// `**粗體**`, `***粗斜***`, inline emphasis (`你這*笨蛋*真是`), and existing
-/// `>` quotes untouched.
+/// Handles:
+///   - Whole-line `*action*`  → `> action`
+///   - Whole-line `_action_`  → `> action`
+/// A line counts as an action when its trimmed form is wrapped in a **single**
+/// pair of `*` or `_` (no inner occurrences of the same delimiter) with
+/// non-empty inner text and length ≥ 3.  Bold `**...**` and underline
+/// `__...__` are left untouched.
 fn actions_to_blockquote(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 16);
     for (i, line) in s.lines().enumerate() {
@@ -451,18 +448,29 @@ fn actions_to_blockquote(s: &str) -> String {
             out.push('\n');
         }
         let t = line.trim();
-        let is_action = t.len() >= 3
-            && t.starts_with('*')
-            && t.ends_with('*')
-            && !t.starts_with("**")
-            && !t.ends_with("**")
-            && !t[1..t.len() - 1].contains('*'); // '*' is ASCII (1 byte) → slice safe
-        if is_action {
-            let inner = t[1..t.len() - 1].trim();
-            if !inner.is_empty() {
-                out.push_str("> ");
-                out.push_str(inner);
-                continue;
+        // Detect which delimiter (if any) wraps the whole trimmed line
+        let delim: Option<char> = if t.len() >= 3 && t.starts_with('*') && t.ends_with('*')
+            && !t.starts_with("**") && !t.ends_with("**")
+        {
+            Some('*')
+        } else if t.len() >= 3 && t.starts_with('_') && t.ends_with('_')
+            && !t.starts_with("__") && !t.ends_with("__")
+        {
+            Some('_')
+        } else {
+            None
+        };
+        if let Some(d) = delim {
+            // Verify no inner delimiter (safe to slice because d is ASCII, 1 byte)
+            let inner_bytes = &t.as_bytes()[1..t.len() - 1];
+            let inner_str = std::str::from_utf8(inner_bytes).unwrap_or("");
+            if !inner_str.chars().any(|c| c == d) {
+                let inner = inner_str.trim();
+                if !inner.is_empty() {
+                    out.push_str("> ");
+                    out.push_str(inner);
+                    continue;
+                }
             }
         }
         out.push_str(line);
@@ -697,6 +705,13 @@ mod tests {
         assert!(out.starts_with("> 轉身背對你，肩膀微微發抖"), "got: {out}");
         assert!(out.contains("才、才沒有可愛啦！"));
         assert!(!out.contains('*'));
+    }
+
+    #[test]
+    fn underscore_action_line_becomes_blockquote() {
+        let out = format_output("_咬著嘴唇看向別處_\n才、才不是害羞！");
+        assert!(out.starts_with("> 咬著嘴唇看向別處"), "got: {out}");
+        assert!(!out.contains('_'));
     }
 
     #[test]

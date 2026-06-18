@@ -1,19 +1,16 @@
-# Multi-stage build — slim final image.
-# Builder: bookworm-based Rust (glibc 2.36) matches runtime.
-FROM rust:slim-bookworm AS builder
+# g10kz-bot production image
+# Uses pre-built musl static binary -- no Rust toolchain needed at image build time.
+# To update: build the musl binary locally, copy to bin/g10kz-bot, then:
+#   docker compose build && docker compose down && docker compose up -d
+FROM debian:bookworm-slim
 
-WORKDIR /build
-COPY Cargo.toml Cargo.lock ./
-COPY crates/ crates/
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV CARGO_TARGET_DIR=/tmp/target
-RUN cargo build --release -p g10kz-bot
-
-FROM debian:bookworm-slim AS runtime
-
-RUN apt-get update && apt-get install -y     ca-certificates     ffmpeg     && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /tmp/target/release/g10kz-bot /usr/local/bin/g10kz-bot
+# Pre-built musl static binary (x86_64-unknown-linux-musl)
+COPY bin/g10kz-bot /usr/local/bin/g10kz-bot
 
 # Obscura headless browser for web search (pre-built binary)
 COPY bin/obscura /usr/local/bin/obscura
