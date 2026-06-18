@@ -416,7 +416,7 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 /// Few-shot format primer injected after system message so haiku learns the
 /// action/speech/inner-thought format by example rather than abstract rules.
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
-const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji:害羞,臉紅]\n…誰稀罕你打招呼。-# 怎麼有點開心...[kaomoji:心動,心跳]";
+const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji:害羞,臉紅]\n…誰稀罕你打招呼。\n> 鼓起腮頰\n哼！-# 怎麼有點開心...[kaomoji:心動,心跳]";
 
 const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇或超出能力→第一行只輸出[[ESCALATE]]停止；日常閒聊簡單問題照常回覆。";
 
