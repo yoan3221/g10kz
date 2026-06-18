@@ -106,7 +106,48 @@ pub fn format_output(reply: &str) -> String {
     let stripped = strip_leading_artefact(trimmed);
 
     // Collapse excessive blank lines
-    collapse_blank_lines(stripped)
+    let collapsed = collapse_blank_lines(stripped);
+
+    // Normalise roleplay action lines (*動作*) into Discord blockquotes (> 動作)
+    actions_to_blockquote(&collapsed)
+}
+
+/// Convert whole-line single-asterisk italics into Discord blockquotes.
+///
+/// Small models default to `*動作*` italics for roleplay actions and ignore
+/// prompt/primer instructions to use `>` blockquotes (the training prior plus
+/// in-context imitation of channel history overwhelm a few-shot example).
+/// Rather than fight that, we normalise deterministically here — the one place
+/// it always holds, regardless of what the model emits.
+///
+/// A line counts as an action only when its trimmed form is wrapped in exactly
+/// one pair of `*` with non-empty inner text and no inner `*`. This leaves
+/// `**粗體**`, `***粗斜***`, inline emphasis (`你這*笨蛋*真是`), and existing
+/// `>` quotes untouched.
+fn actions_to_blockquote(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 16);
+    for (i, line) in s.lines().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        let t = line.trim();
+        let is_action = t.len() >= 3
+            && t.starts_with('*')
+            && t.ends_with('*')
+            && !t.starts_with("**")
+            && !t.ends_with("**")
+            && !t[1..t.len() - 1].contains('*'); // '*' is ASCII (1 byte) → slice safe
+        if is_action {
+            let inner = t[1..t.len() - 1].trim();
+            if !inner.is_empty() {
+                out.push_str("> ");
+                out.push_str(inner);
+                continue;
+            }
+        }
+        out.push_str(line);
+    }
+    out
 }
 
 fn strip_leading_artefact(s: &str) -> &str {
@@ -250,22 +291,25 @@ mod tests {
         assert!(matches!(ok(reply), SanitizeResult::Regenerate { .. }));
     }
 
+    // Model/provider names were intentionally removed from LEAK_SIGNALS so the
+    // bot can discuss AI models freely without false positives. These assert the
+    // current policy: mentioning a model/provider name is allowed.
     #[test]
-    fn leak_model_name_gpt() {
-        let reply = "I am GPT-4 and can help you.";
-        assert!(matches!(ok(reply), SanitizeResult::Regenerate { .. }));
+    fn model_name_gpt_allowed() {
+        let reply = "GPT-4 那種模型確實很強啦，哼。";
+        assert!(matches!(ok(reply), SanitizeResult::Ok(_)));
     }
 
     #[test]
-    fn leak_model_name_claude() {
-        let reply = "I'm Claude, made by Anthropic.";
-        assert!(matches!(ok(reply), SanitizeResult::Regenerate { .. }));
+    fn model_name_claude_allowed() {
+        let reply = "Claude 是 Anthropic 做的，你問這個幹嘛。";
+        assert!(matches!(ok(reply), SanitizeResult::Ok(_)));
     }
 
     #[test]
-    fn leak_openai_mention() {
-        let reply = "This is provided by OpenAI's API.";
-        assert!(matches!(ok(reply), SanitizeResult::Regenerate { .. }));
+    fn openai_mention_allowed() {
+        let reply = "OpenAI 的東西？隨便你信不信。";
+        assert!(matches!(ok(reply), SanitizeResult::Ok(_)));
     }
 
     // ── anti-repetition ───────────────────────────────────────────────────────
@@ -323,6 +367,45 @@ mod tests {
     #[test]
     fn trim_leading_trailing_whitespace() {
         assert_eq!(format_output("  hello  "), "hello");
+    }
+
+    // ── action → blockquote normalisation ─────────────────────────────────────
+
+    #[test]
+    fn italic_action_line_becomes_blockquote() {
+        let out = format_output("*轉身背對你，肩膀微微發抖*\n才、才沒有可愛啦！");
+        assert!(out.starts_with("> 轉身背對你，肩膀微微發抖"), "got: {out}");
+        assert!(out.contains("才、才沒有可愛啦！"));
+        assert!(!out.contains('*'));
+    }
+
+    #[test]
+    fn bold_line_not_converted() {
+        assert_eq!(format_output("**重點**"), "**重點**");
+    }
+
+    #[test]
+    fn bold_italic_line_not_converted() {
+        assert_eq!(format_output("***超強調***"), "***超強調***");
+    }
+
+    #[test]
+    fn inline_italic_preserved() {
+        assert_eq!(format_output("你這個*笨蛋*真是的"), "你這個*笨蛋*真是的");
+    }
+
+    #[test]
+    fn existing_blockquote_preserved() {
+        let out = format_output("> 已經是引用\n你好");
+        assert!(out.starts_with("> 已經是引用"));
+        assert!(out.contains("你好"));
+    }
+
+    #[test]
+    fn multiple_action_lines_all_converted() {
+        let out = format_output("*臉爆紅*\nh、hentai！\n*轉身發抖*");
+        let quoted = out.lines().filter(|l| l.starts_with("> ")).count();
+        assert_eq!(quoted, 2, "got: {out}");
     }
 
     // ── find_leak standalone ──────────────────────────────────────────────────
