@@ -1,4 +1,4 @@
-//! Built-in tools: time, Taiwan stock quote, web search, escalate.
+//! Built-in tools: time, Taiwan stock quote, web search, fetch page, escalate.
 
 use std::path::PathBuf;
 
@@ -164,23 +164,23 @@ impl Tool for TwStockTool {
 
 // ─── WebSearchTool ───────────────────────────────────────────────────────────
 
-/// Web search: DuckDuckGo lite HTML for results + Obscura for full page content.
+/// Web search: DuckDuckGo lite HTML for results + Jina Reader or Obscura for page content.
 ///
 /// Search flow:
 /// 1. POST to DDG lite → parse top hits (title, url, snippet)
-/// 2. Fetch top 3 pages via Obscura (anti-detection, JS rendering)
+/// 2. Fetch top 3 pages via Jina Reader API (fallback to Obscura if available)
 /// 3. BM25-inspired keyword scoring → extract most relevant passages
 /// 4. Return Discord Markdown formatted result
 pub struct WebSearchTool {
     client: reqwest::Client,
-    /// Path to the `obscura` binary. `None` → snippet-only fallback.
+    /// Path to the `obscura` binary. `None` → Jina Reader fallback.
     pub obscura_path: Option<PathBuf>,
 }
 
 impl WebSearchTool {
     pub fn new(obscura_path: Option<PathBuf>) -> Self {
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(12))
+            .timeout(std::time::Duration::from_secs(15))
             .user_agent(
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
                  (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -217,6 +217,10 @@ impl WebSearchTool {
             .ok()?;
         let text = String::from_utf8_lossy(&out.stdout).to_string();
         if text.trim().len() < 50 { None } else { Some(text) }
+    }
+
+    async fn jina_fetch(&self, url: &str) -> Option<String> {
+        jina_fetch_url(&self.client, url, 700).await
     }
 }
 
@@ -273,18 +277,23 @@ impl Tool for WebSearchTool {
             let term_refs: Vec<&str> = query_terms.iter().map(|s| s.as_str()).collect();
             let top_hits: Vec<&SearchHit> = hits.iter().take(3).collect();
 
-            // Fetch pages concurrently
-            let page_contents: Vec<Option<String>> =
-                if do_fetch && self.obscura_path.is_some() {
+            // Fetch pages: prefer Obscura (anti-detection), fallback to Jina Reader
+            let page_contents: Vec<Option<String>> = if do_fetch {
+                if self.obscura_path.is_some() {
                     let futs: Vec<_> =
                         top_hits.iter().map(|h| self.obscura_fetch(&h.url)).collect();
                     futures::future::join_all(futs).await
                 } else {
-                    vec![None; top_hits.len()]
-                };
+                    let futs: Vec<_> =
+                        top_hits.iter().map(|h| self.jina_fetch(&h.url)).collect();
+                    futures::future::join_all(futs).await
+                }
+            } else {
+                vec![None; top_hits.len()]
+            };
 
             // Build Discord-formatted output
-            let mut output = format!("## 🔍 {query}\n\n");
+            let mut output = format!("## 搜尋：{query}\n\n");
 
             for (i, (hit, content)) in
                 top_hits.iter().zip(page_contents.into_iter()).enumerate()
@@ -302,7 +311,6 @@ impl Tool for WebSearchTool {
                 };
 
                 if !body.is_empty() {
-                    // Quote-format for Discord
                     let quoted = body.lines()
                         .map(|l| format!("> {l}"))
                         .collect::<Vec<_>>()
@@ -313,7 +321,6 @@ impl Tool for WebSearchTool {
                 output.push('\n');
             }
 
-            // Remaining results as small footnotes
             if hits.len() > 3 {
                 output.push_str("-# 更多結果：");
                 for hit in hits.iter().skip(3).take(3) {
@@ -323,6 +330,63 @@ impl Tool for WebSearchTool {
             }
 
             ok(&call.name, output.trim().to_string())
+        })
+    }
+}
+
+// ─── FetchPageTool ───────────────────────────────────────────────────────────
+
+/// Fetch a web page as clean Markdown via Jina Reader API (https://r.jina.ai/).
+/// Converts any URL to LLM-friendly Markdown — strips ads, nav, JS, images.
+pub struct FetchPageTool {
+    client: reqwest::Client,
+}
+
+impl FetchPageTool {
+    pub fn new() -> Self {
+        Self {
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(20))
+                .user_agent("Mozilla/5.0 (compatible; g10kz-bot/1.0)")
+                .build()
+                .unwrap(),
+        }
+    }
+}
+
+impl Default for FetchPageTool {
+    fn default() -> Self { Self::new() }
+}
+
+impl Tool for FetchPageTool {
+    fn name(&self) -> &str { "fetch_page" }
+    fn description(&self) -> &str {
+        "讀取指定網頁的完整內容，回傳 Markdown 格式。適合讀取文章、GitHub README、技術文件、新聞等。\
+         參數：url（完整網址，須含 https:// 或 http://）。"
+    }
+    fn schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "要讀取的網頁完整 URL（須含 https:// 或 http://）"
+                }
+            },
+            "required": ["url"]
+        })
+    }
+    fn call<'a>(&'a self, call: ToolCall) -> BoxFuture<'a, ToolResult> {
+        Box::pin(async move {
+            let url = match call.arguments.get("url").and_then(|v| v.as_str()) {
+                Some(u) => u.to_owned(),
+                None => return err(&call.name, "missing url".into()),
+            };
+
+            match jina_fetch_url(&self.client, &url, 4000).await {
+                Some(content) => ok(&call.name, content),
+                None => err(&call.name, format!("無法讀取頁面：{url}")),
+            }
         })
     }
 }
@@ -348,7 +412,6 @@ fn parse_ddg_lite(html: &str) -> Vec<SearchHit> {
         let t = line.trim();
 
         if t.contains("class='result-link'") || t.contains("class=\"result-link\"") {
-            // Flush previous result
             if let (Some(url), Some(title)) = (pending_url.take(), pending_title.take()) {
                 hits.push(SearchHit { url, title, snippet: snippet_buf.trim().to_string() });
                 snippet_buf.clear();
@@ -468,6 +531,41 @@ fn extract_relevant(content: &str, query_terms: &[&str], max_chars: usize) -> St
     }
 }
 
+// ─── Jina Reader API helper ───────────────────────────────────────────────────
+
+/// Fetch a URL via Jina Reader (https://r.jina.ai/{url}).
+/// Returns clean Markdown, truncated to `max_chars`.
+/// Returns `None` on network error or empty response.
+async fn jina_fetch_url(client: &reqwest::Client, url: &str, max_chars: usize) -> Option<String> {
+    let jina_url = format!("https://r.jina.ai/{url}");
+    let resp = client
+        .get(&jina_url)
+        .header("Accept", "text/markdown, text/plain")
+        .header("X-Retain-Images", "none")
+        .send()
+        .await
+        .ok()?;
+
+    if !resp.status().is_success() {
+        warn!("jina_fetch: HTTP {} for {url}", resp.status());
+        return None;
+    }
+
+    let text = resp.text().await.ok()?;
+    if text.trim().len() < 30 {
+        return None;
+    }
+
+    let truncated: String = text.chars().take(max_chars).collect();
+    let note = if text.len() > truncated.len() {
+        format!("\n\n[內容已截斷，原始 {} 字元]", text.len())
+    } else {
+        String::new()
+    };
+
+    Some(format!("{truncated}{note}"))
+}
+
 // ─── URL encoding ────────────────────────────────────────────────────────────
 
 fn url_encode(s: &str) -> String {
@@ -529,6 +627,12 @@ mod tests {
     async fn web_search_missing_query() {
         let call = ToolCall { name: "web_search".into(), arguments: json!({}) };
         assert!(!WebSearchTool::new(None).call(call).await.success);
+    }
+
+    #[tokio::test]
+    async fn fetch_page_missing_url() {
+        let call = ToolCall { name: "fetch_page".into(), arguments: json!({}) };
+        assert!(!FetchPageTool::new().call(call).await.success);
     }
 
     #[test]

@@ -18,7 +18,7 @@ use g10kz_engine::{turn::{run_turn, TurnInput}, EmbeddingRouter};
 use g10kz_everos::{EverosMemory, NullMemory};
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::OpenRouterProvider;
-use g10kz_tools::{TimeTool, ToolBox, TwStockTool, WebSearchTool};
+use g10kz_tools::{FetchPageTool, TimeTool, ToolBox, TwStockTool, WebSearchTool};
 
 use crate::handler::Handler;
 use crate::state::BotState;
@@ -60,7 +60,7 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
             info!(path = %p.display(), "obscura binary found");
             Some(p)
         } else {
-            warn!(path = %p.display(), "obscura binary not found — web search in snippet-only mode");
+            warn!(path = %p.display(), "obscura binary not found — web search will use Jina Reader");
             None
         }
     };
@@ -69,6 +69,7 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
     toolbox.register(TimeTool);
     toolbox.register(TwStockTool::new());
     toolbox.register(WebSearchTool::new(obscura_path));
+    toolbox.register(FetchPageTool::new());
 
     let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
         .unwrap_or_else(|e| {

@@ -9,7 +9,7 @@ pub mod tool;
 
 pub use tool::{Tool, ToolBox, ToolCall, ToolResult};
 pub use r#loop::{run_tool_loop, tool_schema_snippet};
-pub use builtins::{EscalateTool, TimeTool, TwStockTool, WebSearchTool};
+pub use builtins::{EscalateTool, FetchPageTool, TimeTool, TwStockTool, WebSearchTool};
 
 /// Errors from tool execution.
 #[derive(Debug, thiserror::Error)]
