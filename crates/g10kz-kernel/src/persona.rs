@@ -1,29 +1,31 @@
-//! SillyTavern Character Card V2 loader.
+//! Character card loader — SillyTavern V2 JSON **and** OKF markdown bundle.
 //!
-//! Reads and parses a JSON persona file.  Loading is init-time I/O only —
-//! the resulting [`PersonaCard`] is immutable and cloned wherever needed.
+//! # Supported formats
 //!
-//! # SillyTavern V2 format
+//! ## OKF bundle (directory)
+//!
+//! A directory containing at minimum `index.md`:
+//! ```
+//! persona/g10kz/
+//!   index.md      ← YAML frontmatter (title) + body + "## First Message" section
+//!   examples.md   ← dialogue examples (optional)
+//!   log.md        ← change log (ignored by loader)
+//! ```
+//!
+//! `PersonaCard::load()` auto-detects directory vs. file path.
+//!
+//! ## SillyTavern V2 JSON (file, legacy)
+//!
 //! ```json
 //! {
 //!   "spec": "chara_card_v2",
-//!   "spec_version": "2.0",
 //!   "data": {
-//!     "name": "小十",
-//!     "description": "...",
-//!     "personality": "...",
-//!     "scenario": "...",
-//!     "first_mes": "...",
-//!     "mes_example": "...",
-//!     "system_prompt": "..."
+//!     "name": "...", "system_prompt": "...", "mes_example": "...", "first_mes": "..."
 //!   }
 //! }
 //! ```
-//!
-//! The rendered [`PersonaCard::system_prompt`] is concatenated from
-//! `system_prompt` (if present), `description`, `personality`, and `scenario`
-//! with section separators.  It is marked as a prefix-cache target — never
-//! mutate it mid-session.
+
+use std::collections::HashMap;
 
 use serde::Deserialize;
 
@@ -57,18 +59,13 @@ struct CardData {
 
 // ─── PersonaCard ─────────────────────────────────────────────────────────────
 
-/// Parsed representation of a SillyTavern V2 character card.
-///
-/// The `system_prompt` field is the **prefix-cache target**: it is prepended
-/// as the `system` role message on every turn and never changes mid-session.
+/// Parsed representation of a character card (OKF or SillyTavern V2).
 #[derive(Debug, Clone)]
 pub struct PersonaCard {
     /// Character name shown in logs and slash commands.
     pub name: String,
 
-    /// Fully-rendered system prompt (prefix-cache candidate).
-    ///
-    /// Assembled from: `system_prompt` → `description` → `personality` → `scenario`.
+    /// Fully-rendered system prompt.
     pub system_prompt: String,
 
     /// Example dialogue lines used for anti-repetition seeding.
@@ -79,13 +76,18 @@ pub struct PersonaCard {
 }
 
 impl PersonaCard {
-    /// Load and parse a SillyTavern V2 JSON character card from `path`.
+    /// Load a character card from `path`.
     ///
-    /// On parse failure returns [`KernelError::PersonaParse`].
-    /// Falls back to [`PersonaCard::stub`] when the path is empty.
+    /// - **Directory** → OKF bundle (`index.md` + optional `examples.md`)
+    /// - **File**      → SillyTavern V2 JSON
+    /// - **Empty**     → returns [`PersonaCard::stub`]
     pub fn load(path: &std::path::Path) -> Result<Self, KernelError> {
         if path.as_os_str().is_empty() {
             return Ok(Self::stub());
+        }
+
+        if path.is_dir() {
+            return Self::load_okf(path);
         }
 
         let raw = std::fs::read_to_string(path).map_err(|e| {
@@ -94,6 +96,50 @@ impl PersonaCard {
 
         Self::parse_json(&raw)
     }
+
+    // ── OKF loader ────────────────────────────────────────────────────────────
+
+    /// Load an OKF bundle from a directory.
+    ///
+    /// Required: `index.md`
+    /// Optional: `examples.md`
+    fn load_okf(dir: &std::path::Path) -> Result<Self, KernelError> {
+        // ── index.md ──────────────────────────────────────────────────────────
+        let index_path = dir.join("index.md");
+        let index_raw = std::fs::read_to_string(&index_path).map_err(|e| {
+            KernelError::PersonaParse(format!("okf index.md: {e}"))
+        })?;
+
+        let (front, body) = parse_frontmatter(&index_raw);
+
+        let name = front
+            .get("title")
+            .filter(|s| !s.is_empty())
+            .cloned()
+            .unwrap_or_else(|| "g10kz".into());
+
+        // Split body at "## First Message" marker
+        let (system_body, first_message) = split_first_message(&body);
+
+        // ── examples.md (optional) ────────────────────────────────────────────
+        let examples_path = dir.join("examples.md");
+        let example_dialogue = if examples_path.exists() {
+            let raw = std::fs::read_to_string(&examples_path).unwrap_or_default();
+            let (_, ex_body) = parse_frontmatter(&raw);
+            parse_example_dialogue(&ex_body)
+        } else {
+            vec![]
+        };
+
+        Ok(Self {
+            name,
+            system_prompt: system_body.trim().to_string(),
+            example_dialogue,
+            first_message: first_message.trim().to_string(),
+        })
+    }
+
+    // ── JSON loader ───────────────────────────────────────────────────────────
 
     /// Parse a SillyTavern V2 JSON string.
     pub fn parse_json(json: &str) -> Result<Self, KernelError> {
@@ -132,7 +178,71 @@ impl PersonaCard {
     }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── OKF helpers ─────────────────────────────────────────────────────────────
+
+/// Parse YAML frontmatter delimited by `---` lines.
+///
+/// Returns `(fields, body)`.  Only simple `key: value` pairs are parsed;
+/// list/nested YAML is silently skipped.  Quoted string values are unquoted.
+fn parse_frontmatter(content: &str) -> (HashMap<String, String>, String) {
+    // Strip UTF-8 BOM if present
+    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
+
+    let Some(after_open) = content.strip_prefix("---") else {
+        return (HashMap::new(), content.to_string());
+    };
+
+    // The closing --- must be on its own line
+    let close_marker = "\n---";
+    let Some(close_pos) = after_open.find(close_marker) else {
+        return (HashMap::new(), content.to_string());
+    };
+
+    let front_text = &after_open[..close_pos];
+    let rest = &after_open[close_pos + close_marker.len()..];
+    let body = rest.strip_prefix('\n').unwrap_or(rest).to_string();
+
+    let mut fields = HashMap::new();
+    for line in front_text.lines() {
+        // Skip list items and blank lines
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('-') || line.starts_with('[') {
+            continue;
+        }
+        let Some(colon) = line.find(':') else { continue };
+        let key = line[..colon].trim().to_string();
+        let val = line[colon + 1..]
+            .trim()
+            .trim_matches('"')
+            .trim_matches('\'')
+            .to_string();
+        if !key.is_empty() {
+            fields.insert(key, val);
+        }
+    }
+
+    (fields, body)
+}
+
+/// Split a markdown body at a `## First Message` heading.
+///
+/// Returns `(system_prompt_section, first_message_section)`.
+fn split_first_message(body: &str) -> (String, String) {
+    // Look for the heading in any of its common forms
+    for marker in &["## First Message\n", "## First Message\r\n", "## First Message"] {
+        if let Some(pos) = body.find(marker) {
+            let sys = body[..pos].to_string();
+            let rest = &body[pos + marker.len()..];
+            // Skip the first blank line after heading if present
+            let msg = rest.trim_start_matches('\n').trim_start_matches('\r');
+            return (sys, msg.to_string());
+        }
+    }
+    // No separator → entire body is system prompt
+    (body.to_string(), String::new())
+}
+
+// ─── JSON helpers ─────────────────────────────────────────────────────────────
 
 /// Render a single system prompt string from the card's fields.
 fn render_system_prompt(d: &CardData) -> String {
@@ -164,7 +274,11 @@ fn parse_example_dialogue(raw: &str) -> Vec<String> {
         return vec![];
     }
     raw.lines()
-        .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with("<START>") && !l.trim_start().starts_with("<END>"))
+        .filter(|l| {
+            !l.trim().is_empty()
+                && !l.trim_start().starts_with("<START>")
+                && !l.trim_start().starts_with("<END>")
+        })
         .map(|l| l.trim().to_owned())
         .collect()
 }
@@ -174,6 +288,8 @@ fn parse_example_dialogue(raw: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── JSON tests (unchanged) ────────────────────────────────────────────────
 
     const SAMPLE_CARD: &str = r#"{
         "spec": "chara_card_v2",
@@ -235,7 +351,6 @@ mod tests {
     #[test]
     fn example_dialogue_strips_start_end_tags() {
         let card = PersonaCard::parse_json(SAMPLE_CARD).unwrap();
-        // <START> and <END> markers should not appear in parsed dialogue
         assert!(!card.example_dialogue.iter().any(|l| l.contains("<START>")));
         assert!(!card.example_dialogue.iter().any(|l| l.contains("<END>")));
     }
@@ -249,7 +364,70 @@ mod tests {
         }"#;
         let card = PersonaCard::parse_json(minimal).unwrap();
         assert_eq!(card.name, "TestBot");
-        // No fields → falls back to stub system prompt
         assert!(!card.system_prompt.is_empty());
+    }
+
+    // ── OKF frontmatter tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn frontmatter_parses_title() {
+        let md = "---\ntype: Character\ntitle: g10kz\ntags: [a, b]\n---\nbody text";
+        let (fields, body) = parse_frontmatter(md);
+        assert_eq!(fields.get("title").map(String::as_str), Some("g10kz"));
+        assert_eq!(fields.get("type").map(String::as_str), Some("Character"));
+        assert_eq!(body.trim(), "body text");
+    }
+
+    #[test]
+    fn frontmatter_handles_no_frontmatter() {
+        let md = "just plain body";
+        let (fields, body) = parse_frontmatter(md);
+        assert!(fields.is_empty());
+        assert_eq!(body, "just plain body");
+    }
+
+    #[test]
+    fn split_first_message_splits_correctly() {
+        let body = "system stuff here\n\n## First Message\nhello there";
+        let (sys, first) = split_first_message(body);
+        assert!(sys.contains("system stuff"));
+        assert_eq!(first.trim(), "hello there");
+    }
+
+    #[test]
+    fn split_first_message_no_marker_returns_full_body() {
+        let body = "system stuff only";
+        let (sys, first) = split_first_message(body);
+        assert_eq!(sys, "system stuff only");
+        assert!(first.is_empty());
+    }
+
+    #[test]
+    fn okf_load_from_dir() {
+        use std::io::Write;
+
+        let dir = tempfile::tempdir().unwrap();
+        let index = dir.path().join("index.md");
+        let mut f = std::fs::File::create(&index).unwrap();
+        writeln!(f, "---").unwrap();
+        writeln!(f, "type: Character").unwrap();
+        writeln!(f, "title: TestChar").unwrap();
+        writeln!(f, "---").unwrap();
+        writeln!(f, "System prompt text here.").unwrap();
+        writeln!(f, "").unwrap();
+        writeln!(f, "## First Message").unwrap();
+        writeln!(f, "Hello from OKF!").unwrap();
+
+        let ex = dir.path().join("examples.md");
+        let mut fe = std::fs::File::create(&ex).unwrap();
+        writeln!(fe, "---\ntype: Dialogue Examples\ntitle: ex\n---").unwrap();
+        writeln!(fe, "{{{{user}}}}: hi").unwrap();
+        writeln!(fe, "{{{{char}}}}: hey").unwrap();
+
+        let card = PersonaCard::load(dir.path()).unwrap();
+        assert_eq!(card.name, "TestChar");
+        assert!(card.system_prompt.contains("System prompt text here"));
+        assert_eq!(card.first_message, "Hello from OKF!");
+        assert_eq!(card.example_dialogue.len(), 2);
     }
 }

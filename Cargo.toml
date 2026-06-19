@@ -64,6 +64,7 @@ base64         = "0.22"
 
 # property-based testing
 proptest     = "1"
+tempfile     = "3"
 
 # internal crates (opt-in per member)
 g10kz-config  = { path = "crates/g10kz-config" }
