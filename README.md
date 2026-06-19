@@ -302,6 +302,23 @@ REDACTED
 
 ---
 
+---
+
+## 使用的開源技術
+
+| 項目 | 用途 | 連結 |
+|---|---|---|
+| [Serenity](https://github.com/serenity-rs/serenity) | Rust Discord 閘道 / 事件處理 | github.com/serenity-rs/serenity |
+| [EverOS](https://github.com/EverMind-AI/EverOS) | 向量化長期記憶 sidecar | github.com/EverMind-AI/EverOS |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) | 本地 embedding 推理（llama-embed） | github.com/ggml-org/llama.cpp |
+| [SillyTavern](https://github.com/SillyTavern/SillyTavern) | V2 角色卡格式規範 | github.com/SillyTavern/SillyTavern |
+| [new-api](https://github.com/Calcium-Ion/new-api) | OpenAI 相容 LLM 閘道 | github.com/Calcium-Ion/new-api |
+| [Tokio](https://github.com/tokio-rs/tokio) | Rust 非同步運行時 | github.com/tokio-rs/tokio |
+| [reqwest](https://github.com/seanmonstar/reqwest) | HTTP 客戶端（LLM / EverOS / 搜索） | github.com/seanmonstar/reqwest |
+| [serde / serde_json](https://github.com/serde-rs/serde) | JSON 序列化 / 反序列化 | github.com/serde-rs/serde |
+| [tracing](https://github.com/tokio-rs/tracing) | 結構化日誌 | github.com/tokio-rs/tracing |
+| [DuckDuckGo Lite](https://lite.duckduckgo.com/lite/) | 無追蹤網路搜索後端 | lite.duckduckgo.com |
+
 ## License
 
 MIT
