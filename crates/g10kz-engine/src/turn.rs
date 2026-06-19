@@ -360,10 +360,11 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
     tracer.trace.path = format!("{decision:?}");
     debug!(?decision, restricted, "routed");
 
-    // ── Gather (memory — only for Reason path) ───────────────────────────────
+    // ── Gather (memory — Social + Reason paths) ─────────────────────────────
     tracer.enter_stage(&Stage::Gather);
-    let memory_ctx = if matches!(decision, RouteDecision::Reason) && !restricted {
-        let fut = input.memory.search(input.user_id, &display_text, 5);
+    let memory_ctx = if matches!(decision, RouteDecision::Social | RouteDecision::Reason) && !restricted {
+        let limit = if matches!(decision, RouteDecision::Social) { 3 } else { 5 };
+        let fut = input.memory.search(input.user_id, &display_text, limit);
         tokio::select! {
             r = fut => r,
             _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
@@ -386,7 +387,7 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 
         RouteDecision::Social => {
             tracer.enter_stage(&Stage::Social);
-            path_social(&input, &display_text).await?
+            path_social(&input, &display_text, &memory_ctx).await?
         }
 
         RouteDecision::Search => {
@@ -542,9 +543,10 @@ async fn search_and_reply(
 async fn path_social(
     input: &TurnInput<'_>,
     display_text: &str,
+    memory_ctx: &[g10kz_everos::MemoryEntry],
 ) -> Result<(String, Usage), EngineError> {
     if input.stream_sink.is_some() {
-        return path_social_streaming(input, display_text).await;
+        return path_social_streaming(input, display_text, memory_ctx).await;
     }
 
     // Non-streaming: cheap model first, escalate on sentinel.
@@ -552,6 +554,17 @@ async fn path_social(
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
+    // Inject long-term memory context before history (top-3, low token budget)
+    if !memory_ctx.is_empty() {
+        let ctx = memory_ctx.iter()
+            .map(|e| format!("• {}", e.text))
+            .collect::<Vec<_>>()
+            .join("
+");
+        messages.push(Message::text(Role::User, format!("[長期記憶]
+{ctx}")));
+        messages.push(Message::text(Role::Assistant, "嗯，我記得。"));
+    }
     messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
@@ -578,6 +591,7 @@ async fn path_social(
 async fn path_social_streaming(
     input: &TurnInput<'_>,
     display_text: &str,
+    memory_ctx: &[g10kz_everos::MemoryEntry],
 ) -> Result<(String, Usage), EngineError> {
     let sink = input.stream_sink.clone().expect("stream_sink present");
 
@@ -585,6 +599,17 @@ async fn path_social_streaming(
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
+    // Inject long-term memory context before history (top-3, low token budget)
+    if !memory_ctx.is_empty() {
+        let ctx = memory_ctx.iter()
+            .map(|e| format!("• {}", e.text))
+            .collect::<Vec<_>>()
+            .join("
+");
+        messages.push(Message::text(Role::User, format!("[長期記憶]
+{ctx}")));
+        messages.push(Message::text(Role::Assistant, "嗯，我記得。"));
+    }
     messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
