@@ -525,6 +525,15 @@ async fn path_social_streaming(
                         let _ = sink.try_send(buf.clone());
                     }
                 } else {
+                    // Already decided to continue, but haiku may still embed
+                    // [[ESCALATE]] mid-response (e.g. after roleplay text).
+                    // Detect it anywhere in the accumulated buffer.
+                    if buf.contains("[[ESCALATE") {
+                        child.cancel();
+                        drop(stream);
+                        debug!("social self-escalated mid-stream to reason model");
+                        return escalate_opus(input, display_text, Some(sink)).await;
+                    }
                     let _ = sink.try_send(buf.clone());
                 }
             }
@@ -539,6 +548,12 @@ async fn path_social_streaming(
         }
         let _ = sink.try_send(buf.clone());
     }
+
+    // Final safety net: if [[ESCALATE]] slipped through to the end of the buffer.
+    if buf.contains("[[ESCALATE") {
+        return escalate_opus(input, display_text, Some(sink)).await;
+    }
+
     Ok((buf, usage))
 }
 
