@@ -321,4 +321,4 @@ REDACTED
 
 ## License
 
-MIT
+[AGPL-3.0](LICENSE) © 2026 g8kz
