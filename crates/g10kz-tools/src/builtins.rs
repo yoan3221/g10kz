@@ -1,7 +1,5 @@
 //! Built-in tools: time, Taiwan stock quote, web search, fetch page, escalate.
 
-use std::path::PathBuf;
-
 use serde_json::{json, Value};
 use tracing::warn;
 
@@ -164,80 +162,33 @@ impl Tool for TwStockTool {
 
 // ─── WebSearchTool ───────────────────────────────────────────────────────────
 
-/// Web search: DuckDuckGo lite HTML for results + Jina Reader or Obscura for page content.
-///
-/// Search flow:
-/// 1. POST to DDG lite → parse top hits (title, url, snippet)
-/// 2. Fetch top 3 pages via Jina Reader API (fallback to Obscura if available)
-/// 3. BM25-inspired keyword scoring → extract most relevant passages
-/// 4. Return Discord Markdown formatted result
+/// 網路搜尋：委託 gemini-search 微服務（Gemini API + Google Search grounding）
 pub struct WebSearchTool {
     client: reqwest::Client,
-    /// Path to the `obscura` binary. `None` → Jina Reader fallback.
-    pub obscura_path: Option<PathBuf>,
+    search_url: String,
 }
 
 impl WebSearchTool {
-    pub fn new(obscura_path: Option<PathBuf>) -> Self {
+    pub fn new(search_url: Option<String>) -> Self {
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(15))
-            .user_agent(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
-                 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            )
+            .timeout(std::time::Duration::from_secs(20))
             .build()
             .unwrap();
-        Self { client, obscura_path }
-    }
-
-    async fn ddg_search(&self, query: &str) -> Vec<SearchHit> {
-        let body = format!("q={}", url_encode(query));
-        let resp = match self.client
-            .post("https://lite.duckduckgo.com/lite/")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-        {
-            Ok(r) => r,
-            Err(e) => { warn!("ddg_search: {e}"); return vec![]; }
-        };
-        match resp.text().await {
-            Ok(html) => parse_ddg_lite(&html),
-            Err(e) => { warn!("ddg_search read: {e}"); vec![] }
-        }
-    }
-
-    async fn obscura_fetch(&self, url: &str) -> Option<String> {
-        let path = self.obscura_path.as_ref()?;
-        let out = tokio::process::Command::new(path)
-            .args(["fetch", url, "--dump", "text", "--timeout", "8", "--quiet"])
-            .output()
-            .await
-            .ok()?;
-        let text = String::from_utf8_lossy(&out.stdout).to_string();
-        if text.trim().len() < 50 { None } else { Some(text) }
-    }
-
-    async fn jina_fetch(&self, url: &str) -> Option<String> {
-        jina_fetch_url(&self.client, url, 700).await
+        let search_url = search_url
+            .or_else(|| std::env::var("GEMINI_SEARCH_URL").ok())
+            .unwrap_or_else(|| "http://localhost:8090".into());
+        Self { client, search_url }
     }
 }
 
 impl Default for WebSearchTool {
-    fn default() -> Self {
-        let obscura_path = ["/usr/local/bin/obscura", "/usr/bin/obscura"]
-            .iter()
-            .find(|p| std::path::Path::new(p).exists())
-            .map(PathBuf::from);
-        Self::new(obscura_path)
-    }
+    fn default() -> Self { Self::new(None) }
 }
 
 impl Tool for WebSearchTool {
     fn name(&self) -> &str { "web_search" }
     fn description(&self) -> &str {
-        "搜尋網路最新資訊。自動取得頁面全文並提取最相關段落。參數：query（搜尋詞）。"
+        "搜尋網路最新資訊。由 Gemini Google Search grounding 驅動，結果附帶來源連結。參數：query（搜尋詞）。"
     }
     fn schema(&self) -> Value {
         json!({
@@ -246,10 +197,6 @@ impl Tool for WebSearchTool {
                 "query": {
                     "type": "string",
                     "description": "搜尋關鍵詞（繁體中文或英文）"
-                },
-                "fetch_pages": {
-                    "type": "boolean",
-                    "description": "是否抓取頁面全文（預設 true）"
                 }
             },
             "required": ["query"]
@@ -262,71 +209,59 @@ impl Tool for WebSearchTool {
                 Some(q) => q.to_owned(),
                 None => return err(&call.name, "missing query".into()),
             };
-            let do_fetch = call.arguments
-                .get("fetch_pages")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(true);
 
-            let hits = self.ddg_search(&query).await;
-            if hits.is_empty() {
+            let endpoint = format!("{}/v1/search", self.search_url);
+            let body = json!({ "query": query, "max_results": 5 });
+
+            let resp = match self.client.post(&endpoint).json(&body).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    warn!("web_search: gemini-search request failed: {e}");
+                    return err(&call.name, format!("搜尋服務無法連線：{e}"));
+                }
+            };
+
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                warn!("web_search: gemini-search HTTP {status}: {text}");
+                return err(&call.name, format!("搜尋服務錯誤 {status}"));
+            }
+
+            let data: Value = match resp.json().await {
+                Ok(v) => v,
+                Err(e) => return err(&call.name, format!("搜尋結果解析失敗：{e}")),
+            };
+
+            if let Some(e) = data.get("error").and_then(|v| v.as_str()) {
+                return err(&call.name, format!("搜尋錯誤：{e}"));
+            }
+
+            let summary = data.get("summary").and_then(|v| v.as_str()).unwrap_or("").to_owned();
+            let results = data.get("results").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+
+            if summary.is_empty() && results.is_empty() {
                 return ok(&call.name, format!("找不到「{query}」的相關結果，請換個搜尋詞試試。"));
             }
 
-            let query_terms: Vec<String> =
-                query.split_whitespace().map(|s| s.to_lowercase()).collect();
-            let term_refs: Vec<&str> = query_terms.iter().map(|s| s.as_str()).collect();
-            let top_hits: Vec<&SearchHit> = hits.iter().take(3).collect();
-
-            // Fetch pages: prefer Obscura (anti-detection), fallback to Jina Reader
-            let page_contents: Vec<Option<String>> = if do_fetch {
-                if self.obscura_path.is_some() {
-                    let futs: Vec<_> =
-                        top_hits.iter().map(|h| self.obscura_fetch(&h.url)).collect();
-                    futures::future::join_all(futs).await
-                } else {
-                    let futs: Vec<_> =
-                        top_hits.iter().map(|h| self.jina_fetch(&h.url)).collect();
-                    futures::future::join_all(futs).await
-                }
-            } else {
-                vec![None; top_hits.len()]
-            };
-
-            // Build Discord-formatted output
             let mut output = format!("## 搜尋：{query}\n\n");
 
-            for (i, (hit, content)) in
-                top_hits.iter().zip(page_contents.into_iter()).enumerate()
-            {
-                let num = i + 1;
-                output.push_str(&format!("**[{num}] {}**\n", hit.title));
-                output.push_str(&format!("-# <{}>\n", hit.url));
-
-                let body = if let Some(text) = content {
-                    extract_relevant(&text, &term_refs, 700)
-                } else if !hit.snippet.is_empty() {
-                    hit.snippet.chars().take(350).collect()
-                } else {
-                    String::new()
-                };
-
-                if !body.is_empty() {
-                    let quoted = body.lines()
-                        .map(|l| format!("> {l}"))
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    output.push_str(&quoted);
-                    output.push('\n');
-                }
-                output.push('\n');
+            if !summary.is_empty() {
+                let quoted = summary.lines()
+                    .map(|l| format!("> {l}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                output.push_str(&quoted);
+                output.push_str("\n\n");
             }
 
-            if hits.len() > 3 {
-                output.push_str("-# 更多結果：");
-                for hit in hits.iter().skip(3).take(3) {
-                    output.push_str(&format!("[{}](<{}>) · ", hit.title, hit.url));
+            if !results.is_empty() {
+                output.push_str("**來源：**\n");
+                for (i, r) in results.iter().enumerate().take(5) {
+                    let title = r.get("title").and_then(|v| v.as_str()).unwrap_or("(無標題)");
+                    let url   = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
+                    output.push_str(&format!("-# [{i_n}] [{title}](<{url}>)\n", i_n = i + 1));
                 }
-                output.push('\n');
             }
 
             ok(&call.name, output.trim().to_string())
@@ -336,32 +271,33 @@ impl Tool for WebSearchTool {
 
 // ─── FetchPageTool ───────────────────────────────────────────────────────────
 
-/// Fetch a web page as clean Markdown via Jina Reader API (https://r.jina.ai/).
-/// Converts any URL to LLM-friendly Markdown — strips ads, nav, JS, images.
+/// 讀取網頁內容：委託 gemini-search 微服務的 /v1/fetch 端點。
 pub struct FetchPageTool {
     client: reqwest::Client,
+    search_url: String,
 }
 
 impl FetchPageTool {
-    pub fn new() -> Self {
-        Self {
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(20))
-                .user_agent("Mozilla/5.0 (compatible; g10kz-bot/1.0)")
-                .build()
-                .unwrap(),
-        }
+    pub fn new(search_url: Option<String>) -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .unwrap();
+        let search_url = search_url
+            .or_else(|| std::env::var("GEMINI_SEARCH_URL").ok())
+            .unwrap_or_else(|| "http://localhost:8090".into());
+        Self { client, search_url }
     }
 }
 
 impl Default for FetchPageTool {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self { Self::new(None) }
 }
 
 impl Tool for FetchPageTool {
     fn name(&self) -> &str { "fetch_page" }
     fn description(&self) -> &str {
-        "讀取指定網頁的完整內容，回傳 Markdown 格式。適合讀取文章、GitHub README、技術文件、新聞等。\
+        "讀取指定網頁的完整內容，回傳文字摘要。適合讀取文章、GitHub README、技術文件、新聞等。\
          參數：url（完整網址，須含 https:// 或 http://）。"
     }
     fn schema(&self) -> Value {
@@ -383,205 +319,43 @@ impl Tool for FetchPageTool {
                 None => return err(&call.name, "missing url".into()),
             };
 
-            match jina_fetch_url(&self.client, &url, 4000).await {
-                Some(content) => ok(&call.name, content),
-                None => err(&call.name, format!("無法讀取頁面：{url}")),
+            let endpoint = format!("{}/v1/fetch", self.search_url);
+            let body = json!({ "url": url, "max_chars": 4000 });
+
+            let resp = match self.client.post(&endpoint).json(&body).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    warn!("fetch_page: gemini-search request failed: {e}");
+                    return err(&call.name, format!("讀取服務無法連線：{e}"));
+                }
+            };
+
+            if !resp.status().is_success() {
+                let status = resp.status();
+                warn!("fetch_page: gemini-search HTTP {status}");
+                return err(&call.name, format!("讀取服務錯誤 {status}"));
             }
+
+            let data: Value = match resp.json().await {
+                Ok(v) => v,
+                Err(e) => return err(&call.name, format!("讀取結果解析失敗：{e}")),
+            };
+
+            if let Some(e) = data.get("error").and_then(|v| v.as_str()) {
+                return err(&call.name, format!("讀取錯誤：{e}"));
+            }
+
+            let content = data.get("content").and_then(|v| v.as_str()).unwrap_or("").to_owned();
+            let truncated = data.get("truncated").and_then(|v| v.as_bool()).unwrap_or(false);
+
+            if content.is_empty() {
+                return err(&call.name, format!("無法讀取頁面：{url}"));
+            }
+
+            let note = if truncated { "\n\n[內容已截斷]" } else { "" };
+            ok(&call.name, format!("{content}{note}"))
         })
     }
-}
-
-// ─── SearchHit ───────────────────────────────────────────────────────────────
-
-struct SearchHit {
-    title: String,
-    url: String,
-    snippet: String,
-}
-
-// ─── DDG lite HTML parser ────────────────────────────────────────────────────
-
-fn parse_ddg_lite(html: &str) -> Vec<SearchHit> {
-    let mut hits: Vec<SearchHit> = Vec::new();
-    let mut pending_url: Option<String> = None;
-    let mut pending_title: Option<String> = None;
-    let mut in_snippet = false;
-    let mut snippet_buf = String::new();
-
-    for line in html.lines() {
-        let t = line.trim();
-
-        if t.contains("class='result-link'") || t.contains("class=\"result-link\"") {
-            if let (Some(url), Some(title)) = (pending_url.take(), pending_title.take()) {
-                hits.push(SearchHit { url, title, snippet: snippet_buf.trim().to_string() });
-                snippet_buf.clear();
-                if hits.len() >= 6 { return hits; }
-            }
-            if let Some(url) = extract_href(t) {
-                let title = extract_inner_text(t).unwrap_or_else(|| url.clone());
-                pending_url = Some(url);
-                pending_title = Some(title);
-            }
-            in_snippet = false;
-
-        } else if t.contains("class='result-snippet'") || t.contains("class=\"result-snippet\"") {
-            in_snippet = true;
-            if let Some(pos) = t.rfind('>') {
-                let after = t[pos + 1..].trim();
-                if !after.is_empty() {
-                    snippet_buf.push_str(&strip_html(after));
-                    snippet_buf.push(' ');
-                }
-            }
-        } else if in_snippet {
-            if t.starts_with("</td>") || t.starts_with("</tr>") {
-                in_snippet = false;
-            } else if !t.is_empty() {
-                snippet_buf.push_str(&strip_html(t));
-                snippet_buf.push(' ');
-            }
-        }
-    }
-
-    if let (Some(url), Some(title)) = (pending_url, pending_title) {
-        hits.push(SearchHit { url, title, snippet: snippet_buf.trim().to_string() });
-    }
-    hits
-}
-
-fn extract_href(line: &str) -> Option<String> {
-    for (prefix, quote) in &[("href=\"", '"'), ("href='", '\'')] {
-        if let Some(start) = line.find(prefix) {
-            let rest = &line[start + prefix.len()..];
-            if let Some(end) = rest.find(*quote) {
-                let url = &rest[..end];
-                if url.starts_with("http") {
-                    return Some(url.to_string());
-                }
-            }
-        }
-    }
-    None
-}
-
-fn extract_inner_text(line: &str) -> Option<String> {
-    let start = line.rfind('>')?;
-    let rest = &line[start + 1..];
-    let end = rest.find('<').unwrap_or(rest.len());
-    let text = strip_html(&rest[..end]).trim().to_string();
-    if text.is_empty() { None } else { Some(text) }
-}
-
-fn strip_html(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut in_tag = false;
-    for c in s.chars() {
-        match c {
-            '<' => in_tag = true,
-            '>' => in_tag = false,
-            _ if !in_tag => out.push(c),
-            _ => {}
-        }
-    }
-    out.replace("&amp;", "&")
-       .replace("&lt;", "<")
-       .replace("&gt;", ">")
-       .replace("&quot;", "\"")
-       .replace("&#39;", "'")
-       .replace("&apos;", "'")
-       .replace("&nbsp;", " ")
-}
-
-// ─── BM25-inspired relevance extraction ──────────────────────────────────────
-
-fn extract_relevant(content: &str, query_terms: &[&str], max_chars: usize) -> String {
-    let paragraphs: Vec<&str> = content
-        .split('\n')
-        .map(str::trim)
-        .filter(|s| s.len() > 20)
-        .collect();
-
-    if paragraphs.is_empty() {
-        return content.chars().take(max_chars).collect();
-    }
-
-    let mut scored: Vec<(usize, usize, &str)> = paragraphs
-        .iter()
-        .enumerate()
-        .map(|(idx, &p)| {
-            let p_lower = p.to_lowercase();
-            let score = query_terms.iter().filter(|&&t| p_lower.contains(t)).count();
-            (score, idx, p)
-        })
-        .collect();
-
-    scored.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
-
-    let mut result = String::new();
-    for (_, _, para) in &scored {
-        if result.len() + para.len() + 2 > max_chars { break; }
-        if !result.is_empty() { result.push('\n'); }
-        result.push_str(para);
-    }
-
-    if result.is_empty() {
-        content.chars().take(max_chars).collect()
-    } else {
-        result
-    }
-}
-
-// ─── Jina Reader API helper ───────────────────────────────────────────────────
-
-/// Fetch a URL via Jina Reader (https://r.jina.ai/{url}).
-/// Returns clean Markdown, truncated to `max_chars`.
-/// Returns `None` on network error or empty response.
-async fn jina_fetch_url(client: &reqwest::Client, url: &str, max_chars: usize) -> Option<String> {
-    let jina_url = format!("https://r.jina.ai/{url}");
-    let resp = client
-        .get(&jina_url)
-        .header("Accept", "text/markdown, text/plain")
-        .header("X-Retain-Images", "none")
-        .send()
-        .await
-        .ok()?;
-
-    if !resp.status().is_success() {
-        warn!("jina_fetch: HTTP {} for {url}", resp.status());
-        return None;
-    }
-
-    let text = resp.text().await.ok()?;
-    if text.trim().len() < 30 {
-        return None;
-    }
-
-    let truncated: String = text.chars().take(max_chars).collect();
-    let note = if text.len() > truncated.len() {
-        format!("\n\n[內容已截斷，原始 {} 字元]", text.len())
-    } else {
-        String::new()
-    };
-
-    Some(format!("{truncated}{note}"))
-}
-
-// ─── URL encoding ────────────────────────────────────────────────────────────
-
-fn url_encode(s: &str) -> String {
-    let mut out = String::new();
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '~') {
-            out.push(c);
-        } else if c == ' ' {
-            out.push('+');
-        } else {
-            for b in c.to_string().bytes() {
-                out.push_str(&format!("%{:02X}", b));
-            }
-        }
-    }
-    out
 }
 
 // ─── tests ───────────────────────────────────────────────────────────────────
@@ -632,45 +406,6 @@ mod tests {
     #[tokio::test]
     async fn fetch_page_missing_url() {
         let call = ToolCall { name: "fetch_page".into(), arguments: json!({}) };
-        assert!(!FetchPageTool::new().call(call).await.success);
-    }
-
-    #[test]
-    fn strip_html_basic() {
-        assert_eq!(strip_html("<b>hello</b> &amp; world"), "hello & world");
-    }
-
-    #[test]
-    fn url_encode_basic() {
-        assert_eq!(url_encode("hello world"), "hello+world");
-    }
-
-    #[test]
-    fn parse_ddg_lite_extracts_hits() {
-        let html = r#"
-            <tr><td>
-              <a rel="nofollow" href="https://example.com/" class='result-link'>Example Site</a>
-            </td></tr>
-            <tr><td class='result-snippet'>
-              An <b>example</b> snippet about Rust.
-            </td></tr>
-            <tr><td>
-              <a rel="nofollow" href="https://foo.org/bar" class='result-link'>Foo Bar</a>
-            </td></tr>
-            <tr><td class='result-snippet'>Another snippet.</td></tr>
-        "#;
-        let hits = parse_ddg_lite(html);
-        assert!(!hits.is_empty(), "should parse hits");
-        assert_eq!(hits[0].url, "https://example.com/");
-        assert_eq!(hits[0].title, "Example Site");
-        assert!(hits[0].snippet.contains("example") || hits[0].snippet.contains("Rust"),
-            "snippet: '{}'", hits[0].snippet);
-    }
-
-    #[test]
-    fn extract_relevant_prefers_query_terms() {
-        let content = "Rust is fast.\nPython is slow.\nRust has memory safety.\nJava is verbose.";
-        let result = extract_relevant(content, &["rust"], 200);
-        assert!(result.contains("Rust"), "result: {result}");
+        assert!(!FetchPageTool::new(None).call(call).await.success);
     }
 }

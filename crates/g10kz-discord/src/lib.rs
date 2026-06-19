@@ -6,7 +6,6 @@ mod transcript;
 pub mod state;
 mod util;
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -51,25 +50,11 @@ pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
 pub fn build_state(config: &Config) -> Arc<BotState> {
     let provider = OpenRouterProvider::from_config(config);
 
-    // Resolve Obscura path from config
-    let obscura_path = if config.obscura_path.is_empty() {
-        None
-    } else {
-        let p = PathBuf::from(&config.obscura_path);
-        if p.exists() {
-            info!(path = %p.display(), "obscura binary found");
-            Some(p)
-        } else {
-            warn!(path = %p.display(), "obscura binary not found — web search will use Jina Reader");
-            None
-        }
-    };
-
     let mut toolbox = ToolBox::new();
     toolbox.register(TimeTool);
     toolbox.register(TwStockTool::new());
-    toolbox.register(WebSearchTool::new(obscura_path));
-    toolbox.register(FetchPageTool::new());
+    toolbox.register(WebSearchTool::new(None));
+    toolbox.register(FetchPageTool::new(None));
 
     let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
         .unwrap_or_else(|e| {
