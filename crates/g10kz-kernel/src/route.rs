@@ -68,21 +68,26 @@ static SEARCH_TRIGGERS: &[&str] = &[
     "幫我找",
     "查一下",
     "找一下",
+    "找找",
     "google一下",
     "google 一下",
+    "查查",
     "search for",
     "look up",
     "find me",
     "search me",
+    // News / latest anything
+    "新聞",
+    "最新",
+    "近況",
+    "有沒有",
+    "消息",
     // Recency signals (require current data)
     "最新消息",
     "最新的",
     "今天的新聞",
     "今天發生",
     "最近發生",
-    "現在幾點",
-    "今天幾號",
-    "今天日期",
     "現在的價格",
     "現在多少",
     "今日股價",
@@ -120,7 +125,14 @@ static ANALYTICAL_KEYWORDS: &[&str] = &[
     // Strong "definitely needs the strong model" signals only.
     // Soft analytical words (解釋/比較/評估/explain/compare…) now fall through to
     // Social, where the cheap model self-escalates via the [[ESCALATE]] sentinel.
-    // Chinese
+    // Time queries → Reason path so current_time tool can be called
+    "現在幾點",
+    "今天幾號",
+    "今天日期",
+    "現在幾號",
+    "今天是幾號",
+    "現在是幾點",
+    // Chinese coding/writing
     "寫一篇",
     "寫一段",
     "寫程式",
