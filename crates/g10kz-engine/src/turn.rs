@@ -459,11 +459,81 @@ const MAX_HISTORY_REASON: usize = 12; //  6 full turns (opus is expensive)
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
 const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji:害羞,臉紅]\n…誰稀罕你打招呼。\n> 鼓起腮頰\n哼！-# 怎麼有點開心...[kaomoji:心動,心跳]";
 
-const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇或超出能力→第一行只輸出[[ESCALATE]]停止；日常閒聊簡單問題照常回覆。\n[防猜] 被問具體規格/數據/型號/標準/專有名詞（如硬體總線、頻寬、版本與日期）若無十足把握，寧可[[ESCALATE]]也別編造；真不確定就直說不知道，絕不自信亂答。";
+const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇或超出能力→第一行只輸出[[ESCALATE]]停止；日常閒聊簡單問題照常回覆。\n[防猜] 被問具體規格/數據/型號/標準/專有名詞（如硬體總線、頻寬、版本與日期）若無十足把握，寧可[[ESCALATE]]也別編造；真不確定就直說不知道，絕不自信亂答。\n[搜尋] 被問最新新聞/即時資訊/近期事件→第一行只輸出[[SEARCH: 精準搜尋詞]]停止，系統搜尋後把結果傳給你再回覆。";
 
 /// True if `text` opens with the escalation sentinel.
 fn wants_escalation(text: &str) -> bool {
     text.trim_start().starts_with("[[ESCALATE")
+}
+
+/// Extract search query from `[[SEARCH: query]]` sentinel.
+/// Searches anywhere in `text` (handles mid-stream partial buffers with complete `]]`).
+fn extract_search_query(text: &str) -> Option<String> {
+    let start = text.find("[[SEARCH:")?;
+    let rest = &text[start + 9..];
+    let end = rest.find("]]")?;
+    let query = rest[..end].trim().to_string();
+    if query.is_empty() { None } else { Some(query) }
+}
+
+/// Search sentinel handler: dispatches `web_search` then re-calls haiku with results.
+async fn search_and_reply(
+    input: &TurnInput<'_>,
+    display_text: &str,
+    query: String,
+    sink: Option<tokio::sync::mpsc::Sender<String>>,
+) -> Result<(String, Usage), EngineError> {
+    debug!(query = %query, "social search sentinel dispatching web_search");
+    let call = g10kz_tools::tool::ToolCall {
+        name: "web_search".into(),
+        arguments: serde_json::json!({ "query": query }),
+    };
+    let search_result = tokio::select! {
+        r = input.toolbox.dispatch(call) => r,
+        _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+    };
+
+    let context = if search_result.success {
+        format!("[搜尋結果：{}]\n{}\n\n", query, search_result.content)
+    } else {
+        debug!("search tool failed in social sentinel, continuing without result");
+        String::new()
+    };
+
+    let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
+    messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
+    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.push(Message::text(
+        Role::User,
+        input.labeled(&format!("{context}請根據以上搜尋結果回覆：{display_text}")),
+    ));
+    let params = CompletionParams::social(&input.config.llm_model_social);
+
+    match sink {
+        None => tokio::select! {
+            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
+            _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
+        },
+        Some(sink) => {
+            let child = input.cancel.child_token();
+            let mut stream = input.provider.complete_stream(&messages, &params, child.clone());
+            let mut buf = String::new();
+            let mut usage = Usage::default();
+            loop {
+                let item = tokio::select! {
+                    it = stream.next() => it,
+                    _ = input.cancel.cancelled() => { child.cancel(); return Err(EngineError::Cancelled); }
+                };
+                let Some(item) = item else { break };
+                match item.map_err(EngineError::Llm)? {
+                    StreamItem::Token(t) => { buf.push_str(&t); let _ = sink.try_send(buf.clone()); }
+                    StreamItem::Done(u) => { usage = u; }
+                }
+            }
+            Ok((buf, usage))
+        }
+    }
 }
 
 /// Social path. Streams via `stream_sink` when present (Discord), otherwise a
@@ -493,6 +563,10 @@ async fn path_social(
     if wants_escalation(&reply) {
         debug!("social self-escalated to reason model (non-streaming)");
         return escalate_opus(input, display_text, None).await;
+    }
+    if let Some(query) = extract_search_query(&reply) {
+        debug!(query = %query, "social search sentinel (non-streaming)");
+        return search_and_reply(input, display_text, query, None).await;
     }
     Ok((reply, usage))
 }
@@ -542,6 +616,12 @@ async fn path_social_streaming(
                             debug!("social self-escalated to reason model (streaming)");
                             return escalate_opus(input, display_text, Some(sink)).await;
                         }
+                        if let Some(query) = extract_search_query(&buf) {
+                            child.cancel();
+                            drop(stream);
+                            debug!(query = %query, "social search sentinel (streaming, initial)");
+                            return search_and_reply(input, display_text, query, Some(sink)).await;
+                        }
                         let _ = sink.try_send(buf.clone());
                     }
                 } else {
@@ -553,6 +633,12 @@ async fn path_social_streaming(
                         drop(stream);
                         debug!("social self-escalated mid-stream to reason model");
                         return escalate_opus(input, display_text, Some(sink)).await;
+                    }
+                    if let Some(query) = extract_search_query(&buf) {
+                        child.cancel();
+                        drop(stream);
+                        debug!(query = %query, "social search sentinel mid-stream");
+                        return search_and_reply(input, display_text, query, Some(sink)).await;
                     }
                     let _ = sink.try_send(buf.clone());
                 }
@@ -566,12 +652,18 @@ async fn path_social_streaming(
         if wants_escalation(&buf) {
             return escalate_opus(input, display_text, Some(sink)).await;
         }
+        if let Some(query) = extract_search_query(&buf) {
+            return search_and_reply(input, display_text, query, Some(sink)).await;
+        }
         let _ = sink.try_send(buf.clone());
     }
 
-    // Final safety net: if [[ESCALATE]] slipped through to the end of the buffer.
+    // Final safety net: sentinels that slipped through to end of buffer.
     if buf.contains("[[ESCALATE") {
         return escalate_opus(input, display_text, Some(sink)).await;
+    }
+    if let Some(query) = extract_search_query(&buf) {
+        return search_and_reply(input, display_text, query, Some(sink)).await;
     }
 
     Ok((buf, usage))
