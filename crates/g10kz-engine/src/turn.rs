@@ -459,7 +459,7 @@ const MAX_HISTORY_REASON: usize = 12; //  6 full turns (opus is expensive)
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
 const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji:害羞,臉紅]\n…誰稀罕你打招呼。\n> 鼓起腮頰\n哼！-# 怎麼有點開心...[kaomoji:心動,心跳]";
 
-const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇或超出能力→第一行只輸出[[ESCALATE]]停止；日常閒聊簡單問題照常回覆。";
+const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇或超出能力→第一行只輸出[[ESCALATE]]停止；日常閒聊簡單問題照常回覆。\n[防猜] 被問具體規格/數據/型號/標準/專有名詞（如硬體總線、頻寬、版本與日期）若無十足把握，寧可[[ESCALATE]]也別編造；真不確定就直說不知道，絕不自信亂答。";
 
 /// True if `text` opens with the escalation sentinel.
 fn wants_escalation(text: &str) -> bool {
