@@ -294,17 +294,6 @@ REDACTED
 
 ---
 
-## CI
-
-GitHub Actions 每次 push main 自動執行：
-
-1. `cargo fmt --all -- --check`
-2. `cargo clippy --workspace --exclude g10kz-discord --exclude g10kz-bot -- -D warnings`
-3. `cargo test --workspace --exclude g10kz-discord --exclude g10kz-bot`
-4. `LLM_PROVIDER=mock cargo run -p g10kz-bot -- once "你好小十"`（smoke test）
-
----
-
 ## 開發注意事項
 
 **Windows 掛載 null byte 問題**：透過 Windows-mounted 路徑修改的 Rust / TOML 檔案可能附帶 trailing null bytes，導致 `cargo` 解析失敗。所有原始碼修改必須透過 paramiko SFTP，不可使用本地 Edit/Write 工具。
