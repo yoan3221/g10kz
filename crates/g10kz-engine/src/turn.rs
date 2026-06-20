@@ -408,6 +408,7 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 
     // ── Sanitize ─────────────────────────────────────────────────────────────
     tracer.enter_stage(&Stage::Sanitize);
+    let raw_reply = strip_thinking(&raw_reply);
     let reply = match sanitize_output(&raw_reply, &[]) {
         SanitizeResult::Ok(text) => text,
         SanitizeResult::Regenerate { reason } => {
@@ -517,7 +518,7 @@ async fn search_and_reply(
 
     match sink {
         None => tokio::select! {
-            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
+            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm).map(|(t, u)| (strip_thinking(&t), u)),
             _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
         },
         Some(sink) => {
@@ -770,7 +771,7 @@ async fn escalate_opus(
 
     match sink {
         None => tokio::select! {
-            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
+            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm).map(|(t, u)| (strip_thinking(&t), u)),
             _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
         },
         Some(sink) => {
@@ -785,11 +786,11 @@ async fn escalate_opus(
                 };
                 let Some(item) = item else { break };
                 match item.map_err(EngineError::Llm)? {
-                    StreamItem::Token(t) => { buf.push_str(&t); let _ = sink.try_send(buf.clone()); }
+                    StreamItem::Token(t) => { buf.push_str(&t); let visible = strip_thinking(&buf); if !visible.is_empty() { let _ = sink.try_send(visible); } }
                     StreamItem::Done(u) => { usage = u; }
                 }
             }
-            Ok((buf, usage))
+            Ok((strip_thinking(&buf), usage))
         }
     }
 }
