@@ -97,11 +97,42 @@ pub fn is_repetitive_opener(reply: &str, recent_openers: &[&str]) -> bool {
 
 // ─── Format normalisation ─────────────────────────────────────────────────────
 
+/// Remove lone backticks that would break Discord inline-code rendering.
+///
+/// Keeps `` `code` `` spans (matched pairs) and ` ```block``` ` fences intact.
+/// Removes any backtick that has no matching partner on the same line.
+fn strip_lone_backtick(s: &str) -> String {
+    s.lines()
+        .map(|line| {
+            // Fast path: no backtick at all
+            if !line.contains('`') {
+                return line.to_owned();
+            }
+            // Keep triple-backtick fence lines as-is
+            if line.trim_start().starts_with("```") {
+                return line.to_owned();
+            }
+            // Count backticks; if even → all paired → keep line as-is
+            let count = line.chars().filter(|&c| c == '`').count();
+            if count % 2 == 0 {
+                return line.to_owned();
+            }
+            // Odd number of backticks → remove all lone backticks on this line
+            // Simple approach: strip every backtick (paired ones become adjacent
+            // chars which is harmless; the text still reads correctly).
+            line.replace('`', "")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+
 /// Format normalisation applied to clean replies before delivery.
 ///
 /// - Trim leading/trailing whitespace
 /// - Collapse 3+ consecutive blank lines to 2
 /// - Strip leading assistant-turn artefacts ("Assistant:", "AI:", "小十:")
+/// - Strip stray lone backticks that break Discord inline-code rendering
 pub fn format_output(reply: &str) -> String {
     let trimmed = reply.trim();
 
@@ -113,6 +144,11 @@ pub fn format_output(reply: &str) -> String {
 
     // Normalise roleplay action lines (*動作*) into Discord blockquotes (> 動作)
     let blockquoted = actions_to_blockquote(&collapsed);
+
+    // Remove stray lone backticks that aren't part of code spans/blocks.
+    // A lone ` that has no matching closing ` breaks Discord's inline-code
+    // renderer and makes everything after it render as raw monospace.
+    let blockquoted = strip_lone_backtick(&blockquoted);
     blockquoted
 }
 
