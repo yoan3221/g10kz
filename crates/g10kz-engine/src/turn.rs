@@ -454,13 +454,13 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 /// action/speech/inner-thought format by example rather than abstract rules.
 /// Maximum conversation history messages forwarded to the LLM per turn.
 /// Keeps context bounded; prevents token explosion on long sessions.
-const MAX_HISTORY_SOCIAL: usize = 20; // 10 full turns
+const MAX_HISTORY_SOCIAL: usize = 14; // 7 full turns
 const MAX_HISTORY_REASON: usize = 12; //  6 full turns (opus is expensive)
 
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
 const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji:害羞,臉紅]\n…誰稀罕你打招呼。\n> 鼓起腮頰\n哼！-# 怎麼有點開心...[kaomoji:心動,心跳]";
 
-const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇或超出能力→第一行只輸出[[ESCALATE]]停止；日常閒聊簡單問題照常回覆。\n[防猜] 被問具體規格/數據/型號/標準/專有名詞（如硬體總線、頻寬、版本與日期）若無十足把握，寧可[[ESCALATE]]也別編造；真不確定就直說不知道，絕不自信亂答。\n[搜尋] 被問最新新聞/即時資訊/近期事件→第一行只輸出[[SEARCH: 精準搜尋詞]]停止，系統搜尋後把結果傳給你再回覆。";
+const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇→首行只輸出[[ESCALATE]]停止，閒聊照常。規格/數據/型號/日期無把握寧可[[ESCALATE]]或說不知道，別亂編。問即時新聞/近期事件→首行只輸出[[SEARCH: 關鍵詞]]停止。";
 
 /// True if `text` opens with the escalation sentinel.
 fn wants_escalation(text: &str) -> bool {
