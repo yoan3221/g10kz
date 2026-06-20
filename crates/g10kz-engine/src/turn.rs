@@ -223,7 +223,7 @@ impl<'a> TurnInput<'a> {
     /// Static Discord Markdown formatting guide injected into every system prompt.
     /// Teaches the LLM which formatting syntax Discord actually renders.
     fn discord_format_note() -> &'static str {
-        "\n\n[Discord格式] **粗** *斜* ~~刪~~ `碼` ```塊``` ||劇透|| -# 小字 > 引用 [字](url) # 標題 - 列表。視情況用、勿濫用。"
+        "\n\n[Discord格式] **粗** *斜* ~~刪~~ `碼` ```塊``` ||劇透|| -# 小字 > 引用 [字](url) # 標題 - 列表。視情況用、勿濫用。⚠️台詞/動作中嚴禁用 # 當害羞標記——Discord 會把行首 # 渲染成標題；改用 // 或〃。"
     }
     /// Inject guild/channel name into system prompt for server-aware responses.
     /// Empty string in DMs.
