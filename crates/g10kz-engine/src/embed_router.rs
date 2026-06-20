@@ -134,13 +134,15 @@ pub struct EmbeddingRouter {
     client: reqwest::Client,
     warmup_client: reqwest::Client,
     embed_url: String,
+    model: String,
+    api_key: String,
     centroids: Arc<RwLock<Option<Centroids>>>,
 }
 
 impl EmbeddingRouter {
     /// Create a new router pointed at `embed_base`
     /// (e.g. `"http://localhost:8082"` for llama-server).
-    pub fn new(embed_base: &str) -> Self {
+    pub fn new(embed_base: &str, model: &str, api_key: &str) -> Self {
         let embed_url = format!("{embed_base}/v1/embeddings");
         Self {
             client: reqwest::Client::builder()
@@ -152,6 +154,8 @@ impl EmbeddingRouter {
                 .build()
                 .unwrap(),
             embed_url,
+            model: model.to_owned(),
+            api_key: api_key.to_owned(),
             centroids: Arc::new(RwLock::new(None)),
         }
     }
@@ -187,7 +191,8 @@ impl EmbeddingRouter {
         let resp = self
             .warmup_client
             .post(&self.embed_url)
-            .json(&BatchRequest { model: "embed", input: examples })
+            .bearer_auth(&self.api_key)
+            .json(&BatchRequest { model: &self.model, input: examples })
             .send()
             .await?
             .error_for_status()?
@@ -212,7 +217,8 @@ impl EmbeddingRouter {
         let resp = self
             .client
             .post(&self.embed_url)
-            .json(&SingleRequest { model: "embed", input: text })
+            .bearer_auth(&self.api_key)
+            .json(&SingleRequest { model: &self.model, input: text })
             .send()
             .await?
             .error_for_status()?
@@ -318,12 +324,12 @@ mod tests {
 
     #[test]
     fn new_does_not_panic() {
-        let _ = EmbeddingRouter::new("http://localhost:8082");
+        let _ = EmbeddingRouter::new("http://localhost:8082", "embed", "");
     }
 
     #[tokio::test]
     async fn refine_none_before_warmup() {
-        let r = EmbeddingRouter::new("http://localhost:8082");
+        let r = EmbeddingRouter::new("http://localhost:8082", "embed", "");
         assert!(r.refine("hello").await.is_none());
     }
 }
