@@ -554,6 +554,11 @@ async fn path_social(
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
+    // BM25-selected few-shot examples from OKF examples.md (top-3 most relevant)
+    for (user_ex, char_ex) in input.persona.query_examples(display_text, 3) {
+        messages.push(Message::text(Role::User, user_ex));
+        messages.push(Message::text(Role::Assistant, char_ex));
+    }
     // Inject long-term memory context before history (top-3, low token budget)
     if !memory_ctx.is_empty() {
         let ctx = memory_ctx.iter()
@@ -599,6 +604,11 @@ async fn path_social_streaming(
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
+    // BM25-selected few-shot examples from OKF examples.md (top-3 most relevant)
+    for (user_ex, char_ex) in input.persona.query_examples(display_text, 3) {
+        messages.push(Message::text(Role::User, user_ex));
+        messages.push(Message::text(Role::Assistant, char_ex));
+    }
     // Inject long-term memory context before history (top-3, low token budget)
     if !memory_ctx.is_empty() {
         let ctx = memory_ctx.iter()

@@ -69,7 +69,7 @@ pub struct PersonaCard {
     pub system_prompt: String,
 
     /// Example dialogue lines used for anti-repetition seeding.
-    pub example_dialogue: Vec<String>,
+    pub(crate) example_index: ExampleIndex,
 
     /// First message the bot sends when entering a new conversation.
     pub first_message: String,
@@ -134,7 +134,7 @@ impl PersonaCard {
         Ok(Self {
             name,
             system_prompt: system_body.trim().to_string(),
-            example_dialogue,
+            example_index: ExampleIndex::build(&example_dialogue),
             first_message: first_message.trim().to_string(),
         })
     }
@@ -153,12 +153,23 @@ impl PersonaCard {
         Ok(Self {
             name: d.name.clone(),
             system_prompt,
-            example_dialogue,
+            example_index: ExampleIndex::build(&example_dialogue),
             first_message: d.first_mes.clone(),
         })
     }
 
     /// Minimal built-in persona used when no card file is configured.
+    /// Select up to `n` dialogue examples most relevant to `query` (BM25).
+    /// Returns `(user_line, char_line)` pairs ready for few-shot injection.
+    pub fn query_examples(&self, query: &str, n: usize) -> Vec<(String, String)> {
+        self.example_index.query(query, n)
+    }
+
+    /// Number of loaded example pairs.
+    pub fn example_count(&self) -> usize {
+        self.example_index.len()
+    }
+
     pub fn stub() -> Self {
         Self {
             name: "小十".into(),
@@ -169,10 +180,10 @@ impl PersonaCard {
                 "保持角色，自然回應。",
             )
             .into(),
-            example_dialogue: vec![
-                "哼，這種問題你也要問我？".into(),
-                "⋯又不是說我在乎你啊。".into(),
-            ],
+            example_index: ExampleIndex::build(&[
+                ("你好".into(), "哼，這種問題你也要問我？".into()),
+                ("你在嗎".into(), "⋯又不是說我在乎你啊。".into()),
+            ]),
             first_message: "你來了啊⋯又不是說我在等你。".into(),
         }
     }
@@ -269,18 +280,115 @@ fn render_system_prompt(d: &CardData) -> String {
 }
 
 /// Parse `<START>…<END>` example dialogue blocks from a ST mes_example string.
-fn parse_example_dialogue(raw: &str) -> Vec<String> {
-    if raw.is_empty() {
-        return vec![];
+fn parse_example_dialogue(raw: &str) -> Vec<(String, String)> {
+    let mut pairs = Vec::new();
+    let mut pending: Option<String> = None;
+    for line in raw.lines() {
+        let t = line.trim();
+        if t.is_empty() || t == "<START>" || t == "<END>" { continue; }
+        if let Some(u) = t.strip_prefix("{{user}}:") {
+            pending = Some(u.trim().to_owned());
+        } else if let Some(ch) = t.strip_prefix("{{char}}:") {
+            if let Some(u) = pending.take() {
+                pairs.push((u, ch.trim().to_owned()));
+            }
+        }
     }
-    raw.lines()
-        .filter(|l| {
-            !l.trim().is_empty()
-                && !l.trim_start().starts_with("<START>")
-                && !l.trim_start().starts_with("<END>")
-        })
-        .map(|l| l.trim().to_owned())
-        .collect()
+    pairs
+}
+
+// ─── BM25 example index ───────────────────────────────────────────────────────
+
+/// Minimal BM25 index over OKF dialogue example pairs.
+/// Documents are the {{user}} lines; used for per-turn few-shot selection.
+/// k1 = 1.5, b = 0.75 (Robertson defaults).
+#[derive(Debug, Clone)]
+pub(crate) struct ExampleIndex {
+    pairs: Vec<(String, String)>,
+    idf: std::collections::HashMap<String, f32>,
+    tfs: Vec<std::collections::HashMap<String, f32>>,
+    avg_dl: f32,
+}
+
+impl ExampleIndex {
+    pub(crate) fn build(pairs: &[(String, String)]) -> Self {
+        use std::collections::{HashMap, HashSet};
+        if pairs.is_empty() {
+            return Self { pairs: vec![], idf: HashMap::new(), tfs: vec![], avg_dl: 1.0 };
+        }
+        let tokenized: Vec<Vec<String>> = pairs.iter().map(|(u, _)| tokenize_cjk(u)).collect();
+        let n = pairs.len() as f32;
+        let mut df: HashMap<String, usize> = HashMap::new();
+        for toks in &tokenized {
+            let uniq: HashSet<_> = toks.iter().cloned().collect();
+            for t in uniq { *df.entry(t).or_insert(0) += 1; }
+        }
+        let idf: HashMap<String, f32> = df.iter()
+            .map(|(t, &d)| {
+                let v = ((n - d as f32 + 0.5) / (d as f32 + 0.5) + 1.0).ln();
+                (t.clone(), v)
+            })
+            .collect();
+        let total: usize = tokenized.iter().map(|t| t.len()).sum();
+        let avg_dl = total as f32 / n;
+        let tfs: Vec<HashMap<String, f32>> = tokenized.iter().map(|toks| {
+            let mut m: HashMap<String, f32> = HashMap::new();
+            for t in toks { *m.entry(t.clone()).or_insert(0.0) += 1.0; }
+            m
+        }).collect();
+        Self { pairs: pairs.to_vec(), idf, tfs, avg_dl }
+    }
+
+    /// Return up to `n` pairs ordered by BM25 relevance to `query`.
+    pub(crate) fn query(&self, query: &str, n: usize) -> Vec<(String, String)> {
+        if self.pairs.is_empty() || n == 0 { return vec![]; }
+        const K1: f32 = 1.5;
+        const B: f32 = 0.75;
+        let qtoks = tokenize_cjk(query);
+        if qtoks.is_empty() {
+            // No query tokens — return first n pairs as fallback
+            return self.pairs.iter().take(n).cloned().collect();
+        }
+        let mut scores: Vec<(usize, f32)> = self.tfs.iter().enumerate().map(|(i, tf)| {
+            let dl: f32 = tf.values().sum();
+            let s: f32 = qtoks.iter().map(|t| {
+                let idf = self.idf.get(t).copied().unwrap_or(0.0);
+                let f = tf.get(t).copied().unwrap_or(0.0);
+                idf * (f * (K1 + 1.0)) / (f + K1 * (1.0 - B + B * dl / self.avg_dl.max(1.0)))
+            }).sum();
+            (i, s)
+        }).collect();
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        scores.iter().take(n).map(|(i, _)| self.pairs[*i].clone()).collect()
+    }
+
+    pub(crate) fn len(&self) -> usize { self.pairs.len() }
+    pub(crate) fn is_empty(&self) -> bool { self.pairs.is_empty() }
+}
+
+fn tokenize_cjk(s: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut word = String::new();
+    for ch in s.chars() {
+        if ch.is_ascii_alphanumeric() {
+            word.push(ch.to_ascii_lowercase());
+        } else {
+            if !word.is_empty() { tokens.push(std::mem::take(&mut word)); }
+            // Skip whitespace and CJK punctuation; keep CJK characters as individual tokens
+            let is_cjk_punct = matches!(ch,
+                '\u{3001}'..='\u{303F}'  // CJK punctuation block
+                | '\u{FF01}'..='\u{FF0F}' // fullwidth !-/
+                | '\u{FF1A}'..='\u{FF20}' // fullwidth :-@
+                | '\u{2026}'              // ellipsis …
+                | '\u{2018}'..='\u{201F}' // typographic quotes
+            );
+            if !ch.is_whitespace() && !ch.is_ascii_punctuation() && !is_cjk_punct {
+                tokens.push(ch.to_string());
+            }
+        }
+    }
+    if !word.is_empty() { tokens.push(word); }
+    tokens
 }
 
 // ─── tests ───────────────────────────────────────────────────────────────────
@@ -345,14 +453,16 @@ mod tests {
     #[test]
     fn stub_has_example_dialogue() {
         let card = PersonaCard::stub();
-        assert!(!card.example_dialogue.is_empty());
+        assert!(card.example_count() > 0);
     }
 
     #[test]
     fn example_dialogue_strips_start_end_tags() {
-        let card = PersonaCard::parse_json(SAMPLE_CARD).unwrap();
-        assert!(!card.example_dialogue.iter().any(|l| l.contains("<START>")));
-        assert!(!card.example_dialogue.iter().any(|l| l.contains("<END>")));
+        let raw = "<START>\n{{user}}: 你好\n{{char}}: 哼⋯\n<END>";
+        let parsed = parse_example_dialogue(raw);
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].0, "你好");
+        assert!(!parsed[0].1.contains("<END>"));
     }
 
     #[test]
@@ -428,6 +538,6 @@ mod tests {
         assert_eq!(card.name, "TestChar");
         assert!(card.system_prompt.contains("System prompt text here"));
         assert_eq!(card.first_message, "Hello from OKF!");
-        assert_eq!(card.example_dialogue.len(), 2);
+        assert_eq!(card.example_count(), 2);
     }
 }
