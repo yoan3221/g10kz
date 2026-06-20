@@ -462,6 +462,10 @@ const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去[kaomoji
 
 const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇→首行只輸出[[ESCALATE]]停止，閒聊照常。規格/數據/型號/日期無把握寧可[[ESCALATE]]或說不知道，別亂編。問即時新聞/近期事件→首行只輸出[[SEARCH: 關鍵詞]]停止。";
 
+/// Social path system extra: escalate sentinel + inner-monologue instruction.
+/// The <think>...</think> block is stripped from output before delivery.
+const SOCIAL_EXTRA_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇→首行只輸出[[ESCALATE]]停止，閒聊照常。規格/數據/型號/日期無把握寧可[[ESCALATE]]或說不知道，別亂編。問即時新聞/近期事件→首行只輸出[[SEARCH: 關鍵詞]]停止。\n\n[內心] 回覆前先在<think>...</think>裡私下想想（對方看不見），自由推敲情緒和措辭，再寫正式台詞。";
+
 /// True if `text` opens with the escalation sentinel.
 fn wants_escalation(text: &str) -> bool {
     text.trim_start().starts_with("[[ESCALATE")
@@ -537,6 +541,32 @@ async fn search_and_reply(
     }
 }
 
+/// Strip `<think>...</think>` blocks produced by the inner-monologue
+/// instruction. Used in both streaming and non-streaming Social paths so the
+/// model's private reasoning is never shown to the user.
+///
+/// Handles: multiple blocks, leading/trailing whitespace after `</think>`.
+fn strip_thinking(s: &str) -> String {
+    if !s.contains("<think>") {
+        return s.to_owned();
+    }
+    let mut result = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(start) = rest.find("<think>") {
+        result.push_str(&rest[..start]);
+        rest = &rest[start + 7..];
+        if let Some(end) = rest.find("</think>") {
+            // skip past </think> and any leading newline
+            let after = &rest[end + 8..];
+            rest = after.strip_prefix('\n').unwrap_or(after);
+        } else {
+            break; // unclosed — discard rest
+        }
+    }
+    result.push_str(rest);
+    result
+}
+
 /// Social path. Streams via `stream_sink` when present (Discord), otherwise a
 /// single blocking completion (tests / once-mode). Both honour `[[ESCALATE]]`
 /// self-escalation to the strong model.
@@ -550,7 +580,7 @@ async fn path_social(
     }
 
     // Non-streaming: cheap model first, escalate on sentinel.
-    let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    let mut messages = vec![input.system_message(SOCIAL_EXTRA_NOTE)];
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
@@ -570,14 +600,24 @@ async fn path_social(
 {ctx}")));
         messages.push(Message::text(Role::Assistant, "嗯，我記得。"));
     }
+    // Lorebook: inject matched world-knowledge entries (keyword-triggered)
+    let lore_matches = input.persona.matched_lore(display_text);
+    if !lore_matches.is_empty() {
+        messages.push(Message::text(Role::User, format!("[世界設定]
+{}", lore_matches.join("
+
+"))));
+        messages.push(Message::text(Role::Assistant, "嗯，了解。"));
+    }
     messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
 
-    let (reply, usage) = tokio::select! {
+    let (raw, usage) = tokio::select! {
         r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm)?,
         _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
     };
+    let reply = strip_thinking(&raw);
     if wants_escalation(&reply) {
         debug!("social self-escalated to reason model (non-streaming)");
         return escalate_opus(input, display_text, None).await;
@@ -600,7 +640,7 @@ async fn path_social_streaming(
 ) -> Result<(String, Usage), EngineError> {
     let sink = input.stream_sink.clone().expect("stream_sink present");
 
-    let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    let mut messages = vec![input.system_message(SOCIAL_EXTRA_NOTE)];
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
@@ -619,6 +659,15 @@ async fn path_social_streaming(
         messages.push(Message::text(Role::User, format!("[長期記憶]
 {ctx}")));
         messages.push(Message::text(Role::Assistant, "嗯，我記得。"));
+    }
+    // Lorebook: inject matched world-knowledge entries (keyword-triggered)
+    let lore_matches = input.persona.matched_lore(display_text);
+    if !lore_matches.is_empty() {
+        messages.push(Message::text(Role::User, format!("[世界設定]
+{}", lore_matches.join("
+
+"))));
+        messages.push(Message::text(Role::Assistant, "嗯，了解。"));
     }
     messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
@@ -657,7 +706,8 @@ async fn path_social_streaming(
                             debug!(query = %query, "social search sentinel (streaming, initial)");
                             return search_and_reply(input, display_text, query, Some(sink)).await;
                         }
-                        let _ = sink.try_send(buf.clone());
+                        let visible = strip_thinking(&buf);
+                        if !visible.is_empty() { let _ = sink.try_send(visible); }
                     }
                 } else {
                     // Already decided to continue, but haiku may still embed
@@ -675,7 +725,8 @@ async fn path_social_streaming(
                         debug!(query = %query, "social search sentinel mid-stream");
                         return search_and_reply(input, display_text, query, Some(sink)).await;
                     }
-                    let _ = sink.try_send(buf.clone());
+                    let visible = strip_thinking(&buf);
+                    if !visible.is_empty() { let _ = sink.try_send(visible); }
                 }
             }
             StreamItem::Done(u) => { usage = u; }
@@ -690,7 +741,8 @@ async fn path_social_streaming(
         if let Some(query) = extract_search_query(&buf) {
             return search_and_reply(input, display_text, query, Some(sink)).await;
         }
-        let _ = sink.try_send(buf.clone());
+        let visible = strip_thinking(&buf);
+        if !visible.is_empty() { let _ = sink.try_send(visible); }
     }
 
     // Final safety net: sentinels that slipped through to end of buffer.
@@ -701,7 +753,7 @@ async fn path_social_streaming(
         return search_and_reply(input, display_text, query, Some(sink)).await;
     }
 
-    Ok((buf, usage))
+    Ok((strip_thinking(&buf), usage))
 }
 
 /// Escalated answer on the strong (reason/opus) model. If `sink` is `Some`,

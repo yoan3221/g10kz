@@ -73,6 +73,8 @@ pub struct PersonaCard {
 
     /// First message the bot sends when entering a new conversation.
     pub first_message: String,
+    /// Lorebook entries loaded from OKF `lore/` directory.
+    pub lore_entries: Vec<LoreEntry>,
 }
 
 impl PersonaCard {
@@ -131,11 +133,37 @@ impl PersonaCard {
             vec![]
         };
 
+        // ── lore/ directory (optional) ───────────────────────────────────────────
+        let lore_dir = dir.join("lore");
+        let lore_entries = if lore_dir.is_dir() {
+            let mut entries = Vec::new();
+            if let Ok(rd) = std::fs::read_dir(&lore_dir) {
+                for entry in rd.flatten() {
+                    let path = entry.path();
+                    if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
+                    if let Ok(raw) = std::fs::read_to_string(&path) {
+                        let (front, body) = parse_frontmatter(&raw);
+                        let trigger_words: Vec<String> = front.get("trigger_words")
+                            .map(|v| v.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect())
+                            .unwrap_or_default();
+                        let content = body.trim().to_string();
+                        if !trigger_words.is_empty() && !content.is_empty() {
+                            entries.push(LoreEntry { trigger_words, content });
+                        }
+                    }
+                }
+            }
+            entries
+        } else {
+            vec![]
+        };
+
         Ok(Self {
             name,
             system_prompt: system_body.trim().to_string(),
             example_index: ExampleIndex::build(&example_dialogue),
             first_message: first_message.trim().to_string(),
+            lore_entries,
         })
     }
 
@@ -155,6 +183,7 @@ impl PersonaCard {
             system_prompt,
             example_index: ExampleIndex::build(&example_dialogue),
             first_message: d.first_mes.clone(),
+            lore_entries: vec![],
         })
     }
 
@@ -168,6 +197,14 @@ impl PersonaCard {
     /// Number of loaded example pairs.
     pub fn example_count(&self) -> usize {
         self.example_index.len()
+    }
+
+    /// Return the content of all lore entries whose trigger words appear in `text`.
+    pub fn matched_lore<'a>(&'a self, text: &str) -> Vec<&'a str> {
+        self.lore_entries.iter()
+            .filter(|e| e.matches(text))
+            .map(|e| e.content.as_str())
+            .collect()
     }
 
     pub fn stub() -> Self {
@@ -185,6 +222,7 @@ impl PersonaCard {
                 ("你在嗎".into(), "⋯又不是說我在乎你啊。".into()),
             ]),
             first_message: "你來了啊⋯又不是說我在等你。".into(),
+            lore_entries: vec![],
         }
     }
 }
@@ -295,6 +333,27 @@ fn parse_example_dialogue(raw: &str) -> Vec<(String, String)> {
         }
     }
     pairs
+}
+
+// ─── Lorebook ────────────────────────────────────────────────────────────────
+
+/// A single lorebook / World-Info entry.
+/// Loaded from OKF `lore/<name>.md` files. The YAML frontmatter field
+/// `trigger_words: word1, word2, …` lists comma-separated keywords; when any
+/// keyword appears (case-insensitive) in the user message the entry's body is
+/// injected into the system context.
+#[derive(Debug, Clone)]
+pub struct LoreEntry {
+    pub trigger_words: Vec<String>,
+    pub content: String,
+}
+
+impl LoreEntry {
+    /// True if any trigger word appears (case-insensitive) in `text`.
+    pub fn matches(&self, text: &str) -> bool {
+        let lower = text.to_lowercase();
+        self.trigger_words.iter().any(|w| lower.contains(w.as_str()))
+    }
 }
 
 // ─── BM25 example index ───────────────────────────────────────────────────────

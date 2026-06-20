@@ -31,6 +31,10 @@ pub struct Config {
     /// Path to the Obscura headless browser binary for web search.
     /// Defaults to `/usr/local/bin/obscura`. Empty string disables page fetching.
     pub obscura_path: String,
+    /// Channel IDs where the bot lurks (probabilistic unsolicited reply).
+    pub lurk_channels: Vec<u64>,
+    /// Probability [0.0, 1.0] of replying to a non-mention in a lurk channel.
+    pub lurk_reply_probability: f64,
 }
 
 impl Config {
@@ -88,6 +92,15 @@ impl Config {
                 .unwrap_or_else(|_| "http://localhost:8083".into()),
             obscura_path: std::env::var("OBSCURA_PATH")
                 .unwrap_or_else(|_| "/usr/local/bin/obscura".into()),
+            lurk_channels: std::env::var("LURK_CHANNELS")
+                .unwrap_or_default()
+                .split(',')
+                .filter_map(|s| s.trim().parse::<u64>().ok())
+                .collect(),
+            lurk_reply_probability: std::env::var("LURK_REPLY_PROBABILITY")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0.0),
         })
     }
 
@@ -111,6 +124,8 @@ impl Config {
             embed_server_url: String::new(),
             prompt_guard_url: String::new(),
             obscura_path: String::new(),
+            lurk_channels: vec![],
+            lurk_reply_probability: 0.0,
         }
     }
 }

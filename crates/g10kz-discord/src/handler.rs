@@ -75,7 +75,21 @@ impl EventHandler for Handler {
             .unwrap_or(false);
 
         if !is_dm && !is_mention && !is_reply_to_bot {
-            return;
+            // Lurk mode: optionally reply in designated channels with configured probability.
+            let lurk_prob = self.state.config.lurk_reply_probability;
+            let in_lurk_channel = self.state.config.lurk_channels.contains(&channel_id.get());
+            if !in_lurk_channel || lurk_prob <= 0.0 {
+                return;
+            }
+            // Lightweight pseudo-random from nanosecond clock (sufficient for lurk decisions).
+            let nano = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .subsec_nanos() as f64;
+            let roll = (nano % 1_000_000.0) / 1_000_000.0;
+            if roll >= lurk_prob {
+                return;
+            }
         }
 
         let msg_id = msg.id;
