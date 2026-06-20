@@ -2,8 +2,8 @@
 # WSL 上執行：build g10kz-bot image，scp 到 .94，重啟 bot
 set -e
 
-SERVER="REDACTED"
-PASS="REDACTED"
+SERVER=""
+PASS=""
 REPO="https://github.com/yoan3221/g10kz.git"
 IMAGE="g10kz-bot:latest"
 TAR="/tmp/g10kz-bot-latest.tar"
