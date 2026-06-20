@@ -27,6 +27,10 @@ pub struct Config {
     pub embed_server_url: String,
     /// Model ID used for the embedding server (e.g. `@cf/qwen/qwen3-embedding-0.6b`).
     pub embed_model: String,
+    /// Cloudflare Account ID for Workers AI embeddings.
+    pub cf_account_id: String,
+    /// Cloudflare API token with Workers AI permission.
+    pub cf_ai_token: String,
     /// URL of the ML prompt-injection guard service (e.g. http://localhost:8083).
     /// Empty string disables the guard.
     pub prompt_guard_url: String,
@@ -92,6 +96,8 @@ impl Config {
                 .unwrap_or_else(|_| "http://localhost:8082".into()),
             embed_model: std::env::var("EMBED_MODEL")
                 .unwrap_or_else(|_| "embed".into()),
+            cf_account_id: std::env::var("CF_ACCOUNT_ID").unwrap_or_default(),
+            cf_ai_token: std::env::var("CF_AI_TOKEN").unwrap_or_default(),
             prompt_guard_url: std::env::var("PROMPT_GUARD_URL")
                 .unwrap_or_else(|_| "http://localhost:8083".into()),
             obscura_path: std::env::var("OBSCURA_PATH")
@@ -127,6 +133,8 @@ impl Config {
             persona_card_path: String::new(),
             embed_server_url: String::new(),
             embed_model: "embed".into(),
+            cf_account_id: String::new(),
+            cf_ai_token: String::new(),
             prompt_guard_url: String::new(),
             obscura_path: String::new(),
             lurk_channels: vec![],

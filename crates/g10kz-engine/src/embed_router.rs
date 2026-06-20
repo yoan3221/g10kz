@@ -1,16 +1,11 @@
-//! Semantic route refinement via llama.cpp embedding server.
+//! Semantic route refinement via Cloudflare Workers AI embeddings.
 //!
-//! Uses the OpenAI-compatible `/v1/embeddings` endpoint
-//! (llama-server started with `--embedding --pooling last`).
-//!
-//! Key differences vs. the Ollama backend:
-//! - **Batch warmup**: 24 examples → 2 HTTP requests (one per class).
-//! - **No idle unload**: llama-server keeps the model hot in VRAM permanently.
-//! - **Faster startup**: no 27 s cold-start after idle.
+//! Uses `@cf/qwen/qwen3-embedding-0.6b` via the CF AI REST API.
+//! CF request format: `{"text": [...]}` → response: `{"result":{"data":[[...]]}}``
 //!
 //! # Two HTTP clients
-//! - `warmup_client` (60 s): initial GPU load at startup
-//! - `client` (8 s): per-message refine calls; model already warm
+//! - `warmup_client` (60 s): builds per-class centroids at startup
+//! - `client` (8 s): per-message refine calls
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -94,30 +89,29 @@ const REASON_EXAMPLES: &[&str] = &[
     "compare React and Vue for a large application",
 ];
 
-// ─── HTTP types (OpenAI-compatible /v1/embeddings) ────────────────────────────
+// ─── HTTP types (Cloudflare Workers AI /ai/run/{model}) ──────────────────────
 
-/// Batch request — input is a list of strings.
+/// Batch request — CF format: `{"text": ["str1", "str2", ...]}`
 #[derive(Serialize)]
-struct BatchRequest<'a> {
-    model: &'a str,
-    input: &'a [&'a str],
+struct CfBatchRequest<'a> {
+    text: &'a [&'a str],
 }
 
-/// Single-string request used during per-message refine().
+/// Single request — CF format: `{"text": "str"}`
 #[derive(Serialize)]
-struct SingleRequest<'a> {
-    model: &'a str,
-    input: &'a str,
+struct CfSingleRequest<'a> {
+    text: &'a str,
+}
+
+/// CF response: `{"result":{"data":[[f32, ...], ...]}, "success": true}`
+#[derive(Deserialize)]
+struct CfResult {
+    data: Vec<Vec<f32>>,
 }
 
 #[derive(Deserialize)]
-struct EmbedItem {
-    embedding: Vec<f32>,
-}
-
-#[derive(Deserialize)]
-struct EmbedResponse {
-    data: Vec<EmbedItem>,
+struct CfEmbedResponse {
+    result: CfResult,
 }
 
 // ─── Centroids ────────────────────────────────────────────────────────────────
@@ -133,17 +127,22 @@ struct Centroids {
 pub struct EmbeddingRouter {
     client: reqwest::Client,
     warmup_client: reqwest::Client,
-    embed_url: String,
-    model: String,
-    api_key: String,
+    /// Full CF API URL: `https://api.cloudflare.com/client/v4/accounts/{id}/ai/run/{model}`
+    cf_url: String,
+    cf_token: String,
     centroids: Arc<RwLock<Option<Centroids>>>,
 }
 
 impl EmbeddingRouter {
     /// Create a new router pointed at `embed_base`
     /// (e.g. `"http://localhost:8082"` for llama-server).
-    pub fn new(embed_base: &str, model: &str, api_key: &str) -> Self {
-        let embed_url = format!("{embed_base}/v1/embeddings");
+    /// `account_id` — Cloudflare account ID.
+    /// `model`      — e.g. `@cf/qwen/qwen3-embedding-0.6b`.
+    /// `token`      — Cloudflare API token with Workers AI permission.
+    pub fn new(account_id: &str, model: &str, token: &str) -> Self {
+        let cf_url = format!(
+            "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}"
+        );
         Self {
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(8))
@@ -153,9 +152,8 @@ impl EmbeddingRouter {
                 .timeout(std::time::Duration::from_secs(60))
                 .build()
                 .unwrap(),
-            embed_url,
-            model: model.to_owned(),
-            api_key: api_key.to_owned(),
+            cf_url,
+            cf_token: token.to_owned(),
             centroids: Arc::new(RwLock::new(None)),
         }
     }
@@ -190,22 +188,23 @@ impl EmbeddingRouter {
     async fn batch_centroid(&self, examples: &[&str]) -> anyhow::Result<Vec<f32>> {
         let resp = self
             .warmup_client
-            .post(&self.embed_url)
-            .bearer_auth(&self.api_key)
-            .json(&BatchRequest { model: &self.model, input: examples })
+            .post(&self.cf_url)
+            .bearer_auth(&self.cf_token)
+            .json(&CfBatchRequest { text: examples })
             .send()
             .await?
             .error_for_status()?
-            .json::<EmbedResponse>()
+            .json::<CfEmbedResponse>()
             .await?;
 
-        let n = resp.data.len();
-        anyhow::ensure!(n > 0, "empty batch embedding response");
+        let vecs = &resp.result.data;
+        let n = vecs.len();
+        anyhow::ensure!(n > 0, "empty CF batch embedding response");
 
-        let dim = resp.data[0].embedding.len();
+        let dim = vecs[0].len();
         let mut sum = vec![0.0_f32; dim];
-        for item in &resp.data {
-            for (a, b) in sum.iter_mut().zip(item.embedding.iter()) {
+        for vec in vecs {
+            for (a, b) in sum.iter_mut().zip(vec.iter()) {
                 *a += b;
             }
         }
@@ -216,20 +215,19 @@ impl EmbeddingRouter {
     async fn embed_one(&self, text: &str) -> anyhow::Result<Vec<f32>> {
         let resp = self
             .client
-            .post(&self.embed_url)
-            .bearer_auth(&self.api_key)
-            .json(&SingleRequest { model: &self.model, input: text })
+            .post(&self.cf_url)
+            .bearer_auth(&self.cf_token)
+            .json(&CfSingleRequest { text })
             .send()
             .await?
             .error_for_status()?
-            .json::<EmbedResponse>()
+            .json::<CfEmbedResponse>()
             .await?;
 
-        resp.data
+        resp.result.data
             .into_iter()
             .next()
-            .map(|d| d.embedding)
-            .ok_or_else(|| anyhow::anyhow!("empty embedding response"))
+            .ok_or_else(|| anyhow::anyhow!("empty CF embedding response"))
     }
 
     /// Try to upgrade a `Social` route decision.
@@ -324,12 +322,12 @@ mod tests {
 
     #[test]
     fn new_does_not_panic() {
-        let _ = EmbeddingRouter::new("http://localhost:8082", "embed", "");
+        let _ = EmbeddingRouter::new("test-account", "@cf/qwen/qwen3-embedding-0.6b", "");
     }
 
     #[tokio::test]
     async fn refine_none_before_warmup() {
-        let r = EmbeddingRouter::new("http://localhost:8082", "embed", "");
+        let r = EmbeddingRouter::new("test-account", "@cf/qwen/qwen3-embedding-0.6b", "");
         assert!(r.refine("hello").await.is_none());
     }
 }
