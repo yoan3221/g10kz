@@ -219,7 +219,7 @@ impl<'a> TurnInput<'a> {
         // Snap to even index so we never begin on an orphaned assistant message
         let start = {
             let s = h.len() - max_messages;
-            if s % 2 != 0 {
+            if !s.is_multiple_of(2) {
                 s + 1
             } else {
                 s
@@ -477,7 +477,6 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 /// task is beyond it, the model emits `[[ESCALATE]]` on the first line instead
 /// of answering, and the engine re-issues the turn on the strong (opus) model.
 /// Appended only on the Social path, folded into the cacheable static prefix.
-
 /// Few-shot format primer injected after system message so haiku learns the
 /// action/speech/inner-thought format by example rather than abstract rules.
 /// Maximum conversation history messages forwarded to the LLM per turn.
