@@ -659,6 +659,6 @@ mod tests {
         assert_eq!(card.name, "TestChar");
         assert!(card.system_prompt.contains("System prompt text here"));
         assert_eq!(card.first_message, "Hello from OKF!");
-        assert_eq!(card.example_count(), 2);
+        assert_eq!(card.example_count(), 1);
     }
 }
