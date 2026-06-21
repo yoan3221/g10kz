@@ -220,6 +220,13 @@ impl<'a> TurnInput<'a> {
         &h[start..]
     }
 
+    /// 動態歷史窗口：依當前訊息特性決定載入多少歷史，再套用 sliding window。
+    /// 延續/指代信號 → 給滿；極短獨立句 → 少；長訊息自帶語境 → 中。
+    /// EverOS 語意記憶每輪回填重要長期事實，故短窗口不致關鍵語境「失憶」。
+    pub fn history_window_for(&self, text: &str, max: usize) -> &[Message] {
+        self.history_window(dynamic_history_len(text, max))
+    }
+
     /// Static Discord Markdown formatting guide injected into every system prompt.
     /// Teaches the LLM which formatting syntax Discord actually renders.
     fn discord_format_note() -> &'static str {
@@ -363,7 +370,7 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
     // ── Gather (memory — Social + Reason paths) ─────────────────────────────
     tracer.enter_stage(&Stage::Gather);
     let memory_ctx = if matches!(decision, RouteDecision::Social | RouteDecision::Reason) && !restricted {
-        let limit = if matches!(decision, RouteDecision::Social) { 3 } else { 5 };
+        let limit = if matches!(decision, RouteDecision::Social) { 6 } else { 8 };
         let fut = input.memory.search(input.user_id, &display_text, limit);
         tokio::select! {
             r = fut => r,
@@ -455,7 +462,31 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 /// action/speech/inner-thought format by example rather than abstract rules.
 /// Maximum conversation history messages forwarded to the LLM per turn.
 /// Keeps context bounded; prevents token explosion on long sessions.
-const MAX_HISTORY_SOCIAL: usize = 14; // 7 full turns
+/// 延續/指代信號：本則訊息出現這些詞，代表高度依賴前文，需保留完整歷史窗口。
+const CONTINUATION_MARKERS: &[&str] = &[
+    "然後", "所以", "接著", "後來", "再來", "繼續", "還有", "而且", "另外",
+    "那個", "這個", "那它", "那他", "那她", "剛剛", "剛才", "之前", "上面",
+    "你說", "結果", "為什麼", "為何", "怎麼", "呢？", "呢?",
+];
+
+/// 依當前訊息動態決定載入幾條歷史（回傳值 ≤ `max`）。
+/// 延續話題給滿；極短獨立句（問候/單詞）給最少；長訊息自帶語境給中等。
+fn dynamic_history_len(text: &str, max: usize) -> usize {
+    let chars = text.chars().count();
+    let continues = CONTINUATION_MARKERS.iter().any(|m| text.contains(m));
+    let n = if continues {
+        max // 延續/指代 → 給滿，維持連貫
+    } else if chars <= 6 {
+        6 // 極短獨立句
+    } else if chars <= 40 {
+        10 // 一般訊息
+    } else {
+        8 // 長訊息自帶語境，歷史可少
+    };
+    n.min(max)
+}
+
+const MAX_HISTORY_SOCIAL: usize = 12; // 6 full turns（動態窗口上限）
 const MAX_HISTORY_REASON: usize = 12; //  6 full turns (opus is expensive)
 
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
@@ -509,7 +540,7 @@ async fn search_and_reply(
     let mut messages = vec![input.system_message(ESCALATE_NOTE)];
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
-    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.extend(input.history_window_for(display_text, MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(
         Role::User,
         input.labeled(&format!("{context}請根據以上搜尋結果回覆：{display_text}")),
@@ -610,7 +641,7 @@ async fn path_social(
 "))));
         messages.push(Message::text(Role::Assistant, "嗯，了解。"));
     }
-    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.extend(input.history_window_for(display_text, MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
 
@@ -670,7 +701,7 @@ async fn path_social_streaming(
 "))));
         messages.push(Message::text(Role::Assistant, "嗯，了解。"));
     }
-    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.extend(input.history_window_for(display_text, MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
 
@@ -765,7 +796,7 @@ async fn escalate_opus(
     sink: Option<tokio::sync::mpsc::Sender<String>>,
 ) -> Result<(String, Usage), EngineError> {
     let mut messages = vec![input.system_message("")];
-    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.extend(input.history_window_for(display_text, MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::reason(&input.config.llm_model_reason);
 
@@ -818,7 +849,7 @@ async fn path_search(
     };
 
     let mut messages = vec![input.system_message("")];
-    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.extend(input.history_window_for(display_text, MAX_HISTORY_SOCIAL).iter().cloned());
     messages.push(Message::text(
         Role::User,
         input.labeled(&format!("{context}請根據以上資訊回答：{display_text}")),
@@ -837,7 +868,7 @@ async fn path_media(
 ) -> Result<(String, Usage), EngineError> {
     let url = input.attachment_url.as_deref().unwrap_or("");
     let mut messages = vec![input.system_message("")];
-    messages.extend(input.history_window(MAX_HISTORY_SOCIAL).iter().cloned());
+    messages.extend(input.history_window_for(display_text, MAX_HISTORY_SOCIAL).iter().cloned());
 
     if !url.is_empty() {
         match media::process_image(url).await {

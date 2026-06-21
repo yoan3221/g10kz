@@ -289,6 +289,42 @@ impl EverosMemory {
             }
         });
     }
+
+    /// 被動觀察寫入：把單則使用者訊息加入記憶緩衝，**不觸發 flush**。
+    /// 用於 bot 旁觀（非 @bot）的群組訊息——EverOS 累積到 boundary 後自動提取，
+    /// 避免每條被動訊息都觸發一次 LLM 提取而拖垮後端。
+    pub async fn observe(&self, user_id: u64, session_id: &str, text: &str) {
+        if self.circuit_open() {
+            return;
+        }
+        let uid_str = user_id.to_string();
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+
+        let add_body = AddReq {
+            session_id,
+            app_id:     APP_ID,
+            project_id: PROJECT_ID,
+            messages: vec![
+                AddMsg { sender_id: &uid_str, role: "user", timestamp: now_ms, content: text },
+            ],
+        };
+
+        match self.write_client
+            .post(self.url("/api/v1/memory/add"))
+            .json(&add_body)
+            .send()
+            .await
+        {
+            Err(e) => { debug!("EverOS observe add error: {e}"); self.record_fail(); }
+            Ok(r) if !r.status().is_success() => {
+                debug!("EverOS observe add HTTP {}", r.status());
+            }
+            Ok(_) => { self.record_ok(); debug!("EverOS observe: accumulated (no flush)"); }
+        }
+    }
 }
 
 // ─── impl Memory ───────────────────────────────────────────────────────────

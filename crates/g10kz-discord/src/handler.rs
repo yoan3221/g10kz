@@ -78,16 +78,29 @@ impl EventHandler for Handler {
             // Lurk mode: optionally reply in designated channels with configured probability.
             let lurk_prob = self.state.config.lurk_reply_probability;
             let in_lurk_channel = self.state.config.lurk_channels.contains(&channel_id.get());
-            if !in_lurk_channel || lurk_prob <= 0.0 {
-                return;
+            let mut will_respond = false;
+            if in_lurk_channel && lurk_prob > 0.0 {
+                // Lightweight pseudo-random from nanosecond clock (sufficient for lurk decisions).
+                let nano = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .subsec_nanos() as f64;
+                let roll = (nano % 1_000_000.0) / 1_000_000.0;
+                will_respond = roll < lurk_prob;
             }
-            // Lightweight pseudo-random from nanosecond clock (sufficient for lurk decisions).
-            let nano = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .subsec_nanos() as f64;
-            let roll = (nano % 1_000_000.0) / 1_000_000.0;
-            if roll >= lurk_prob {
+            if !will_respond {
+                // 主動觀察：bot 旁觀（不回應）的群組訊息也寫入長期記憶，
+                // 讓她「記得」群裡發生的事。只 add 不 flush，跳過過短噪音。
+                if let Some(everos) = self.state.everos.clone() {
+                    let observed = resolve_mentions(&msg, bot_id, &ctx.cache);
+                    if observed.chars().count() >= 4 {
+                        let uid = msg.author.id.get();
+                        let session = format!("g10kz-{uid}");
+                        tokio::spawn(async move {
+                            everos.observe(uid, &session, &observed).await;
+                        });
+                    }
+                }
                 return;
             }
         }
