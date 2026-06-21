@@ -147,8 +147,7 @@ pub fn format_output(reply: &str) -> String {
     // Remove stray lone backticks that aren't part of code spans/blocks.
     // A lone ` that has no matching closing ` breaks Discord's inline-code
     // renderer and makes everything after it render as raw monospace.
-    let blockquoted = strip_lone_backtick(&blockquoted);
-    blockquoted
+    strip_lone_backtick(&blockquoted)
 }
 
 /// Convert action lines to Discord blockquotes.
@@ -156,9 +155,9 @@ pub fn format_output(reply: &str) -> String {
 /// Handles:
 ///   - Whole-line `*action*`  → `> action`
 ///   - Whole-line `_action_`  → `> action`
-/// A line counts as an action when its trimmed form is wrapped in a **single**
+/// A line counts as an action when its trimmed form is wrapped in a single
 /// pair of `*` or `_` (no inner occurrences of the same delimiter) with
-/// non-empty inner text and length ≥ 3.  Bold `**...**` and underline
+/// non-empty inner text and length >= 3. Bold `**...**` and underline
 /// `__...__` are left untouched.
 fn actions_to_blockquote(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 16);
@@ -232,7 +231,7 @@ fn strip_bracket_label(s: &str) -> Option<&str> {
     if inner.is_empty() || inner.len() > 32 || inner.contains(' ') {
         return None;
     }
-    let after = s[end + 1..].trim_start_matches(|c| c == ':' || c == '：');
+    let after = s[end + 1..].trim_start_matches([':', '：']);
     Some(after.trim_start())
 }
 

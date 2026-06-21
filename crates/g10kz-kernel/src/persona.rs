@@ -477,6 +477,7 @@ impl ExampleIndex {
     pub(crate) fn len(&self) -> usize {
         self.pairs.len()
     }
+    #[allow(dead_code)]
     pub(crate) fn is_empty(&self) -> bool {
         self.pairs.is_empty()
     }
