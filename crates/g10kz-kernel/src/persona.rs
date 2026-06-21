@@ -5,7 +5,7 @@
 //! ## OKF bundle (directory)
 //!
 //! A directory containing at minimum `index.md`:
-//! ```
+//! ```text
 //! persona/g10kz/
 //!   index.md      ← YAML frontmatter (title) + body + "## First Message" section
 //!   examples.md   ← dialogue examples (optional)
