@@ -155,6 +155,7 @@ pub fn format_output(reply: &str) -> String {
 /// Handles:
 ///   - Whole-line `*action*`  → `> action`
 ///   - Whole-line `_action_`  → `> action`
+///
 /// A line counts as an action when its trimmed form is wrapped in a single
 /// pair of `*` or `_` (no inner occurrences of the same delimiter) with
 /// non-empty inner text and length >= 3. Bold `**...**` and underline
