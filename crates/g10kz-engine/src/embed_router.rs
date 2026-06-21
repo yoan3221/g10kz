@@ -7,10 +7,10 @@
 //! - `warmup_client` (60 s): builds per-class centroids at startup
 //! - `client` (8 s): per-message refine calls
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, warn};
-use serde::{Deserialize, Serialize};
 
 use g10kz_kernel::RouteDecision;
 
@@ -140,9 +140,8 @@ impl EmbeddingRouter {
     /// `model`      — e.g. `@cf/qwen/qwen3-embedding-0.6b`.
     /// `token`      — Cloudflare API token with Workers AI permission.
     pub fn new(account_id: &str, model: &str, token: &str) -> Self {
-        let cf_url = format!(
-            "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}"
-        );
+        let cf_url =
+            format!("https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}");
         Self {
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(8))
@@ -224,7 +223,8 @@ impl EmbeddingRouter {
             .json::<CfEmbedResponse>()
             .await?;
 
-        resp.result.data
+        resp.result
+            .data
             .into_iter()
             .next()
             .ok_or_else(|| anyhow::anyhow!("empty CF embedding response"))
@@ -241,17 +241,44 @@ impl EmbeddingRouter {
         let lower = text.to_lowercase();
         let search_keywords: &[&str] = &[
             // 明確查詢指令
-            "查詢", "搜一下", "搜搜看", "幫我找", "幫我查", "幫我搜",
-            "查一查", "找一下", "查看看", "去查", "查查",
+            "查詢",
+            "搜一下",
+            "搜搜看",
+            "幫我找",
+            "幫我查",
+            "幫我搜",
+            "查一查",
+            "找一下",
+            "查看看",
+            "去查",
+            "查查",
             // 操作/教學類（複合詞才觸發，避免誤判）
-            "怎麼用", "怎麼開通", "怎麼設定", "怎麼安裝", "怎麼啟用",
-            "如何使用", "如何開通", "如何設定", "如何安裝",
-            "怎麼申請", "怎麼訂閱", "如何申請",
-            "教學", "使用方法", "操作步驟",
+            "怎麼用",
+            "怎麼開通",
+            "怎麼設定",
+            "怎麼安裝",
+            "怎麼啟用",
+            "如何使用",
+            "如何開通",
+            "如何設定",
+            "如何安裝",
+            "怎麼申請",
+            "怎麼訂閱",
+            "如何申請",
+            "教學",
+            "使用方法",
+            "操作步驟",
             // 英文
-            "search for", "look up", "find me", "google",
-            "how to use", "how do i", "how to set up", "how to install",
-            "tutorial for", "guide for",
+            "search for",
+            "look up",
+            "find me",
+            "google",
+            "how to use",
+            "how do i",
+            "how to set up",
+            "how to install",
+            "tutorial for",
+            "guide for",
         ];
         if search_keywords.iter().any(|kw| lower.contains(kw)) {
             debug!("embed_router: keyword fast-path → Search");
@@ -290,7 +317,9 @@ fn cosine_sim(a: &[f32], b: &[f32]) -> f32 {
     let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
     let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if na == 0.0 || nb == 0.0 { return 0.0; }
+    if na == 0.0 || nb == 0.0 {
+        return 0.0;
+    }
     dot / (na * nb)
 }
 

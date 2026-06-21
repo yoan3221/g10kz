@@ -56,8 +56,7 @@ impl Config {
 
         Ok(Self {
             discord_token: std::env::var("DISCORD_TOKEN").unwrap_or_default(),
-            llm_provider: std::env::var("LLM_PROVIDER")
-                .unwrap_or_else(|_| "openrouter".into()),
+            llm_provider: std::env::var("LLM_PROVIDER").unwrap_or_else(|_| "openrouter".into()),
             llm_base_url: std::env::var("LLM_BASE_URL")
                 .unwrap_or_else(|_| "https://openrouter.ai/api/v1".into()),
             llm_api_key: std::env::var("LLM_API_KEY").unwrap_or_default(),
@@ -80,8 +79,7 @@ impl Config {
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(30),
             ),
-            log_level: std::env::var("RUST_LOG")
-                .unwrap_or_else(|_| "g10kz=info,warn".into()),
+            log_level: std::env::var("RUST_LOG").unwrap_or_else(|_| "g10kz=info,warn".into()),
             blacklisted_users: std::env::var("BLACKLISTED_USERS")
                 .unwrap_or_default()
                 .split(',')
@@ -94,8 +92,7 @@ impl Config {
             persona_card_path: std::env::var("PERSONA_CARD_PATH").unwrap_or_default(),
             embed_server_url: std::env::var("EMBED_SERVER_URL")
                 .unwrap_or_else(|_| "http://localhost:8082".into()),
-            embed_model: std::env::var("EMBED_MODEL")
-                .unwrap_or_else(|_| "embed".into()),
+            embed_model: std::env::var("EMBED_MODEL").unwrap_or_else(|_| "embed".into()),
             cf_account_id: std::env::var("CF_ACCOUNT_ID").unwrap_or_default(),
             cf_ai_token: std::env::var("CF_AI_TOKEN").unwrap_or_default(),
             prompt_guard_url: std::env::var("PROMPT_GUARD_URL")

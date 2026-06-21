@@ -6,10 +6,18 @@ use tracing::warn;
 use crate::tool::{BoxFuture, Tool, ToolCall, ToolResult};
 
 fn ok(name: &str, content: String) -> ToolResult {
-    ToolResult { name: name.into(), content, success: true }
+    ToolResult {
+        name: name.into(),
+        content,
+        success: true,
+    }
 }
 fn err(name: &str, msg: String) -> ToolResult {
-    ToolResult { name: name.into(), content: msg, success: false }
+    ToolResult {
+        name: name.into(),
+        content: msg,
+        success: false,
+    }
 }
 
 // ─── TimeTool ────────────────────────────────────────────────────────────────
@@ -17,8 +25,12 @@ fn err(name: &str, msg: String) -> ToolResult {
 pub struct TimeTool;
 
 impl Tool for TimeTool {
-    fn name(&self) -> &str { "current_time" }
-    fn description(&self) -> &str { "回傳台灣當前日期與時間（UTC+8）。" }
+    fn name(&self) -> &str {
+        "current_time"
+    }
+    fn description(&self) -> &str {
+        "回傳台灣當前日期與時間（UTC+8）。"
+    }
     fn schema(&self) -> Value {
         json!({ "type": "object", "properties": {}, "required": [] })
     }
@@ -35,7 +47,8 @@ impl Tool for TimeTool {
             let mm = (time_of_day % 3600) / 60;
             let ss = time_of_day % 60;
             let (year, month, day) = unix_days_to_ymd(days);
-            let text = format!("{year:04}-{month:02}-{day:02} {hh:02}:{mm:02}:{ss:02} (台灣時間 UTC+8)");
+            let text =
+                format!("{year:04}-{month:02}-{day:02} {hh:02}:{mm:02}:{ss:02} (台灣時間 UTC+8)");
             ok(call.name.as_str(), text)
         })
     }
@@ -60,7 +73,9 @@ fn unix_days_to_ymd(days: u64) -> (u64, u64, u64) {
 pub struct EscalateTool;
 
 impl Tool for EscalateTool {
-    fn name(&self) -> &str { "escalate" }
+    fn name(&self) -> &str {
+        "escalate"
+    }
     fn description(&self) -> &str {
         "當問題超出社交對話範圍、需要深度分析時使用。觸發升級到推理路徑。"
     }
@@ -96,11 +111,15 @@ impl TwStockTool {
 }
 
 impl Default for TwStockTool {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Tool for TwStockTool {
-    fn name(&self) -> &str { "tw_stock" }
+    fn name(&self) -> &str {
+        "tw_stock"
+    }
     fn description(&self) -> &str {
         "查詢台灣股票即時資訊（TWSE）。參數：stock_code（如 \"2330\" 代表台積電）。"
     }
@@ -139,17 +158,18 @@ impl Tool for TwStockTool {
                 Ok(v) => v,
                 Err(e) => return err(&call.name, format!("解析失敗：{e}")),
             };
-            let info = json.get("msgArray")
+            let info = json
+                .get("msgArray")
                 .and_then(|a| a.as_array())
                 .and_then(|a| a.first());
             match info {
                 Some(stock) => {
-                    let name  = stock.get("n").and_then(|v| v.as_str()).unwrap_or("N/A");
+                    let name = stock.get("n").and_then(|v| v.as_str()).unwrap_or("N/A");
                     let price = stock.get("z").and_then(|v| v.as_str()).unwrap_or("-");
-                    let open  = stock.get("o").and_then(|v| v.as_str()).unwrap_or("-");
-                    let high  = stock.get("h").and_then(|v| v.as_str()).unwrap_or("-");
-                    let low   = stock.get("l").and_then(|v| v.as_str()).unwrap_or("-");
-                    let vol   = stock.get("v").and_then(|v| v.as_str()).unwrap_or("-");
+                    let open = stock.get("o").and_then(|v| v.as_str()).unwrap_or("-");
+                    let high = stock.get("h").and_then(|v| v.as_str()).unwrap_or("-");
+                    let low = stock.get("l").and_then(|v| v.as_str()).unwrap_or("-");
+                    let vol = stock.get("v").and_then(|v| v.as_str()).unwrap_or("-");
                     ok(&call.name, format!(
                         "{code} {name}\n現價：{price}\n開盤：{open} 最高：{high} 最低：{low}\n成交量：{vol}張"
                     ))
@@ -182,11 +202,15 @@ impl WebSearchTool {
 }
 
 impl Default for WebSearchTool {
-    fn default() -> Self { Self::new(None) }
+    fn default() -> Self {
+        Self::new(None)
+    }
 }
 
 impl Tool for WebSearchTool {
-    fn name(&self) -> &str { "web_search" }
+    fn name(&self) -> &str {
+        "web_search"
+    }
     fn description(&self) -> &str {
         "搜尋網路最新資訊。由 Gemini Google Search grounding 驅動，結果附帶來源連結。參數：query（搜尋詞）。"
     }
@@ -237,17 +261,29 @@ impl Tool for WebSearchTool {
                 return err(&call.name, format!("搜尋錯誤：{e}"));
             }
 
-            let summary = data.get("summary").and_then(|v| v.as_str()).unwrap_or("").to_owned();
-            let results = data.get("results").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let summary = data
+                .get("summary")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_owned();
+            let results = data
+                .get("results")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
 
             if summary.is_empty() && results.is_empty() {
-                return ok(&call.name, format!("找不到「{query}」的相關結果，請換個搜尋詞試試。"));
+                return ok(
+                    &call.name,
+                    format!("找不到「{query}」的相關結果，請換個搜尋詞試試。"),
+                );
             }
 
             let mut output = format!("## 搜尋：{query}\n\n");
 
             if !summary.is_empty() {
-                let quoted = summary.lines()
+                let quoted = summary
+                    .lines()
                     .map(|l| format!("> {l}"))
                     .collect::<Vec<_>>()
                     .join("\n");
@@ -258,8 +294,11 @@ impl Tool for WebSearchTool {
             if !results.is_empty() {
                 output.push_str("**來源：**\n");
                 for (i, r) in results.iter().enumerate().take(5) {
-                    let title = r.get("title").and_then(|v| v.as_str()).unwrap_or("(無標題)");
-                    let url   = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
+                    let title = r
+                        .get("title")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("(無標題)");
+                    let url = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
                     output.push_str(&format!("-# [{i_n}] [{title}](<{url}>)\n", i_n = i + 1));
                 }
             }
@@ -291,11 +330,15 @@ impl FetchPageTool {
 }
 
 impl Default for FetchPageTool {
-    fn default() -> Self { Self::new(None) }
+    fn default() -> Self {
+        Self::new(None)
+    }
 }
 
 impl Tool for FetchPageTool {
-    fn name(&self) -> &str { "fetch_page" }
+    fn name(&self) -> &str {
+        "fetch_page"
+    }
     fn description(&self) -> &str {
         "讀取指定網頁的完整內容，回傳文字摘要。適合讀取文章、GitHub README、技術文件、新聞等。\
          參數：url（完整網址，須含 https:// 或 http://）。"
@@ -345,14 +388,25 @@ impl Tool for FetchPageTool {
                 return err(&call.name, format!("讀取錯誤：{e}"));
             }
 
-            let content = data.get("content").and_then(|v| v.as_str()).unwrap_or("").to_owned();
-            let truncated = data.get("truncated").and_then(|v| v.as_bool()).unwrap_or(false);
+            let content = data
+                .get("content")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_owned();
+            let truncated = data
+                .get("truncated")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             if content.is_empty() {
                 return err(&call.name, format!("無法讀取頁面：{url}"));
             }
 
-            let note = if truncated { "\n\n[內容已截斷]" } else { "" };
+            let note = if truncated {
+                "\n\n[內容已截斷]"
+            } else {
+                ""
+            };
             ok(&call.name, format!("{content}{note}"))
         })
     }
@@ -366,7 +420,10 @@ mod tests {
 
     #[tokio::test]
     async fn time_tool_returns_datetime() {
-        let call = ToolCall { name: "current_time".into(), arguments: json!({}) };
+        let call = ToolCall {
+            name: "current_time".into(),
+            arguments: json!({}),
+        };
         let result = TimeTool.call(call).await;
         assert!(result.success);
         assert!(result.content.contains("UTC+8"));
@@ -385,7 +442,10 @@ mod tests {
 
     #[tokio::test]
     async fn escalate_tool_returns_sentinel() {
-        let call = ToolCall { name: "escalate".into(), arguments: json!({"reason": "complex"}) };
+        let call = ToolCall {
+            name: "escalate".into(),
+            arguments: json!({"reason": "complex"}),
+        };
         let result = EscalateTool.call(call).await;
         assert!(result.success);
         assert_eq!(result.content, "ESCALATE");
@@ -393,19 +453,28 @@ mod tests {
 
     #[tokio::test]
     async fn tw_stock_missing_arg() {
-        let call = ToolCall { name: "tw_stock".into(), arguments: json!({}) };
+        let call = ToolCall {
+            name: "tw_stock".into(),
+            arguments: json!({}),
+        };
         assert!(!TwStockTool::new().call(call).await.success);
     }
 
     #[tokio::test]
     async fn web_search_missing_query() {
-        let call = ToolCall { name: "web_search".into(), arguments: json!({}) };
+        let call = ToolCall {
+            name: "web_search".into(),
+            arguments: json!({}),
+        };
         assert!(!WebSearchTool::new(None).call(call).await.success);
     }
 
     #[tokio::test]
     async fn fetch_page_missing_url() {
-        let call = ToolCall { name: "fetch_page".into(), arguments: json!({}) };
+        let call = ToolCall {
+            name: "fetch_page".into(),
+            arguments: json!({}),
+        };
         assert!(!FetchPageTool::new(None).call(call).await.success);
     }
 }

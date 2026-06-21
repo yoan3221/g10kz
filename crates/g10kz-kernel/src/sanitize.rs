@@ -60,7 +60,10 @@ static LEAK_SIGNALS: &[&str] = &[
 /// Returns `Some(signal)` if a leak is detected in `reply`.
 pub fn find_leak(reply: &str) -> Option<&'static str> {
     let scanned = normalize_for_scan(reply);
-    LEAK_SIGNALS.iter().find(|&&sig| scanned.contains(sig)).copied()
+    LEAK_SIGNALS
+        .iter()
+        .find(|&&sig| scanned.contains(sig))
+        .copied()
 }
 
 // ─── Anti-repetition ─────────────────────────────────────────────────────────
@@ -92,9 +95,6 @@ pub fn is_repetitive_opener(reply: &str, recent_openers: &[&str]) -> bool {
         .any(|prev| extract_opener(prev) == opener)
 }
 
-
-
-
 // ─── Format normalisation ─────────────────────────────────────────────────────
 
 /// Remove lone backticks that would break Discord inline-code rendering.
@@ -125,7 +125,6 @@ fn strip_lone_backtick(s: &str) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
-
 
 /// Format normalisation applied to clean replies before delivery.
 ///
@@ -169,12 +168,18 @@ fn actions_to_blockquote(s: &str) -> String {
         }
         let t = line.trim();
         // Detect which delimiter (if any) wraps the whole trimmed line
-        let delim: Option<char> = if t.len() >= 3 && t.starts_with('*') && t.ends_with('*')
-            && !t.starts_with("**") && !t.ends_with("**")
+        let delim: Option<char> = if t.len() >= 3
+            && t.starts_with('*')
+            && t.ends_with('*')
+            && !t.starts_with("**")
+            && !t.ends_with("**")
         {
             Some('*')
-        } else if t.len() >= 3 && t.starts_with('_') && t.ends_with('_')
-            && !t.starts_with("__") && !t.ends_with("__")
+        } else if t.len() >= 3
+            && t.starts_with('_')
+            && t.ends_with('_')
+            && !t.starts_with("__")
+            && !t.ends_with("__")
         {
             Some('_')
         } else {
@@ -199,9 +204,7 @@ fn actions_to_blockquote(s: &str) -> String {
 }
 
 fn strip_leading_artefact(s: &str) -> &str {
-    static ARTEFACTS: &[&str] = &[
-        "assistant:", "ai:", "小十:", "bot:", "小十：", "ai：",
-    ];
+    static ARTEFACTS: &[&str] = &["assistant:", "ai:", "小十:", "bot:", "小十：", "ai："];
     let lower = s.to_lowercase();
     for art in ARTEFACTS {
         if lower.starts_with(art) {
@@ -221,10 +224,14 @@ fn strip_leading_artefact(s: &str) -> &str {
 /// Only strips when the content inside brackets contains no whitespace and is
 /// ≤ 32 chars — avoids clobbering intentional bracket usage in replies.
 fn strip_bracket_label(s: &str) -> Option<&str> {
-    if !s.starts_with('[') { return None; }
+    if !s.starts_with('[') {
+        return None;
+    }
     let end = s.find(']')?;
     let inner = &s[1..end];
-    if inner.is_empty() || inner.len() > 32 || inner.contains(' ') { return None; }
+    if inner.is_empty() || inner.len() > 32 || inner.contains(' ') {
+        return None;
+    }
     let after = s[end + 1..].trim_start_matches(|c| c == ':' || c == '：');
     Some(after.trim_start())
 }
@@ -298,17 +305,17 @@ mod tests {
 
     #[test]
     fn whitespace_only_triggers_regenerate() {
-        assert!(matches!(ok("   \n  \t  "), SanitizeResult::Regenerate { .. }));
+        assert!(matches!(
+            ok("   \n  \t  "),
+            SanitizeResult::Regenerate { .. }
+        ));
     }
 
     // ── clean reply ───────────────────────────────────────────────────────────
 
     #[test]
     fn clean_zh_reply_passes() {
-        assert!(matches!(
-            ok("哼，算你問的還不蠢。"),
-            SanitizeResult::Ok(_)
-        ));
+        assert!(matches!(ok("哼，算你問的還不蠢。"), SanitizeResult::Ok(_)));
     }
 
     #[test]

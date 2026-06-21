@@ -25,8 +25,8 @@ pub trait Memory: Send + Sync {
     fn search<'a>(
         &'a self,
         user_id: u64,
-        query:   &'a str,
-        limit:   usize,
+        query: &'a str,
+        limit: usize,
     ) -> BoxFuture<'a, Vec<MemoryEntry>>;
 
     fn add<'a>(&'a self, user_id: u64, entry: MemoryEntry) -> BoxFuture<'a, ()>;
@@ -35,7 +35,7 @@ pub trait Memory: Send + Sync {
     /// Default: no-op — override in `EverosMemory`.
     fn add_turn<'a>(
         &'a self,
-        _user_id:   u64,
+        _user_id: u64,
         _session_id: &'a str,
         _user_text: &'a str,
         _bot_reply: &'a str,

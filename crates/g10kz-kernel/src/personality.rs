@@ -56,7 +56,7 @@ fn index_to_function(idx: usize) -> JungFunction {
 const BASE: [f32; 8] = [0.35, 0.01, 0.15, 0.25, 0.01, 0.15, 0.05, 0.03];
 
 const DECAY: f32 = 0.90;
-const BUMP: f32  = 0.08;
+const BUMP: f32 = 0.08;
 const MIN_TURNS: u32 = 3;
 const DRIFT_THRESHOLD: f32 = 0.05;
 
@@ -73,7 +73,10 @@ pub struct PersonalityState {
 
 impl Default for PersonalityState {
     fn default() -> Self {
-        Self { temp: [0.0; 8], turn_count: 0 }
+        Self {
+            temp: [0.0; 8],
+            turn_count: 0,
+        }
     }
 }
 
@@ -89,7 +92,9 @@ impl PersonalityState {
 
     /// Decay all temp weights then bump the activated function.
     pub fn update(&mut self, activated: JungFunction) {
-        for t in self.temp.iter_mut() { *t *= DECAY; }
+        for t in self.temp.iter_mut() {
+            *t *= DECAY;
+        }
         self.temp[activated as usize] += BUMP;
         self.turn_count += 1;
     }
@@ -97,15 +102,21 @@ impl PersonalityState {
     /// Returns a Traditional-Chinese modifier to inject into the system prompt,
     /// or `None` when data is insufficient or drift is below threshold.
     pub fn render_modifier(&self) -> Option<String> {
-        if self.turn_count < MIN_TURNS { return None; }
+        if self.turn_count < MIN_TURNS {
+            return None;
+        }
 
         let e = self.effective();
-        let (idx, drift) = e.iter().zip(BASE.iter())
+        let (idx, drift) = e
+            .iter()
+            .zip(BASE.iter())
             .enumerate()
             .map(|(i, (eff, b))| (i, eff - b))
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())?;
 
-        if drift < DRIFT_THRESHOLD { return None; }
+        if drift < DRIFT_THRESHOLD {
+            return None;
+        }
 
         let text = modifier_text(index_to_function(idx));
         Some(format!("\n\n[人格動態]\n{text}"))
@@ -123,39 +134,103 @@ pub fn classify_activation(user_text: &str, bot_reply: &str) -> JungFunction {
     let mut scores = [0i32; 8];
 
     // Fe — warmth, care, harmony
-    for kw in ["謝謝","感謝","喜歡","♡","♥","開心","好可愛","溫柔","陪","在乎","關心"] {
-        if t.contains(kw) { scores[3] += 2; }
+    for kw in [
+        "謝謝",
+        "感謝",
+        "喜歡",
+        "♡",
+        "♥",
+        "開心",
+        "好可愛",
+        "溫柔",
+        "陪",
+        "在乎",
+        "關心",
+    ] {
+        if t.contains(kw) {
+            scores[3] += 2;
+        }
     }
     // Fi — values, trust, authenticity
-    for kw in ["真心","秘密","信任","心裡","真正","說實話","內心","心動"] {
-        if t.contains(kw) { scores[2] += 2; }
+    for kw in [
+        "真心",
+        "秘密",
+        "信任",
+        "心裡",
+        "真正",
+        "說實話",
+        "內心",
+        "心動",
+    ] {
+        if t.contains(kw) {
+            scores[2] += 2;
+        }
     }
     // Ti — logic, analysis, defense
-    for kw in ["為什麼","原理","機制","分析","邏輯","原因","怎麼","how","why","因為","解釋"] {
-        if t.contains(kw) { scores[0] += 1; }
+    for kw in [
+        "為什麼",
+        "原理",
+        "機制",
+        "分析",
+        "邏輯",
+        "原因",
+        "怎麼",
+        "how",
+        "why",
+        "因為",
+        "解釋",
+    ] {
+        if t.contains(kw) {
+            scores[0] += 1;
+        }
     }
     // Ne — curiosity, ideas, playful
-    for kw in ["如果","假如","可能","想到","玩","有趣","哈哈","hhh","lol","好主意","奇怪"] {
-        if t.contains(kw) { scores[5] += 1; }
+    for kw in [
+        "如果",
+        "假如",
+        "可能",
+        "想到",
+        "玩",
+        "有趣",
+        "哈哈",
+        "hhh",
+        "lol",
+        "好主意",
+        "奇怪",
+    ] {
+        if t.contains(kw) {
+            scores[5] += 1;
+        }
     }
     // Se — immediate, reactive
-    for kw in ["現在","馬上","快","wow","哇","剛剛","啊啊","喔喔","衝"] {
-        if t.contains(kw) { scores[7] += 1; }
+    for kw in [
+        "現在", "馬上", "快", "wow", "哇", "剛剛", "啊啊", "喔喔", "衝",
+    ] {
+        if t.contains(kw) {
+            scores[7] += 1;
+        }
     }
     // Si — memory, routine, past
-    for kw in ["記得","以前","上次","習慣","常常","每次","之前"] {
-        if t.contains(kw) { scores[6] += 1; }
+    for kw in ["記得", "以前", "上次", "習慣", "常常", "每次", "之前"] {
+        if t.contains(kw) {
+            scores[6] += 1;
+        }
     }
     // Ni — intuition, insight
-    for kw in ["感覺","直覺","預感","象徵","深層","意義"] {
-        if t.contains(kw) { scores[4] += 1; }
+    for kw in ["感覺", "直覺", "預感", "象徵", "深層", "意義"] {
+        if t.contains(kw) {
+            scores[4] += 1;
+        }
     }
     // Te — structure, efficiency
-    for kw in ["效率","計畫","步驟","目標","完成","整理"] {
-        if t.contains(kw) { scores[1] += 1; }
+    for kw in ["效率", "計畫", "步驟", "目標", "完成", "整理"] {
+        if t.contains(kw) {
+            scores[1] += 1;
+        }
     }
 
-    let idx = scores.iter()
+    let idx = scores
+        .iter()
         .enumerate()
         .max_by_key(|(_, &s)| s)
         .map(|(i, _)| i)
@@ -218,19 +293,27 @@ mod tests {
     #[test]
     fn modifier_appears_after_sufficient_drift() {
         let mut s = PersonalityState::default();
-        for _ in 0..6 { s.update(JungFunction::Fe); }
+        for _ in 0..6 {
+            s.update(JungFunction::Fe);
+        }
         assert!(s.render_modifier().is_some());
         assert!(s.render_modifier().unwrap().contains("人格動態"));
     }
 
     #[test]
     fn classify_warm_text_returns_fe() {
-        assert_eq!(classify_activation("謝謝你陪我", "不客氣啦"), JungFunction::Fe);
+        assert_eq!(
+            classify_activation("謝謝你陪我", "不客氣啦"),
+            JungFunction::Fe
+        );
     }
 
     #[test]
     fn classify_analytical_text_returns_ti() {
-        assert_eq!(classify_activation("解釋一下這個機制的原理", "分析如下"), JungFunction::Ti);
+        assert_eq!(
+            classify_activation("解釋一下這個機制的原理", "分析如下"),
+            JungFunction::Ti
+        );
     }
 
     #[test]
@@ -238,7 +321,9 @@ mod tests {
         let mut s = PersonalityState::default();
         s.update(JungFunction::Fe);
         let peak = s.temp[3];
-        for _ in 0..15 { s.update(JungFunction::Ti); }
+        for _ in 0..15 {
+            s.update(JungFunction::Ti);
+        }
         assert!(s.temp[3] < peak * 0.3);
     }
 }

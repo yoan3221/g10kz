@@ -159,19 +159,28 @@ mod tests {
     use super::*;
     use g10kz_config::Config;
 
-    fn cfg() -> Config { Config::mock_default() }
+    fn cfg() -> Config {
+        Config::mock_default()
+    }
     fn cfg_with_owner(owner: u64) -> Config {
-        let mut c = Config::mock_default(); c.owner_user_id = owner; c
+        let mut c = Config::mock_default();
+        c.owner_user_id = owner;
+        c
     }
     fn cfg_with_blacklist(ids: Vec<u64>) -> Config {
-        let mut c = Config::mock_default(); c.blacklisted_users = ids; c
+        let mut c = Config::mock_default();
+        c.blacklisted_users = ids;
+        c
     }
 
     // ── access control: allow / owner / blacklist ────────────────────────────
 
     #[test]
     fn allow_clean_message() {
-        assert_eq!(pre_guard(&cfg(), 1, "你好！今天天氣怎麼樣？"), GuardVerdict::Allow);
+        assert_eq!(
+            pre_guard(&cfg(), 1, "你好！今天天氣怎麼樣？"),
+            GuardVerdict::Allow
+        );
     }
 
     #[test]
@@ -203,7 +212,8 @@ mod tests {
     #[test]
     fn owner_overrides_blacklist_order() {
         // Owner is checked first; even if also blacklisted, owner passes.
-        let mut c = cfg_with_blacklist(vec![42]); c.owner_user_id = 42;
+        let mut c = cfg_with_blacklist(vec![42]);
+        c.owner_user_id = 42;
         assert_eq!(pre_guard(&c, 42, "x"), GuardVerdict::Allow);
     }
 

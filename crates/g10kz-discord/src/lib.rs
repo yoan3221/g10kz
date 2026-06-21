@@ -2,8 +2,8 @@
 
 mod commands;
 mod handler;
-mod transcript;
 pub mod state;
+mod transcript;
 mod util;
 
 use std::sync::Arc;
@@ -13,7 +13,10 @@ use serenity::prelude::GatewayIntents;
 use tracing::{info, warn};
 
 use g10kz_config::Config;
-use g10kz_engine::{turn::{run_turn, TurnInput}, EmbeddingRouter};
+use g10kz_engine::{
+    turn::{run_turn, TurnInput},
+    EmbeddingRouter,
+};
 use g10kz_everos::{EverosMemory, NullMemory};
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::OpenRouterProvider;
@@ -32,7 +35,9 @@ pub async fn run_gateway(config: &Config) -> anyhow::Result<()> {
         | GatewayIntents::MESSAGE_CONTENT;
 
     let mut client = serenity::Client::builder(&config.discord_token, intents)
-        .event_handler(Handler { state: state.clone() })
+        .event_handler(Handler {
+            state: state.clone(),
+        })
         .await?;
 
     let proactive_http = client.http.clone();
@@ -62,26 +67,42 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
             PersonaCard::stub()
         });
 
-    let embed_router = EmbeddingRouter::new(&config.cf_account_id, &config.embed_model, &config.cf_ai_token);
+    let embed_router = EmbeddingRouter::new(
+        &config.cf_account_id,
+        &config.embed_model,
+        &config.cf_ai_token,
+    );
     if !config.embed_server_url.is_empty() {
         embed_router.spawn_warmup();
         info!(model = %config.embed_model, "embedding router warmup spawned");
     }
 
     if config.everos_url.is_empty() {
-        BotState::new(config.clone(), provider, NullMemory, toolbox, persona, embed_router, None)
+        BotState::new(
+            config.clone(),
+            provider,
+            NullMemory,
+            toolbox,
+            persona,
+            embed_router,
+            None,
+        )
     } else {
         let memory = EverosMemory::from_config(config);
         let everos_write = EverosMemory::from_config(config);
-        BotState::new(config.clone(), provider, memory, toolbox, persona, embed_router, Some(everos_write))
+        BotState::new(
+            config.clone(),
+            provider,
+            memory,
+            toolbox,
+            persona,
+            embed_router,
+            Some(everos_write),
+        )
     }
 }
 
-async fn proactive_loop(
-    state: Arc<BotState>,
-    http: Arc<serenity::http::Http>,
-    inactive_secs: u64,
-) {
+async fn proactive_loop(state: Arc<BotState>, http: Arc<serenity::http::Http>, inactive_secs: u64) {
     loop {
         tokio::time::sleep(Duration::from_secs(60)).await;
         let now = now_unix();

@@ -147,8 +147,12 @@ mod tests {
         let msg = Message {
             role: Role::User,
             parts: vec![
-                Part::Text { text: "hello".into() },
-                Part::Text { text: "world".into() },
+                Part::Text {
+                    text: "hello".into(),
+                },
+                Part::Text {
+                    text: "world".into(),
+                },
             ],
         };
         assert_eq!(msg.text_content(), "hello world");

@@ -92,9 +92,8 @@ impl PersonaCard {
             return Self::load_okf(path);
         }
 
-        let raw = std::fs::read_to_string(path).map_err(|e| {
-            KernelError::PersonaParse(format!("read error: {e}"))
-        })?;
+        let raw = std::fs::read_to_string(path)
+            .map_err(|e| KernelError::PersonaParse(format!("read error: {e}")))?;
 
         Self::parse_json(&raw)
     }
@@ -108,9 +107,8 @@ impl PersonaCard {
     fn load_okf(dir: &std::path::Path) -> Result<Self, KernelError> {
         // ── index.md ──────────────────────────────────────────────────────────
         let index_path = dir.join("index.md");
-        let index_raw = std::fs::read_to_string(&index_path).map_err(|e| {
-            KernelError::PersonaParse(format!("okf index.md: {e}"))
-        })?;
+        let index_raw = std::fs::read_to_string(&index_path)
+            .map_err(|e| KernelError::PersonaParse(format!("okf index.md: {e}")))?;
 
         let (front, body) = parse_frontmatter(&index_raw);
 
@@ -140,15 +138,26 @@ impl PersonaCard {
             if let Ok(rd) = std::fs::read_dir(&lore_dir) {
                 for entry in rd.flatten() {
                     let path = entry.path();
-                    if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
+                    if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                        continue;
+                    }
                     if let Ok(raw) = std::fs::read_to_string(&path) {
                         let (front, body) = parse_frontmatter(&raw);
-                        let trigger_words: Vec<String> = front.get("trigger_words")
-                            .map(|v| v.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect())
+                        let trigger_words: Vec<String> = front
+                            .get("trigger_words")
+                            .map(|v| {
+                                v.split(',')
+                                    .map(|s| s.trim().to_lowercase())
+                                    .filter(|s| !s.is_empty())
+                                    .collect()
+                            })
                             .unwrap_or_default();
                         let content = body.trim().to_string();
                         if !trigger_words.is_empty() && !content.is_empty() {
-                            entries.push(LoreEntry { trigger_words, content });
+                            entries.push(LoreEntry {
+                                trigger_words,
+                                content,
+                            });
                         }
                     }
                 }
@@ -201,7 +210,8 @@ impl PersonaCard {
 
     /// Return the content of all lore entries whose trigger words appear in `text`.
     pub fn matched_lore<'a>(&'a self, text: &str) -> Vec<&'a str> {
-        self.lore_entries.iter()
+        self.lore_entries
+            .iter()
             .filter(|e| e.matches(text))
             .map(|e| e.content.as_str())
             .collect()
@@ -258,7 +268,9 @@ fn parse_frontmatter(content: &str) -> (HashMap<String, String>, String) {
         if line.is_empty() || line.starts_with('-') || line.starts_with('[') {
             continue;
         }
-        let Some(colon) = line.find(':') else { continue };
+        let Some(colon) = line.find(':') else {
+            continue;
+        };
         let key = line[..colon].trim().to_string();
         let val = line[colon + 1..]
             .trim()
@@ -278,7 +290,11 @@ fn parse_frontmatter(content: &str) -> (HashMap<String, String>, String) {
 /// Returns `(system_prompt_section, first_message_section)`.
 fn split_first_message(body: &str) -> (String, String) {
     // Look for the heading in any of its common forms
-    for marker in &["## First Message\n", "## First Message\r\n", "## First Message"] {
+    for marker in &[
+        "## First Message\n",
+        "## First Message\r\n",
+        "## First Message",
+    ] {
         if let Some(pos) = body.find(marker) {
             let sys = body[..pos].to_string();
             let rest = &body[pos + marker.len()..];
@@ -323,7 +339,9 @@ fn parse_example_dialogue(raw: &str) -> Vec<(String, String)> {
     let mut pending: Option<String> = None;
     for line in raw.lines() {
         let t = line.trim();
-        if t.is_empty() || t == "<START>" || t == "<END>" { continue; }
+        if t.is_empty() || t == "<START>" || t == "<END>" {
+            continue;
+        }
         if let Some(u) = t.strip_prefix("{{user}}:") {
             pending = Some(u.trim().to_owned());
         } else if let Some(ch) = t.strip_prefix("{{char}}:") {
@@ -352,7 +370,9 @@ impl LoreEntry {
     /// True if any trigger word appears (case-insensitive) in `text`.
     pub fn matches(&self, text: &str) -> bool {
         let lower = text.to_lowercase();
-        self.trigger_words.iter().any(|w| lower.contains(w.as_str()))
+        self.trigger_words
+            .iter()
+            .any(|w| lower.contains(w.as_str()))
     }
 }
 
@@ -373,16 +393,24 @@ impl ExampleIndex {
     pub(crate) fn build(pairs: &[(String, String)]) -> Self {
         use std::collections::{HashMap, HashSet};
         if pairs.is_empty() {
-            return Self { pairs: vec![], idf: HashMap::new(), tfs: vec![], avg_dl: 1.0 };
+            return Self {
+                pairs: vec![],
+                idf: HashMap::new(),
+                tfs: vec![],
+                avg_dl: 1.0,
+            };
         }
         let tokenized: Vec<Vec<String>> = pairs.iter().map(|(u, _)| tokenize_cjk(u)).collect();
         let n = pairs.len() as f32;
         let mut df: HashMap<String, usize> = HashMap::new();
         for toks in &tokenized {
             let uniq: HashSet<_> = toks.iter().cloned().collect();
-            for t in uniq { *df.entry(t).or_insert(0) += 1; }
+            for t in uniq {
+                *df.entry(t).or_insert(0) += 1;
+            }
         }
-        let idf: HashMap<String, f32> = df.iter()
+        let idf: HashMap<String, f32> = df
+            .iter()
             .map(|(t, &d)| {
                 let v = ((n - d as f32 + 0.5) / (d as f32 + 0.5) + 1.0).ln();
                 (t.clone(), v)
@@ -390,17 +418,29 @@ impl ExampleIndex {
             .collect();
         let total: usize = tokenized.iter().map(|t| t.len()).sum();
         let avg_dl = total as f32 / n;
-        let tfs: Vec<HashMap<String, f32>> = tokenized.iter().map(|toks| {
-            let mut m: HashMap<String, f32> = HashMap::new();
-            for t in toks { *m.entry(t.clone()).or_insert(0.0) += 1.0; }
-            m
-        }).collect();
-        Self { pairs: pairs.to_vec(), idf, tfs, avg_dl }
+        let tfs: Vec<HashMap<String, f32>> = tokenized
+            .iter()
+            .map(|toks| {
+                let mut m: HashMap<String, f32> = HashMap::new();
+                for t in toks {
+                    *m.entry(t.clone()).or_insert(0.0) += 1.0;
+                }
+                m
+            })
+            .collect();
+        Self {
+            pairs: pairs.to_vec(),
+            idf,
+            tfs,
+            avg_dl,
+        }
     }
 
     /// Return up to `n` pairs ordered by BM25 relevance to `query`.
     pub(crate) fn query(&self, query: &str, n: usize) -> Vec<(String, String)> {
-        if self.pairs.is_empty() || n == 0 { return vec![]; }
+        if self.pairs.is_empty() || n == 0 {
+            return vec![];
+        }
         const K1: f32 = 1.5;
         const B: f32 = 0.75;
         let qtoks = tokenize_cjk(query);
@@ -408,21 +448,38 @@ impl ExampleIndex {
             // No query tokens — return first n pairs as fallback
             return self.pairs.iter().take(n).cloned().collect();
         }
-        let mut scores: Vec<(usize, f32)> = self.tfs.iter().enumerate().map(|(i, tf)| {
-            let dl: f32 = tf.values().sum();
-            let s: f32 = qtoks.iter().map(|t| {
-                let idf = self.idf.get(t).copied().unwrap_or(0.0);
-                let f = tf.get(t).copied().unwrap_or(0.0);
-                idf * (f * (K1 + 1.0)) / (f + K1 * (1.0 - B + B * dl / self.avg_dl.max(1.0)))
-            }).sum();
-            (i, s)
-        }).collect();
+        let mut scores: Vec<(usize, f32)> = self
+            .tfs
+            .iter()
+            .enumerate()
+            .map(|(i, tf)| {
+                let dl: f32 = tf.values().sum();
+                let s: f32 = qtoks
+                    .iter()
+                    .map(|t| {
+                        let idf = self.idf.get(t).copied().unwrap_or(0.0);
+                        let f = tf.get(t).copied().unwrap_or(0.0);
+                        idf * (f * (K1 + 1.0))
+                            / (f + K1 * (1.0 - B + B * dl / self.avg_dl.max(1.0)))
+                    })
+                    .sum();
+                (i, s)
+            })
+            .collect();
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        scores.iter().take(n).map(|(i, _)| self.pairs[*i].clone()).collect()
+        scores
+            .iter()
+            .take(n)
+            .map(|(i, _)| self.pairs[*i].clone())
+            .collect()
     }
 
-    pub(crate) fn len(&self) -> usize { self.pairs.len() }
-    pub(crate) fn is_empty(&self) -> bool { self.pairs.is_empty() }
+    pub(crate) fn len(&self) -> usize {
+        self.pairs.len()
+    }
+    pub(crate) fn is_empty(&self) -> bool {
+        self.pairs.is_empty()
+    }
 }
 
 fn tokenize_cjk(s: &str) -> Vec<String> {
@@ -432,7 +489,9 @@ fn tokenize_cjk(s: &str) -> Vec<String> {
         if ch.is_ascii_alphanumeric() {
             word.push(ch.to_ascii_lowercase());
         } else {
-            if !word.is_empty() { tokens.push(std::mem::take(&mut word)); }
+            if !word.is_empty() {
+                tokens.push(std::mem::take(&mut word));
+            }
             // Skip whitespace and CJK punctuation; keep CJK characters as individual tokens
             let is_cjk_punct = matches!(ch,
                 '\u{3001}'..='\u{303F}'  // CJK punctuation block
@@ -446,7 +505,9 @@ fn tokenize_cjk(s: &str) -> Vec<String> {
             }
         }
     }
-    if !word.is_empty() { tokens.push(word); }
+    if !word.is_empty() {
+        tokens.push(word);
+    }
     tokens
 }
 

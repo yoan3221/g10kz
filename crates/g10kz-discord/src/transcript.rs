@@ -59,9 +59,7 @@ fn cleanup_tokens(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'<'
-            && i + 1 < bytes.len()
-            && (bytes[i + 1] == b'#' || bytes[i + 1] == b'@')
+        if bytes[i] == b'<' && i + 1 < bytes.len() && (bytes[i + 1] == b'#' || bytes[i + 1] == b'@')
         {
             if let Some(rel) = input[i..].find('>') {
                 let inner = &input[i + 1..i + rel];
@@ -142,8 +140,15 @@ pub async fn fetch_channel_history(
             if resolved.is_empty() {
                 continue;
             }
-            let name = m.author.global_name.clone().unwrap_or_else(|| m.author.name.clone());
-            let reply = m.referenced_message.as_ref().map(|r| reply_snippet(r, bot_id));
+            let name = m
+                .author
+                .global_name
+                .clone()
+                .unwrap_or_else(|| m.author.name.clone());
+            let reply = m
+                .referenced_message
+                .as_ref()
+                .map(|r| reply_snippet(r, bot_id));
             let line = serialize_user_line(true, &name, reply.as_deref(), &resolved);
             push_or_merge(&mut msgs, Role::User, &line);
         }

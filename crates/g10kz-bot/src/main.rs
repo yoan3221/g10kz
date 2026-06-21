@@ -92,8 +92,7 @@ fn init_tracing(log_level: &str) {
 
     fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(log_level)),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level)),
         )
         .with_target(true)
         .compact()

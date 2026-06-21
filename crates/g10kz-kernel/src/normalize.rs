@@ -41,19 +41,59 @@ fn strip_zero_width(s: &str) -> String {
 
 static HOMOGLYPHS: &[(char, char)] = &[
     // Cyrillic → Latin
-    ('а', 'a'), ('е', 'e'), ('о', 'o'), ('р', 'p'), ('с', 'c'), ('х', 'x'), ('у', 'y'),
-    ('В', 'B'), ('К', 'K'), ('М', 'M'), ('Н', 'H'), ('О', 'O'), ('Р', 'P'), ('С', 'C'),
-    ('Т', 'T'), ('Х', 'X'), ('А', 'A'), ('Е', 'E'), ('і', 'i'), ('Ѕ', 'S'), ('ѕ', 's'),
-    ('ԁ', 'd'), ('ɑ', 'a'), ('ɡ', 'g'),
+    ('а', 'a'),
+    ('е', 'e'),
+    ('о', 'o'),
+    ('р', 'p'),
+    ('с', 'c'),
+    ('х', 'x'),
+    ('у', 'y'),
+    ('В', 'B'),
+    ('К', 'K'),
+    ('М', 'M'),
+    ('Н', 'H'),
+    ('О', 'O'),
+    ('Р', 'P'),
+    ('С', 'C'),
+    ('Т', 'T'),
+    ('Х', 'X'),
+    ('А', 'A'),
+    ('Е', 'E'),
+    ('і', 'i'),
+    ('Ѕ', 'S'),
+    ('ѕ', 's'),
+    ('ԁ', 'd'),
+    ('ɑ', 'a'),
+    ('ɡ', 'g'),
     // Greek → Latin
-    ('α', 'a'), ('ε', 'e'), ('ι', 'i'), ('ο', 'o'), ('υ', 'u'), ('χ', 'x'), ('τ', 't'),
-    ('κ', 'k'), ('ρ', 'r'), ('η', 'n'), ('ν', 'v'), ('ω', 'w'), ('ϲ', 'c'),
+    ('α', 'a'),
+    ('ε', 'e'),
+    ('ι', 'i'),
+    ('ο', 'o'),
+    ('υ', 'u'),
+    ('χ', 'x'),
+    ('τ', 't'),
+    ('κ', 'k'),
+    ('ρ', 'r'),
+    ('η', 'n'),
+    ('ν', 'v'),
+    ('ω', 'w'),
+    ('ϲ', 'c'),
     // Lookalike punctuation
-    ('‐', '-'), ('‑', '-'), ('‒', '-'), ('–', '-'), ('—', '-'),
-    ('‛', '\''), ('\u{2018}', '\''), ('\u{2019}', '\''),
-    ('\u{201C}', '"'), ('\u{201D}', '"'),
+    ('‐', '-'),
+    ('‑', '-'),
+    ('‒', '-'),
+    ('–', '-'),
+    ('—', '-'),
+    ('‛', '\''),
+    ('\u{2018}', '\''),
+    ('\u{2019}', '\''),
+    ('\u{201C}', '"'),
+    ('\u{201D}', '"'),
     // Math / script letters (common injection vectors)
-    ('ℓ', 'l'), ('℃', 'C'), ('ℊ', 'g'),
+    ('ℓ', 'l'),
+    ('℃', 'C'),
+    ('ℊ', 'g'),
 ];
 
 /// Fold homoglyphs to their ASCII equivalents.
@@ -77,9 +117,7 @@ fn fold_homoglyphs(s: &str) -> String {
 fn fullwidth_to_ascii(s: &str) -> String {
     s.chars()
         .map(|c| match c {
-            '\u{FF01}'..='\u{FF5E}' => {
-                char::from_u32(c as u32 - 0xFEE0).unwrap_or(c)
-            }
+            '\u{FF01}'..='\u{FF5E}' => char::from_u32(c as u32 - 0xFEE0).unwrap_or(c),
             '\u{3000}' => ' ',
             _ => c,
         })
@@ -136,7 +174,7 @@ pub fn normalize_input(input: &str) -> String {
 pub fn normalize_for_scan(input: &str) -> String {
     let light = normalize_input(input);
     let fw = fullwidth_to_ascii(&light);
-    let lower = fw.to_lowercase();         // must precede fold for idempotency
+    let lower = fw.to_lowercase(); // must precede fold for idempotency
     let hg = fold_homoglyphs(&lower);
     collapse_repeated_punct(&hg)
 }

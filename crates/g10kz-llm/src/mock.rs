@@ -36,7 +36,10 @@ impl MockProvider {
     /// Create a provider that cycles through `replies`.
     /// Panics if `replies` is empty.
     pub fn new(replies: Vec<String>) -> Self {
-        assert!(!replies.is_empty(), "MockProvider requires at least one reply");
+        assert!(
+            !replies.is_empty(),
+            "MockProvider requires at least one reply"
+        );
         Self {
             replies: Arc::new(replies),
             counter: Arc::new(AtomicUsize::new(0)),

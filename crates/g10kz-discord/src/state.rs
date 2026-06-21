@@ -1,17 +1,17 @@
 //! Shared bot state — Arc-wrapped, passed into every event handler.
 
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock};
-use tokio_util::sync::CancellationToken;
-use serenity::model::id::{ChannelId, MessageId};
 use g10kz_config::Config;
+use g10kz_engine::{EmbeddingRouter, PromptGuardClient};
 use g10kz_everos::{EverosMemory, Memory};
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_kernel::PersonalityState;
 use g10kz_llm::Provider;
 use g10kz_tools::ToolBox;
-use g10kz_engine::{EmbeddingRouter, PromptGuardClient};
+use serenity::model::id::{ChannelId, MessageId};
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
+use tokio_util::sync::CancellationToken;
 
 /// Maximum conversation exchanges per channel kept in the ring buffer.
 pub const RING_SIZE: usize = 30;

@@ -1,28 +1,24 @@
 //! serenity [`EventHandler`] implementation.
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::sync::mpsc;
-use serenity::builder::EditMessage;
-use serenity::{
-    async_trait,
-    client::{Context, EventHandler},
-    model::{
-        application::Interaction,
-        channel::Message as DiscordMessage,
-        gateway::Ready,
-    },
-};
-use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn};
-use g10kz_engine::turn::{run_turn, TurnInput};
-use g10kz_kernel::{classify_activation, PersonalityState, RouteDecision};
 use crate::{
     commands::{global_commands, handle_command},
     state::{BotState, ContextEntry, RING_SIZE},
     transcript::{fetch_channel_history, reply_snippet, resolve_mentions},
-    util::{build_history, now_unix, split_message, spawn_typing_task},
+    util::{build_history, now_unix, spawn_typing_task, split_message},
 };
+use g10kz_engine::turn::{run_turn, TurnInput};
+use g10kz_kernel::{classify_activation, PersonalityState, RouteDecision};
+use serenity::builder::EditMessage;
+use serenity::{
+    async_trait,
+    client::{Context, EventHandler},
+    model::{application::Interaction, channel::Message as DiscordMessage, gateway::Ready},
+};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, info, warn};
 
 /// How many recent channel messages to pull for group-channel context.
 const HISTORY_FETCH_LIMIT: u8 = 15;
@@ -139,7 +135,11 @@ impl EventHandler for Handler {
                 .map(|rm| reply_snippet(rm, bot_id))
         };
 
-        self.state.last_seen.lock().await.insert(channel_id, now_unix());
+        self.state
+            .last_seen
+            .lock()
+            .await
+            .insert(channel_id, now_unix());
 
         // History source:
         //  - group: live channel transcript (includes other users' messages)
@@ -194,8 +194,9 @@ impl EventHandler for Handler {
         // ── JPAF: read personality modifier for this user ─────────────────────
         let personality_modifier: Option<String> = {
             let states = self.state.personality_states.lock().await;
-            states.get(&msg.author.id.get())
-                  .and_then(|s| s.render_modifier())
+            states
+                .get(&msg.author.id.get())
+                .and_then(|s| s.render_modifier())
         };
 
         let cancel = CancellationToken::new();
@@ -283,17 +284,18 @@ impl EventHandler for Handler {
                 {
                     let activated = classify_activation(&clean_text, &output.reply);
                     let mut states = self.state.personality_states.lock().await;
-                    states.entry(msg.author.id.get())
-                          .or_insert_with(PersonalityState::default)
-                          .update(activated);
+                    states
+                        .entry(msg.author.id.get())
+                        .or_insert_with(PersonalityState::default)
+                        .update(activated);
                 }
 
                 // EverOS: persist the conversation turn in background
                 if let Some(everos) = self.state.everos.clone() {
-                    let uid        = msg.author.id.get();
-                    let session    = format!("g10kz-{uid}");
-                    let user_text  = clean_text.clone();
-                    let bot_reply  = output.reply.clone();
+                    let uid = msg.author.id.get();
+                    let session = format!("g10kz-{uid}");
+                    let user_text = clean_text.clone();
+                    let bot_reply = output.reply.clone();
                     tokio::spawn(async move {
                         everos.add_turn(uid, &session, &user_text, &bot_reply).await;
                     });
@@ -304,8 +306,9 @@ impl EventHandler for Handler {
                 // render as monospace in Discord. Triple-backtick blocks intact.
                 let reply = output.reply;
                 match output.path {
-                    RouteDecision::Social | RouteDecision::Search =>
-                        crate::util::sanitize_backticks(&reply),
+                    RouteDecision::Social | RouteDecision::Search => {
+                        crate::util::sanitize_backticks(&reply)
+                    }
                     _ => reply,
                 }
             }

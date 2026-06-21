@@ -79,7 +79,11 @@ impl OpenRouterProvider {
 
     /// Construct from [`g10kz_config::Config`].
     pub fn from_config(config: &g10kz_config::Config) -> Self {
-        Self::new_with_timeout(&config.llm_base_url, &config.llm_api_key, config.request_timeout)
+        Self::new_with_timeout(
+            &config.llm_base_url,
+            &config.llm_api_key,
+            config.request_timeout,
+        )
     }
 
     /// True if the circuit breaker is currently open (provider should be skipped).
@@ -210,9 +214,8 @@ impl OpenRouterProvider {
                 }
             };
 
-            let comp_resp: crate::serialize::CompletionResponse =
-                serde_json::from_value(json_val)
-                    .map_err(|e| LlmError::Request(format!("parse: {e}")))?;
+            let comp_resp: crate::serialize::CompletionResponse = serde_json::from_value(json_val)
+                .map_err(|e| LlmError::Request(format!("parse: {e}")))?;
 
             let (text, mut usage) = extract_reply(comp_resp)?;
             usage.cost_usd = cost_usd;
@@ -235,9 +238,7 @@ impl Provider for OpenRouterProvider {
         params: &'a CompletionParams,
     ) -> BoxFuture<'a, anyhow::Result<(String, Usage)>> {
         let cancel = self.cancel.clone();
-        Box::pin(async move {
-            self.complete_with_cancel(messages, params, cancel).await
-        })
+        Box::pin(async move { self.complete_with_cancel(messages, params, cancel).await })
     }
 
     /// Streaming completion over OpenAI-compatible SSE (`stream: true`).
@@ -275,13 +276,18 @@ impl Provider for OpenRouterProvider {
             };
             let resp = match resp {
                 Ok(r) => r,
-                Err(e) => { let _ = tx.send(Err(e.into())).await; return; }
+                Err(e) => {
+                    let _ = tx.send(Err(e.into())).await;
+                    return;
+                }
             };
             let status = resp.status();
             if !status.is_success() {
                 let txt = resp.text().await.unwrap_or_default();
                 let _ = tx
-                    .send(Err(LlmError::Request(format!("HTTP {status}: {txt}")).into()))
+                    .send(Err(
+                        LlmError::Request(format!("HTTP {status}: {txt}")).into()
+                    ))
                     .await;
                 return;
             }
@@ -298,7 +304,10 @@ impl Provider for OpenRouterProvider {
                 let Some(chunk) = chunk else { break };
                 let bytes = match chunk {
                     Ok(b) => b,
-                    Err(e) => { let _ = tx.send(Err(e.into())).await; return; }
+                    Err(e) => {
+                        let _ = tx.send(Err(e.into())).await;
+                        return;
+                    }
                 };
                 buf.push_str(&String::from_utf8_lossy(&bytes));
 
@@ -306,9 +315,13 @@ impl Provider for OpenRouterProvider {
                 while let Some(nl) = buf.find('\n') {
                     let line: String = buf[..nl].trim().to_string();
                     buf.drain(..=nl);
-                    let Some(payload) = line.strip_prefix("data:") else { continue };
+                    let Some(payload) = line.strip_prefix("data:") else {
+                        continue;
+                    };
                     let payload = payload.trim();
-                    if payload.is_empty() { continue; }
+                    if payload.is_empty() {
+                        continue;
+                    }
                     if payload == "[DONE]" {
                         let _ = tx.send(Ok(StreamItem::Done(usage.clone()))).await;
                         return;
@@ -380,10 +393,7 @@ mod tests {
     #[tokio::test]
     async fn cancellation_returns_cancelled_error() {
         let p = make_provider();
-        let msgs = vec![crate::types::Message::text(
-            crate::types::Role::User,
-            "hi",
-        )];
+        let msgs = vec![crate::types::Message::text(crate::types::Role::User, "hi")];
         let params = crate::types::CompletionParams::social("mock");
         let cancel = CancellationToken::new();
         cancel.cancel(); // pre-cancel

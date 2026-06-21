@@ -17,22 +17,22 @@
 pub mod guard;
 pub mod normalize;
 pub mod persona;
+pub mod personality;
 pub mod proactive;
 pub mod reject;
 pub mod route;
 pub mod sanitize;
-pub mod personality;
 
 // ─── re-exports ──────────────────────────────────────────────────────────────
 
 pub use guard::{pre_guard, GuardVerdict, RejectReason};
 pub use normalize::{normalize_for_scan, normalize_input};
 pub use persona::PersonaCard;
+pub use personality::{classify_activation, JungFunction, PersonalityState};
 pub use proactive::should_send_proactive;
 pub use reject::canned_response;
 pub use route::{route, RouteDecision};
 pub use sanitize::{format_output, sanitize_output, SanitizeResult};
-pub use personality::{classify_activation, JungFunction, PersonalityState};
 
 // ─── s
 // ─── error type ──────────────────────────────────────────────────────────────
