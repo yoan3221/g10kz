@@ -16,6 +16,9 @@ pub struct Config {
     pub llm_model_social: String,
     pub llm_model_reason: String,
     pub llm_model_judge: String,
+    /// Vision / media path model (must support multimodal image_url).
+    /// Defaults to llm_model_social if not set.
+    pub llm_model_media: String,
     pub llm_fusion_drafters: Vec<String>,
     pub everos_url: String,
     pub owner_user_id: u64,
@@ -66,6 +69,10 @@ impl Config {
                 .unwrap_or_else(|_| "openai/gpt-4o".into()),
             llm_model_judge: std::env::var("LLM_MODEL_JUDGE")
                 .unwrap_or_else(|_| "anthropic/claude-3-5-haiku".into()),
+            llm_model_media: std::env::var("LLM_MODEL_MEDIA").unwrap_or_else(|_| {
+                std::env::var("LLM_MODEL_SOCIAL")
+                    .unwrap_or_else(|_| "anthropic/claude-3-5-haiku".into())
+            }),
             llm_fusion_drafters,
             everos_url: std::env::var("EVEROS_URL")
                 .unwrap_or_else(|_| "http://localhost:7700".into()),
@@ -120,6 +127,7 @@ impl Config {
             llm_model_social: "mock-social".into(),
             llm_model_reason: "mock-reason".into(),
             llm_model_judge: "mock-judge".into(),
+            llm_model_media: "mock-social".into(),
             llm_fusion_drafters: vec!["mock-a".into(), "mock-b".into()],
             everos_url: "http://localhost:7700".into(),
             owner_user_id: 0,

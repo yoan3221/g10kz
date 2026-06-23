@@ -1026,7 +1026,7 @@ async fn path_media(
         messages.push(Message::text(Role::User, input.labeled(display_text)));
     }
 
-    let params = CompletionParams::social(&input.config.llm_model_social);
+    let params = CompletionParams::social(&input.config.llm_model_media);
     tokio::select! {
         r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
         _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
