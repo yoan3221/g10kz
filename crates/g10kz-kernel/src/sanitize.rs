@@ -144,10 +144,45 @@ pub fn format_output(reply: &str) -> String {
     // Normalise roleplay action lines (*動作*) into Discord blockquotes (> 動作)
     let blockquoted = actions_to_blockquote(&collapsed);
 
+    // Split inline blockquote markers to their own line.
+    // Some models output "台詞> 動作" on one line; Discord only renders
+    // "> text" as a blockquote when ">" is at the start of the line.
+    let blockquoted = split_inline_blockquote(&blockquoted);
+
     // Remove stray lone backticks that aren't part of code spans/blocks.
     // A lone ` that has no matching closing ` breaks Discord's inline-code
     // renderer and makes everything after it render as raw monospace.
     strip_lone_backtick(&blockquoted)
+}
+
+/// Move any "> " that appears mid-line to the start of a new line.
+///
+/// Converts `"台詞> 動作"` → `"台詞\n> 動作"` so Discord renders the
+/// blockquote correctly. Only fires when ">" is preceded by non-whitespace
+/// and is followed by a space (to avoid matching HTML/comparison operators).
+fn split_inline_blockquote(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 16);
+    for (i, line) in s.lines().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        // If line already starts with '>' leave it alone.
+        if line.trim_start().starts_with('>') {
+            out.push_str(line);
+            continue;
+        }
+        // Find the first occurrence of "> " not at position 0.
+        if let Some(pos) = line.find("> ") {
+            if pos > 0 && !line[..pos].trim_end().is_empty() {
+                out.push_str(line[..pos].trim_end());
+                out.push('\n');
+                out.push_str(&line[pos..]);
+                continue;
+            }
+        }
+        out.push_str(line);
+    }
+    out
 }
 
 /// Convert action lines to Discord blockquotes.
