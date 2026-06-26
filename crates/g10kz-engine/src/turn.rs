@@ -10,6 +10,7 @@
 //! | Command | 0 | skip | none |
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, instrument, warn};
@@ -656,6 +657,96 @@ fn strip_thinking(s: &str) -> String {
     result
 }
 
+// ─── Incremental think-tag filter ────────────────────────────────────────────
+
+/// Incremental `<think>...</think>` filter for the streaming path.
+/// Each [`push`] call processes only the new token bytes — O(token.len()) work
+/// vs O(n²) total for calling `strip_thinking` on the full buffer each token.
+struct ThinkStripper {
+    in_think: bool,
+    /// Bytes buffered that may be a partial tag split across tokens (max 7 bytes).
+    pending: String,
+    /// All visible (non-think) output accumulated so far.
+    visible: String,
+}
+
+impl ThinkStripper {
+    fn new() -> Self {
+        Self { in_think: false, pending: String::new(), visible: String::new() }
+    }
+
+    /// Feed a new streaming token. Updates state in O(token.len()).
+    fn push(&mut self, token: &str) {
+        self.pending.push_str(token);
+        self.flush_pending();
+    }
+
+    /// Finalise after the stream ends. Call once before reading `visible()`.
+    fn finish(&mut self) {
+        if !self.in_think {
+            let tail = std::mem::take(&mut self.pending);
+            self.visible.push_str(&tail);
+        } else {
+            self.pending.clear(); // discard unclosed think block
+        }
+    }
+
+    /// Full accumulated visible text so far.
+    fn visible(&self) -> &str {
+        &self.visible
+    }
+
+    fn flush_pending(&mut self) {
+        loop {
+            if self.pending.is_empty() { break; }
+
+            if self.in_think {
+                if let Some(pos) = self.pending.find("</think>") {
+                    let after = pos + "</think>".len();
+                    let skip = usize::from(self.pending[after..].starts_with('\n'));
+                    self.pending = self.pending[after + skip..].to_string();
+                    self.in_think = false;
+                } else {
+                    const KEEP: usize = 8 - 1; // "</think>".len() - 1
+                    if self.pending.len() > KEEP {
+                        let discard_to = self.pending.len() - KEEP;
+                        let discard_to = (0..=discard_to).rev()
+                            .find(|&i| self.pending.is_char_boundary(i))
+                            .unwrap_or(0);
+                        self.pending.drain(..discard_to);
+                    }
+                    break;
+                }
+            } else {
+                if let Some(pos) = self.pending.find("<think>") {
+                    self.visible.push_str(&self.pending[..pos]);
+                    self.pending = self.pending[pos + "<think>".len()..].to_string();
+                    self.in_think = true;
+                } else {
+                    let keep = think_tag_suffix_prefix(&self.pending);
+                    let emit_end = self.pending.len() - keep;
+                    let emit_end = (0..=emit_end).rev()
+                        .find(|&i| self.pending.is_char_boundary(i))
+                        .unwrap_or(0);
+                    self.visible.push_str(&self.pending[..emit_end]);
+                    self.pending.drain(..emit_end);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+/// Length of the longest suffix of `s` that is also a proper prefix of `"<think>"`.
+fn think_tag_suffix_prefix(s: &str) -> usize {
+    const TAG: &[u8] = b"<think>";
+    let sb = s.as_bytes();
+    for n in (1..=TAG.len().min(sb.len())).rev() {
+        if sb[sb.len() - n..] == TAG[..n] { return n; }
+    }
+    0
+}
+
 /// Social path. Streams via `stream_sink` when present (Discord), otherwise a
 /// single blocking completion (tests / once-mode). Both honour `[[ESCALATE]]`
 /// self-escalation to the strong model.
@@ -773,6 +864,7 @@ async fn path_social_streaming(
     let mut buf = String::new();
     let mut decided = false;
     let mut usage = Usage::default();
+    let mut stripper = ThinkStripper::new();
 
     loop {
         let item = tokio::select! {
@@ -783,6 +875,7 @@ async fn path_social_streaming(
         match item.map_err(EngineError::Llm)? {
             StreamItem::Token(t) => {
                 buf.push_str(&t);
+                stripper.push(&t);
                 if !decided {
                     // Wait for the first line (or enough chars) before revealing
                     // anything, so the sentinel never flashes on screen.
@@ -800,10 +893,8 @@ async fn path_social_streaming(
                             debug!(query = %query, "social search sentinel (streaming, initial)");
                             return search_and_reply(input, display_text, query, Some(sink)).await;
                         }
-                        let visible = strip_thinking(&buf);
-                        if !visible.is_empty() {
-                            let _ = sink.try_send(visible);
-                        }
+                        let v = stripper.visible();
+                        if !v.is_empty() { let _ = sink.try_send(v.to_owned()); }
                     }
                 } else {
                     // Already decided to continue, but haiku may still embed
@@ -821,10 +912,8 @@ async fn path_social_streaming(
                         debug!(query = %query, "social search sentinel mid-stream");
                         return search_and_reply(input, display_text, query, Some(sink)).await;
                     }
-                    let visible = strip_thinking(&buf);
-                    if !visible.is_empty() {
-                        let _ = sink.try_send(visible);
-                    }
+                    let v = stripper.visible();
+                    if !v.is_empty() { let _ = sink.try_send(v.to_owned()); }
                 }
             }
             StreamItem::Done(u) => {
@@ -841,10 +930,9 @@ async fn path_social_streaming(
         if let Some(query) = extract_search_query(&buf) {
             return search_and_reply(input, display_text, query, Some(sink)).await;
         }
-        let visible = strip_thinking(&buf);
-        if !visible.is_empty() {
-            let _ = sink.try_send(visible);
-        }
+        stripper.finish();
+        let v = stripper.visible();
+        if !v.is_empty() { let _ = sink.try_send(v.to_owned()); }
     }
 
     // Final safety net: sentinels that slipped through to end of buffer.
@@ -855,7 +943,8 @@ async fn path_social_streaming(
         return search_and_reply(input, display_text, query, Some(sink)).await;
     }
 
-    Ok((strip_thinking(&buf), usage))
+    stripper.finish();
+    Ok((stripper.visible().to_owned(), usage))
 }
 
 /// Escalated answer on the strong (reason/opus) model. If `sink` is `Some`,
@@ -1020,12 +1109,15 @@ async fn path_reason(
 
     let params = CompletionParams::reason(&input.config.llm_model_reason);
 
-    // Run tool loop first
+    // Run tool loop first (hard wall-clock cap: if provider hangs, bail out)
     let (after_loop, loop_usage) = tokio::select! {
         r = run_tool_loop(input.provider, input.toolbox, messages.clone(), &params) => {
             r.map_err(EngineError::Llm)?
         }
         _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+        _ = tokio::time::sleep(Duration::from_secs(90)) => {
+            return Err(EngineError::Llm(anyhow::anyhow!("tool loop timed out after 90s")));
+        }
     };
 
     // If tool loop produced a real reply (not ESCALATE), apply Fusion on final step
@@ -1220,5 +1312,68 @@ mod tests {
         };
         let out = run_turn(input).await.unwrap();
         assert!(!out.reply.is_empty());
+    }
+
+    // ── ThinkStripper unit tests ──────────────────────────────────────────────
+
+    #[test]
+    fn think_stripper_no_tags_passthrough() {
+        let mut s = ThinkStripper::new();
+        s.push("hello ");
+        s.push("world");
+        s.finish();
+        assert_eq!(s.visible(), "hello world");
+    }
+
+    #[test]
+    fn think_stripper_single_block_stripped() {
+        let mut s = ThinkStripper::new();
+        s.push("<think>secret</think>visible");
+        s.finish();
+        assert_eq!(s.visible(), "visible");
+    }
+
+    #[test]
+    fn think_stripper_block_split_across_tokens() {
+        let mut s = ThinkStripper::new();
+        // Tag split: "<thi" + "nk>" across two tokens
+        s.push("before<thi");
+        s.push("nk>hidden</thi");
+        s.push("nk>after");
+        s.finish();
+        assert_eq!(s.visible(), "beforeafter");
+    }
+
+    #[test]
+    fn think_stripper_leading_newline_after_close_stripped() {
+        let mut s = ThinkStripper::new();
+        s.push("<think>x</think>\nvisible");
+        s.finish();
+        assert_eq!(s.visible(), "visible");
+    }
+
+    #[test]
+    fn think_stripper_unclosed_tag_discards_rest() {
+        let mut s = ThinkStripper::new();
+        s.push("before<think>unclosed content");
+        s.finish();
+        assert_eq!(s.visible(), "before");
+    }
+
+    #[test]
+    fn think_stripper_multiple_blocks() {
+        let mut s = ThinkStripper::new();
+        s.push("<think>a</think>mid<think>b</think>end");
+        s.finish();
+        assert_eq!(s.visible(), "midend");
+    }
+
+    #[test]
+    fn think_tag_suffix_prefix_cases() {
+        assert_eq!(think_tag_suffix_prefix("hello<"), 1);
+        assert_eq!(think_tag_suffix_prefix("hello<th"), 3);
+        assert_eq!(think_tag_suffix_prefix("hello<think"), 6);
+        assert_eq!(think_tag_suffix_prefix("hello"), 0);
+        assert_eq!(think_tag_suffix_prefix(""), 0);
     }
 }

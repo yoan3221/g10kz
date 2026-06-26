@@ -6,6 +6,7 @@
 //! - **Audio**: download → transcription model via LLM provider
 
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use base64::Engine as _;
@@ -19,6 +20,31 @@ pub struct MediaOutput {
     pub parts: Vec<Part>,
     /// Human-readable label prepended by the engine (e.g., `"[影像分析]"`).
     pub label: String,
+}
+
+// ─── Static HTTP clients ─────────────────────────────────────────────────────
+
+static DOWNLOAD_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static TRANSCRIBE_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+fn download_client() -> &'static reqwest::Client {
+    DOWNLOAD_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .pool_max_idle_per_host(4)
+            .build()
+            .expect("media download client build failed")
+    })
+}
+
+fn transcribe_client() -> &'static reqwest::Client {
+    TRANSCRIBE_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(60))
+            .pool_max_idle_per_host(4)
+            .build()
+            .expect("media transcribe client build failed")
+    })
 }
 
 // ─── Image ────────────────────────────────────────────────────────────────────
@@ -158,10 +184,6 @@ pub async fn transcribe_audio(url: &str) -> anyhow::Result<String> {
     // POST to /audio/transcriptions (OpenAI-compatible)
     // NOTE: Requires LLM provider to expose whisper endpoint.
     // This is a best-effort implementation — errors are surfaced to the engine.
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(60))
-        .build()?;
-
     let base_url =
         std::env::var("LLM_BASE_URL").unwrap_or_else(|_| "https://openrouter.ai/api/v1".into());
     let api_key = std::env::var("LLM_API_KEY").unwrap_or_default();
@@ -175,7 +197,7 @@ pub async fn transcribe_audio(url: &str) -> anyhow::Result<String> {
         )
         .text("model", "whisper-1");
 
-    let resp = client
+    let resp = transcribe_client()
         .post(format!(
             "{}/audio/transcriptions",
             base_url.trim_end_matches('/')
@@ -199,10 +221,7 @@ pub async fn transcribe_audio(url: &str) -> anyhow::Result<String> {
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 async fn download_bytes(url: &str) -> anyhow::Result<Vec<u8>> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()?;
-    let resp = client.get(url).send().await?;
+    let resp = download_client().get(url).send().await?;
     if !resp.status().is_success() {
         anyhow::bail!("download HTTP {}", resp.status());
     }
