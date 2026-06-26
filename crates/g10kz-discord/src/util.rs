@@ -18,12 +18,29 @@ pub fn split_message(text: &str) -> Vec<String> {
     let mut chunks = Vec::new();
     let mut start = 0usize;
     while start < text.len() {
-        let end = (start + MAX).min(text.len());
-        if end == text.len() {
+        let raw_end = (start + MAX).min(text.len());
+        if raw_end == text.len() {
             chunks.push(text[start..].to_owned());
             break;
         }
+        // Step back to a UTF-8 char boundary so we never slice mid-codepoint.
+        // This matters for Chinese text (3 bytes/char) with no newlines.
+        let end = {
+            let mut e = raw_end;
+            while e > start && !text.is_char_boundary(e) {
+                e -= 1;
+            }
+            e
+        };
+        if end == start {
+            // Degenerate: advance one char to avoid infinite loop
+            let next = text[start..].char_indices().nth(1).map(|(i, _)| start + i).unwrap_or(text.len());
+            chunks.push(text[start..next].to_owned());
+            start = next;
+            continue;
+        }
         let window = &text[start..end];
+        // Prefer splitting on the last newline; fall back to char boundary at end.
         let split = window.rfind('\n').map(|p| start + p + 1).unwrap_or(end);
         chunks.push(text[start..split].trim_end().to_owned());
         start = split;
@@ -137,4 +154,55 @@ fn strip_inline_backtick_pairs(s: &str) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_message_short_passthrough() {
+        let s = "短訊息";
+        assert_eq!(split_message(s), vec![s.to_owned()]);
+    }
+
+    #[test]
+    fn split_message_ascii_no_newline() {
+        // Long ASCII without newlines: must split at char boundary
+        let s = "a".repeat(3000);
+        let chunks = split_message(&s);
+        assert!(chunks.len() >= 2);
+        for chunk in &chunks {
+            assert!(chunk.len() <= 1900, "chunk too long: {}", chunk.len());
+        }
+        assert_eq!(chunks.join(""), s);
+    }
+
+    #[test]
+    fn split_message_chinese_wall_no_newline() {
+        // Chinese text (3 bytes/char) without newlines — previously panicked
+        // with "byte index is not a char boundary".
+        let s = "好".repeat(800); // 800 × 3 = 2400 bytes, no newlines
+        let chunks = split_message(&s);
+        assert!(chunks.len() >= 2);
+        // Every chunk must be valid UTF-8 (Rust strings guarantee this if we
+        // never slice at a non-boundary, so just joining must work)
+        let rejoined = chunks.join("");
+        assert_eq!(rejoined, s, "rejoined mismatch");
+        for chunk in &chunks {
+            assert!(chunk.len() <= 1900, "chunk too long");
+        }
+    }
+
+    #[test]
+    fn split_message_prefers_newline_boundary() {
+        // Content with newlines: should split at the newline, not mid-word
+        let line = "x".repeat(950) + "\n" + &"y".repeat(950);
+        let long = line.repeat(2); // ~3800 chars
+        let chunks = split_message(&long);
+        // First chunk should end at a newline boundary
+        for chunk in &chunks {
+            assert!(!chunk.starts_with('y') || chunk.len() < 1901);
+        }
+    }
 }

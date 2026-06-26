@@ -31,8 +31,8 @@ const AGENT_ID: &str = "g10kz";
 const CIRCUIT_THRESHOLD: u32 = 5;
 const CIRCUIT_RESET_SECS: u64 = 30;
 const SEARCH_TIMEOUT_MS: u64 = 3000;
-const WRITE_TIMEOUT_MS: u64 = 20000; // add() only; flush is fire-and-forget
-const CACHE_TTL_SECS: u64 = 30;
+const WRITE_TIMEOUT_MS:  u64 = 5000;   // add() only; flush is fire-and-forget
+const CACHE_TTL_SECS:    u64 = 30;
 
 // ─── MemoryEntry ───────────────────────────────────────────────────────────
 
@@ -195,6 +195,7 @@ impl EverosMemory {
         let mk = |ms| {
             reqwest::Client::builder()
                 .timeout(Duration::from_millis(ms))
+                .pool_max_idle_per_host(8)
                 .build()
                 .expect("reqwest client build failed")
         };
