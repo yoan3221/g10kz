@@ -177,8 +177,13 @@ pub struct EverosMemory {
     search_client: Arc<reqwest::Client>,
     write_client: Arc<reqwest::Client>,
     base_url: Arc<String>,
+    /// Circuit breaker for add_turn / search path.
     failures: Arc<AtomicU32>,
     last_fail_ts: Arc<AtomicU32>,
+    /// Separate circuit breaker for passive observe() calls.
+    /// Keeps group-chat observation failures isolated from conversation memory.
+    obs_failures: Arc<AtomicU32>,
+    obs_last_fail_ts: Arc<AtomicU32>,
     cache: Arc<Mutex<HashMap<CacheKey, CacheEntry>>>,
 }
 
@@ -205,6 +210,8 @@ impl EverosMemory {
             base_url: Arc::new(base_url.into()),
             failures: Arc::new(AtomicU32::new(0)),
             last_fail_ts: Arc::new(AtomicU32::new(0)),
+            obs_failures: Arc::new(AtomicU32::new(0)),
+            obs_last_fail_ts: Arc::new(AtomicU32::new(0)),
             cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -239,6 +246,31 @@ impl EverosMemory {
             .unwrap_or_default()
             .as_secs() as u32;
         self.last_fail_ts.store(now, Ordering::Relaxed);
+    }
+
+    // ── observe-only circuit breaker (isolated from add_turn / search) ────────
+    fn obs_circuit_open(&self) -> bool {
+        let f = self.obs_failures.load(Ordering::Relaxed);
+        if f < CIRCUIT_THRESHOLD {
+            return false;
+        }
+        let last = self.obs_last_fail_ts.load(Ordering::Relaxed) as u64;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        now.saturating_sub(last) < CIRCUIT_RESET_SECS
+    }
+    fn obs_record_ok(&self) {
+        self.obs_failures.store(0, Ordering::Relaxed);
+    }
+    fn obs_record_fail(&self) {
+        self.obs_failures.fetch_add(1, Ordering::Relaxed);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as u32;
+        self.obs_last_fail_ts.store(now, Ordering::Relaxed);
     }
 
     // ── Public: add a full conversation turn ─────────────────────────────────
@@ -325,7 +357,7 @@ impl EverosMemory {
     /// 用於 bot 旁觀（非 @bot）的群組訊息——EverOS 累積到 boundary 後自動提取，
     /// 避免每條被動訊息都觸發一次 LLM 提取而拖垮後端。
     pub async fn observe(&self, user_id: u64, session_id: &str, text: &str) {
-        if self.circuit_open() {
+        if self.obs_circuit_open() {
             return;
         }
         let uid_str = user_id.to_string();
@@ -355,13 +387,14 @@ impl EverosMemory {
         {
             Err(e) => {
                 debug!("EverOS observe add error: {e}");
-                self.record_fail();
+                self.obs_record_fail();
             }
             Ok(r) if !r.status().is_success() => {
                 debug!("EverOS observe add HTTP {}", r.status());
+                self.obs_record_fail();
             }
             Ok(_) => {
-                self.record_ok();
+                self.obs_record_ok();
                 debug!("EverOS observe: accumulated (no flush)");
             }
         }
@@ -560,5 +593,27 @@ mod tests {
     fn memory_entry_new() {
         let e = MemoryEntry::new("hello").with_tag("fact");
         assert_eq!(e.tag.as_deref(), Some("fact"));
+    }
+
+    #[test]
+    fn observe_circuit_is_isolated_from_add_turn() {
+        // Tripping the observe breaker must NOT open the main add_turn/search breaker.
+        let m = EverosMemory::new("http://127.0.0.1:19900");
+        for _ in 0..CIRCUIT_THRESHOLD {
+            m.obs_record_fail();
+        }
+        assert!(m.obs_circuit_open(),  "observe breaker should be open");
+        assert!(!m.circuit_open(),     "main breaker must stay closed");
+    }
+
+    #[test]
+    fn main_circuit_does_not_affect_observe() {
+        // Tripping the main breaker must NOT close the observe path.
+        let m = EverosMemory::new("http://127.0.0.1:19900");
+        for _ in 0..CIRCUIT_THRESHOLD {
+            m.record_fail();
+        }
+        assert!(m.circuit_open(),      "main breaker should be open");
+        assert!(!m.obs_circuit_open(), "observe breaker must stay closed");
     }
 }
