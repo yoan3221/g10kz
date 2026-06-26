@@ -659,16 +659,15 @@ fn strip_thinking(s: &str) -> String {
 /// Social path. Streams via `stream_sink` when present (Discord), otherwise a
 /// single blocking completion (tests / once-mode). Both honour `[[ESCALATE]]`
 /// self-escalation to the strong model.
-async fn path_social(
+/// Assemble the Social-path message list and completion params.
+///
+/// Both the blocking and the streaming code paths use identical message
+/// construction logic; this helper keeps them in sync automatically.
+fn build_social_messages(
     input: &TurnInput<'_>,
     display_text: &str,
     memory_ctx: &[g10kz_everos::MemoryEntry],
-) -> Result<(String, Usage), EngineError> {
-    if input.stream_sink.is_some() {
-        return path_social_streaming(input, display_text, memory_ctx).await;
-    }
-
-    // Non-streaming: cheap model first, escalate on sentinel.
+) -> (Vec<Message>, CompletionParams) {
     let mut messages = vec![input.system_message(SOCIAL_EXTRA_NOTE)];
     // Few-shot format primer: concrete example > abstract rules for small models during RP
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
@@ -722,6 +721,20 @@ async fn path_social(
     );
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::social(&input.config.llm_model_social);
+    (messages, params)
+}
+
+async fn path_social(
+    input: &TurnInput<'_>,
+    display_text: &str,
+    memory_ctx: &[g10kz_everos::MemoryEntry],
+) -> Result<(String, Usage), EngineError> {
+    if input.stream_sink.is_some() {
+        return path_social_streaming(input, display_text, memory_ctx).await;
+    }
+
+    // Non-streaming: cheap model first, escalate on sentinel.
+    let (messages, params) = build_social_messages(input, display_text, memory_ctx);
 
     let (raw, usage) = tokio::select! {
         r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm)?,
@@ -750,59 +763,7 @@ async fn path_social_streaming(
 ) -> Result<(String, Usage), EngineError> {
     let sink = input.stream_sink.clone().expect("stream_sink present");
 
-    let mut messages = vec![input.system_message(SOCIAL_EXTRA_NOTE)];
-    // Few-shot format primer: concrete example > abstract rules for small models during RP
-    messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
-    messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
-    // BM25-selected few-shot examples from OKF examples.md (top-3 most relevant)
-    for (user_ex, char_ex) in input.persona.query_examples(display_text, 2) {
-        messages.push(Message::text(Role::User, user_ex));
-        messages.push(Message::text(Role::Assistant, char_ex));
-    }
-    // Inject long-term memory context before history (top-3, low token budget)
-    if !memory_ctx.is_empty() {
-        let ctx = memory_ctx
-            .iter()
-            .map(|e| format!("• {}", e.text))
-            .collect::<Vec<_>>()
-            .join(
-                "
-",
-            );
-        messages.push(Message::text(
-            Role::User,
-            format!(
-                "[長期記憶]
-{ctx}"
-            ),
-        ));
-        messages.push(Message::text(Role::Assistant, "嗯，我記得。"));
-    }
-    // Lorebook: inject matched world-knowledge entries (keyword-triggered)
-    let lore_matches = input.persona.matched_lore(display_text);
-    if !lore_matches.is_empty() {
-        messages.push(Message::text(
-            Role::User,
-            format!(
-                "[世界設定]
-{}",
-                lore_matches.join(
-                    "
-
-"
-                )
-            ),
-        ));
-        messages.push(Message::text(Role::Assistant, "嗯，了解。"));
-    }
-    messages.extend(
-        input
-            .history_window_for(display_text, MAX_HISTORY_SOCIAL)
-            .iter()
-            .cloned(),
-    );
-    messages.push(Message::text(Role::User, input.labeled(display_text)));
-    let params = CompletionParams::social(&input.config.llm_model_social);
+    let (messages, params) = build_social_messages(input, display_text, memory_ctx);
 
     let child = input.cancel.child_token();
     let mut stream = input
