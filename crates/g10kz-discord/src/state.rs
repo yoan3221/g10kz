@@ -27,6 +27,19 @@ pub struct ContextEntry {
     pub bot_reply: Option<String>,
 }
 
+/// Per-channel ring buffer with last-touch timestamp for TTL eviction.
+pub struct ChannelRing {
+    pub entries: VecDeque<ContextEntry>,
+    /// Unix seconds of the last write into this ring.
+    pub last_touch_secs: u64,
+}
+
+impl Default for ChannelRing {
+    fn default() -> Self {
+        Self { entries: VecDeque::new(), last_touch_secs: 0 }
+    }
+}
+
 /// All shared mutable state for the bot lifetime.
 pub struct BotState {
     pub config: Arc<Config>,
@@ -39,7 +52,7 @@ pub struct BotState {
     /// ML prompt-injection guard client.
     pub prompt_guard: Arc<PromptGuardClient>,
     /// Per-channel conversation ring buffer (last RING_SIZE exchanges).
-    pub channel_ctx: Mutex<HashMap<ChannelId, VecDeque<ContextEntry>>>,
+    pub channel_ctx: Mutex<HashMap<ChannelId, ChannelRing>>,
     /// In-flight message IDs — prevents double-processing on reshard.
     pub in_flight: Mutex<HashSet<MessageId>>,
     /// Per-channel cancellation tokens — cancelled by /stop.

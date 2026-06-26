@@ -148,7 +148,7 @@ impl EventHandler for Handler {
             let ctx_map = self.state.channel_ctx.lock().await;
             ctx_map
                 .get(&channel_id)
-                .map(|ring| build_history(ring, true))
+                .map(|ring| build_history(&ring.entries, true))
                 .unwrap_or_default()
         } else {
             let fetched = fetch_channel_history(
@@ -165,7 +165,7 @@ impl EventHandler for Handler {
                 let ctx_map = self.state.channel_ctx.lock().await;
                 ctx_map
                     .get(&channel_id)
-                    .map(|ring| build_history(ring, false))
+                    .map(|ring| build_history(&ring.entries, false))
                     .unwrap_or_default()
             } else {
                 fetched
@@ -327,16 +327,21 @@ impl EventHandler for Handler {
 
         {
             let mut ctx_map = self.state.channel_ctx.lock().await;
+            let now = now_unix();
+            // Evict channels idle for more than 7 days (lazy TTL on write path).
+            const TTL_SECS: u64 = 7 * 24 * 3600;
+            ctx_map.retain(|_, ring| now.saturating_sub(ring.last_touch_secs) < TTL_SECS);
             let ring = ctx_map.entry(channel_id).or_default();
-            ring.push_back(ContextEntry {
+            ring.last_touch_secs = now;
+            ring.entries.push_back(ContextEntry {
                 user_id: msg.author.id.get(),
                 user_name: display_name.clone(),
                 reply_to: reply_context.clone(),
                 user_text: clean_text,
                 bot_reply: Some(reply_text.clone()),
             });
-            while ring.len() > RING_SIZE {
-                ring.pop_front();
+            while ring.entries.len() > RING_SIZE {
+                ring.entries.pop_front();
             }
         }
 
