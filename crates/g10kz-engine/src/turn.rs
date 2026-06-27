@@ -53,8 +53,8 @@ pub struct TurnInput<'a> {
     pub text: String,
     /// True when the message carries an attachment.
     pub has_attachment: bool,
-    /// URL of the attachment, if any.
-    pub attachment_url: Option<String>,
+    /// URLs of attached/embedded images (≤4), in order. Empty when none.
+    pub attachment_urls: Vec<String>,
     /// Recent conversation history (user + assistant), oldest first.
     pub history: Vec<Message>,
     /// Cancellation token — cancel to abort mid-turn.
@@ -107,7 +107,7 @@ impl<'a> TurnInput<'a> {
             user_name: String::new(),
             text: text.into(),
             has_attachment: false,
-            attachment_url: None,
+            attachment_urls: vec![],
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
@@ -772,34 +772,56 @@ async fn build_social_messages(
             .iter()
             .cloned(),
     );
-    // Resolve any attached/replied image to a base64 data URL. On failure we
-    // send text only rather than a raw URL, which Gemini rejects.
-    let image_data_url = match &input.attachment_url {
-        Some(img_url) => match fetch_image_data_url(img_url).await {
-            Ok(data_url) => Some(data_url),
-            Err(e) => {
-                warn!(url = %img_url, err = %e, "image fetch failed, sending text only");
-                None
+    // Resolve any attached/replied images to base64 data URLs (in parallel).
+    // On failure we drop that image rather than sending a raw URL, which Gemini
+    // rejects. Up to MAX_IMAGES_PER_TURN images arrive from the Discord layer.
+    let mut image_data_urls: Vec<String> = Vec::new();
+    if !input.attachment_urls.is_empty() {
+        let fetches = input
+            .attachment_urls
+            .iter()
+            .map(|u| fetch_image_data_url(u));
+        for (i, res) in futures::future::join_all(fetches).await.into_iter().enumerate() {
+            match res {
+                Ok(data_url) => image_data_urls.push(data_url),
+                Err(e) => warn!(
+                    url = %input.attachment_urls[i],
+                    err = %e,
+                    "image fetch failed, dropping this image"
+                ),
             }
-        },
-        None => None,
-    };
-    if let Some(data_url) = image_data_url {
-        // When the user only @mentions the bot with an image and no question,
-        // steer the model to actually look at the picture/GIF instead of
+        }
+    }
+    if !image_data_urls.is_empty() {
+        // When the user only @mentions the bot with image(s) and no question,
+        // steer the model to actually look at the picture(s)/GIF instead of
         // free-associating with chat history (the [歸屬] bystander rule would
         // otherwise make it comment on others rather than the image).
+        let n = image_data_urls.len();
         let caption = if display_text.trim().is_empty() {
-            "（傳了這張圖片/GIF 給你看，先看清楚畫面內容是什麼，再用你的風格回應它）"
+            if n > 1 {
+                std::borrow::Cow::Owned(format!(
+                    "（傳了這 {n} 張圖片/GIF 給你看，先看清楚每張畫面內容是什麼，再用你的風格回應）"
+                ))
+            } else {
+                std::borrow::Cow::Borrowed(
+                    "（傳了這張圖片/GIF 給你看，先看清楚畫面內容是什麼，再用你的風格回應它）",
+                )
+            }
         } else {
-            display_text
+            std::borrow::Cow::Borrowed(display_text)
         };
+        // Image parts first, then the caption text last (recency anchors the ask).
+        let mut parts: Vec<Part> = image_data_urls
+            .into_iter()
+            .map(|url| Part::ImageUrl { url })
+            .collect();
+        parts.push(Part::Text {
+            text: input.labeled(&caption),
+        });
         messages.push(Message {
             role: Role::User,
-            parts: vec![
-                Part::ImageUrl { url: data_url },
-                Part::Text { text: input.labeled(caption) },
-            ],
+            parts,
         });
     } else {
         messages.push(Message::text(Role::User, input.labeled(display_text)));
@@ -1324,7 +1346,7 @@ mod tests {
             text: "搜尋量子纏繞".into(),
             user_name: String::new(),
             has_attachment: false,
-            attachment_url: None,
+            attachment_urls: vec![],
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
@@ -1355,7 +1377,7 @@ mod tests {
             text: "分析這張圖".into(),
             user_name: String::new(),
             has_attachment: true,
-            attachment_url: Some("https://example.com/img.png".into()),
+            attachment_urls: vec!["https://example.com/img.png".into()],
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,
@@ -1388,7 +1410,7 @@ mod tests {
             text: "分析量子纏繞的機制是什麼".into(),
             user_name: String::new(),
             has_attachment: false,
-            attachment_url: None,
+            attachment_urls: vec![],
             history: vec![],
             cancel: CancellationToken::new(),
             embed_router: None,

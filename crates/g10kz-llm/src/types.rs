@@ -87,13 +87,16 @@ pub struct CompletionParams {
 impl CompletionParams {
     /// Defaults for the social (conversational) path.
     pub fn social(model: impl Into<String>) -> Self {
+        let model = model.into();
+        // gemma-4 thinking can consume ~1600 tokens before any visible output,
+        // so the budget must comfortably exceed that or the reply gets truncated.
+        let extra_body = reasoning_off_if_supported(&model);
         Self {
-            model: model.into(),
-            max_tokens: 2048,
+            model,
+            max_tokens: 4096,
             temperature: 0.9,
             cache_system_prompt: true,
-            // Suppress thinking on flash/lite models; pure roleplay doesn't need it.
-            extra_body: Some(serde_json::json!({"reasoning_effort": "none"})),
+            extra_body,
         }
     }
 
@@ -101,7 +104,9 @@ impl CompletionParams {
     pub fn reason(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
-            max_tokens: 1500,
+            // Reason keeps full thinking AND must leave room for the visible
+            // answer + tool-call JSON; gemma-4 thinking alone can exceed 1.5k.
+            max_tokens: 4096,
             temperature: 0.4,
             cache_system_prompt: true,
             extra_body: None, // keep full thinking for analysis / tool-use
@@ -110,13 +115,29 @@ impl CompletionParams {
 
     /// Defaults for the Fusion judge.
     pub fn judge(model: impl Into<String>) -> Self {
+        let model = model.into();
+        let extra_body = reasoning_off_if_supported(&model);
         Self {
-            model: model.into(),
-            max_tokens: 800,
+            model,
+            max_tokens: 2048,
             temperature: 0.3,
             cache_system_prompt: true,
-            extra_body: Some(serde_json::json!({"reasoning_effort": "none"})),
+            extra_body,
         }
+    }
+}
+
+/// Build the thinking-suppression body **only for models that accept it**.
+///
+/// `gemini-2.5-flash` / `-lite` honour `reasoning_effort: "none"`, but
+/// `gemma-4` rejects it with HTTP 400 ("Thinking budget is not supported for
+/// this model"), so for gemma we return `None` and let it think freely
+/// (the larger `max_tokens` budgets above absorb that overhead).
+fn reasoning_off_if_supported(model: &str) -> Option<serde_json::Value> {
+    if model.contains("gemma") {
+        None
+    } else {
+        Some(serde_json::json!({"reasoning_effort": "none"}))
     }
 }
 

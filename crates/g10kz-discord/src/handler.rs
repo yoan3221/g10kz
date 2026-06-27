@@ -27,6 +27,9 @@ const HISTORY_FETCH_LIMIT: u8 = 15;
 /// Discord allows ~5 edits / 5s per message; 1s keeps us well under the limit.
 const STREAM_EDIT_INTERVAL: Duration = Duration::from_millis(1000);
 
+/// Maximum images forwarded to the vision model per turn (token-cost guard).
+const MAX_IMAGES_PER_TURN: usize = 4;
+
 /// Clip a string to Discord's 2000-character message limit (char-safe).
 fn clip2000(s: &str) -> String {
     if s.chars().count() <= 2000 {
@@ -43,26 +46,27 @@ fn clip2000(s: &str) -> String {
 /// image links arrive, since they are NOT file attachments. For animated GIFs
 /// we prefer the `.gif` video URL so Gemini can sample multiple frames; we fall
 /// back to the embed's still image / thumbnail otherwise.
-fn first_image_url(msg: &DiscordMessage) -> Option<String> {
-    // Image attached to / embedded in the message itself.
-    if let Some(u) = image_url_in(msg) {
-        return Some(u);
-    }
+fn collect_image_urls(msg: &DiscordMessage) -> Vec<String> {
+    // Images attached to / embedded in the message itself.
+    let mut urls = images_in(msg);
     // Otherwise look at the message this one replies to — users often @mention
     // the bot in a reply to someone else's image/GIF instead of re-posting it.
-    if let Some(rm) = &msg.referenced_message {
-        if let Some(u) = image_url_in(rm) {
-            return Some(u);
+    if urls.is_empty() {
+        if let Some(rm) = &msg.referenced_message {
+            urls = images_in(rm);
         }
     }
-    None
+    // Cap at 4 images to bound vision-token cost (gemma-4 samples every frame).
+    urls.truncate(MAX_IMAGES_PER_TURN);
+    urls
 }
 
-/// Image URL carried directly by a single message (attachment or embed).
-fn image_url_in(msg: &DiscordMessage) -> Option<String> {
-    // 1. Direct file attachment (uploaded image or GIF).
-    if let Some(att) = msg.attachments.first() {
-        return Some(att.url.clone());
+/// All image URLs carried directly by a single message (attachments + embeds).
+fn images_in(msg: &DiscordMessage) -> Vec<String> {
+    let mut urls = Vec::new();
+    // 1. Direct file attachments (uploaded images or GIFs) — all of them.
+    for att in &msg.attachments {
+        urls.push(att.url.clone());
     }
     // 2. Image / GIF embeds (Tenor, Giphy, pasted image links).
     for embed in &msg.embeds {
@@ -71,28 +75,27 @@ fn image_url_in(msg: &DiscordMessage) -> Option<String> {
                 // Prefer an actual animated GIF so the vision model sees motion.
                 if let Some(v) = &embed.video {
                     if v.url.contains(".gif") {
-                        return Some(v.url.clone());
+                        urls.push(v.url.clone());
+                        continue;
                     }
                 }
                 if let Some(img) = &embed.image {
-                    return Some(img.url.clone());
-                }
-                if let Some(t) = &embed.thumbnail {
-                    return Some(t.url.clone());
+                    urls.push(img.url.clone());
+                } else if let Some(t) = &embed.thumbnail {
+                    urls.push(t.url.clone());
                 }
             }
             Some("image") => {
                 if let Some(img) = &embed.image {
-                    return Some(img.url.clone());
-                }
-                if let Some(t) = &embed.thumbnail {
-                    return Some(t.url.clone());
+                    urls.push(img.url.clone());
+                } else if let Some(t) = &embed.thumbnail {
+                    urls.push(t.url.clone());
                 }
             }
             _ => {}
         }
     }
-    None
+    urls
 }
 
 pub struct Handler {
@@ -183,7 +186,7 @@ impl EventHandler for Handler {
         // Resolve all mention tokens to readable names; strip the bot's own.
         let clean_text = resolve_mentions(&msg, bot_id, &ctx.cache);
 
-        if clean_text.is_empty() && first_image_url(&msg).is_none() {
+        if clean_text.is_empty() && collect_image_urls(&msg).is_empty() {
             self.state.in_flight.lock().await.remove(&msg_id);
             return;
         }
@@ -242,8 +245,8 @@ impl EventHandler for Handler {
             }
         };
 
-        let attachment_url = first_image_url(&msg);
-        let has_attachment = attachment_url.is_some();
+        let attachment_urls = collect_image_urls(&msg);
+        let has_attachment = !attachment_urls.is_empty();
 
         // ── Guild / channel name for environment-aware system prompt ──────────
         let guild_name: Option<String> = if !is_dm {
@@ -290,7 +293,7 @@ impl EventHandler for Handler {
         turn_input.reply_context = reply_context.clone();
         turn_input.history = history;
         turn_input.has_attachment = has_attachment;
-        turn_input.attachment_url = attachment_url;
+        turn_input.attachment_urls = attachment_urls;
         turn_input.cancel = cancel.clone();
         turn_input.embed_router = Some(self.state.embed_router.clone());
         turn_input.prompt_guard = Some(self.state.prompt_guard.clone());
