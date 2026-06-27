@@ -1,10 +1,9 @@
-//! Tool trait, `ToolBox` registry, tool loop, and media pre-processing.
+//! Tool trait, `ToolBox` registry, and tool loop.
 //!
 //! L2 — depends on [`g10kz_config`] and [`g10kz_llm`].
 
 pub mod builtins;
 pub mod r#loop;
-pub mod media;
 pub mod tool;
 
 pub use builtins::{EscalateTool, FetchPageTool, TimeTool, TwStockTool, WebSearchTool};
@@ -23,6 +22,4 @@ pub enum ToolError {
     #[error("max iterations reached")]
     MaxIterations,
 
-    #[error("media processing error: {0}")]
-    Media(String),
 }

@@ -735,7 +735,6 @@ name = "g10kz-tools"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "chrono",
  "futures",
  "g10kz-config",

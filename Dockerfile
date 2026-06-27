@@ -6,7 +6,6 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Pre-built musl static binary (x86_64-unknown-linux-musl)

@@ -60,7 +60,6 @@ unicode-normalization = "0.1"
 chrono         = { version = "0.4", features = ["serde"] }
 
 # encoding
-base64         = "0.22"
 
 # property-based testing
 proptest     = "1"
