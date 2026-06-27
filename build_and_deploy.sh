@@ -1,38 +1,30 @@
 #!/usr/bin/env bash
-# WSL 上執行：build g10kz-bot image，scp 到 .94，重啟 bot
+# 在 .127 本地建置並部署 g10kz-bot
+# 用法：ssh g8kz@REDACTED bash build_and_deploy.sh
 set -e
 
-SERVER=""
-PASS=""
-REPO="https://github.com/yoan3221/g10kz.git"
-IMAGE="g10kz-bot:latest"
-TAR="/tmp/g10kz-bot-latest.tar"
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+SRC_DIR="$HOME/g10kz-src"
+DEPLOY_DIR="$HOME/g10kz"
+TARGET="x86_64-unknown-linux-musl"
 
-echo "=== [1/5] 拉最新代碼 ==="
-rm -rf /tmp/g10kz-build
-git clone --depth=1 "$REPO" /tmp/g10kz-build
-cd /tmp/g10kz-build
+echo "=== [1/4] cargo build (musl) ==="
+source ~/.cargo/env
+cd "$SRC_DIR"
+cargo build -p g10kz-bot --release --target "$TARGET"
 
-echo "=== [2/5] 建立 Docker image ==="
-docker build -f Dockerfile -t "$IMAGE" .
+echo "=== [2/4] 複製 binary 到 bin/ ==="
+cp "target/$TARGET/release/g10kz-bot" "$DEPLOY_DIR/bin/g10kz-bot"
+ls -lh "$DEPLOY_DIR/bin/g10kz-bot"
 
-echo "=== [3/5] 匯出成 tar ==="
-docker save "$IMAGE" -o "$TAR"
-echo "tar size: $(du -sh $TAR | cut -f1)"
+echo "=== [3/4] docker compose build ==="
+cd "$DEPLOY_DIR"
+docker compose build
 
-echo "=== [4/5] scp 傳到 .94 ==="
-sshpass -p "$PASS" scp $SSH_OPTS "$TAR" "${SERVER}:/tmp/g10kz-bot-latest.tar"
-
-echo "=== [5/5] 伺服器 load + restart ==="
-sshpass -p "$PASS" ssh $SSH_OPTS "$SERVER" '
-  docker load -i /tmp/g10kz-bot-latest.tar &&
-  cd ~/g10kz &&
-  docker compose down 2>/dev/null || true &&
-  docker compose up -d --no-build &&
-  sleep 4 &&
-  docker logs g10kz-bot --tail 10 2>&1
-'
+echo "=== [4/4] 重啟 bot ==="
+docker compose down
+docker compose up -d
+sleep 3
+docker compose logs --tail=10
 
 echo ""
-echo "=== 完成 ==="
+echo "=== 部署完成 ==="
