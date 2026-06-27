@@ -11,9 +11,6 @@ RUN apt-get update && apt-get install -y \
 # Pre-built musl static binary (x86_64-unknown-linux-musl)
 COPY bin/g10kz-bot /usr/local/bin/g10kz-bot
 
-# Obscura headless browser for web search (pre-built binary)
-COPY bin/obscura /usr/local/bin/obscura
-COPY bin/obscura-worker /usr/local/bin/obscura-worker
 
 ENTRYPOINT ["/usr/local/bin/g10kz-bot"]
 CMD ["daemon"]
