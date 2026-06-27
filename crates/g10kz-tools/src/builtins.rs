@@ -310,22 +310,73 @@ impl Tool for WebSearchTool {
 
 // ─── FetchPageTool ───────────────────────────────────────────────────────────
 
-/// 讀取網頁內容：委託 gemini-search 微服務的 /v1/fetch 端點。
+/// 讀取網頁內容：優先用 stealth headless 瀏覽器（browser 微服務 /v1/render，
+/// 真實 JS 渲染 + 反偵測），失敗時回退到 gemini-search /v1/fetch。
 pub struct FetchPageTool {
     client: reqwest::Client,
+    browser_url: String,
     search_url: String,
 }
 
 impl FetchPageTool {
     pub fn new(search_url: Option<String>) -> Self {
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(45))
             .build()
             .unwrap();
+        let browser_url = std::env::var("BROWSER_URL")
+            .unwrap_or_else(|_| "http://localhost:8091".into());
         let search_url = search_url
             .or_else(|| std::env::var("GEMINI_SEARCH_URL").ok())
             .unwrap_or_else(|| "http://localhost:8090".into());
-        Self { client, search_url }
+        Self { client, browser_url, search_url }
+    }
+
+    /// Render a page via the stealth headless browser. Returns the cleaned
+    /// article text (with a truncation marker) or `None` on any failure.
+    async fn browser_render(&self, url: &str) -> Option<String> {
+        let endpoint = format!("{}/v1/render", self.browser_url);
+        let body = json!({ "url": url, "max_chars": 6000 });
+        let resp = self.client.post(&endpoint).json(&body).send().await.ok()?;
+        if !resp.status().is_success() {
+            warn!("fetch_page: browser HTTP {}", resp.status());
+            return None;
+        }
+        let data: Value = resp.json().await.ok()?;
+        let content = data.get("content").and_then(|v| v.as_str()).unwrap_or("");
+        if content.trim().len() < 50 {
+            return None;
+        }
+        let title = data.get("title").and_then(|v| v.as_str()).unwrap_or("");
+        let truncated = data.get("truncated").and_then(|v| v.as_bool()).unwrap_or(false);
+        let mut out = String::new();
+        if !title.is_empty() {
+            out.push_str(&format!("# {title}\n\n"));
+        }
+        out.push_str(content.trim());
+        if truncated {
+            out.push_str("\n\n[內容已截斷]");
+        }
+        Some(out)
+    }
+
+    /// Fallback: ask gemini-search to fetch + summarise the URL.
+    async fn gemini_fetch(&self, url: &str) -> Option<String> {
+        let endpoint = format!("{}/v1/fetch", self.search_url);
+        let body = json!({ "url": url, "max_chars": 4000 });
+        let resp = self.client.post(&endpoint).json(&body).send().await.ok()?;
+        if !resp.status().is_success() {
+            warn!("fetch_page: gemini-search HTTP {}", resp.status());
+            return None;
+        }
+        let data: Value = resp.json().await.ok()?;
+        let content = data.get("content").and_then(|v| v.as_str()).unwrap_or("");
+        if content.trim().is_empty() {
+            return None;
+        }
+        let truncated = data.get("truncated").and_then(|v| v.as_bool()).unwrap_or(false);
+        let note = if truncated { "\n\n[內容已截斷]" } else { "" };
+        Some(format!("{content}{note}"))
     }
 }
 
@@ -362,52 +413,18 @@ impl Tool for FetchPageTool {
                 None => return err(&call.name, "missing url".into()),
             };
 
-            let endpoint = format!("{}/v1/fetch", self.search_url);
-            let body = json!({ "url": url, "max_chars": 4000 });
+            // 1. Stealth headless browser (real JS rendering + anti-detection).
+            if let Some(text) = self.browser_render(&url).await {
+                return ok(&call.name, text);
+            }
+            warn!("fetch_page: browser render failed, falling back to gemini-search");
 
-            let resp = match self.client.post(&endpoint).json(&body).send().await {
-                Ok(r) => r,
-                Err(e) => {
-                    warn!("fetch_page: gemini-search request failed: {e}");
-                    return err(&call.name, format!("讀取服務無法連線：{e}"));
-                }
-            };
-
-            if !resp.status().is_success() {
-                let status = resp.status();
-                warn!("fetch_page: gemini-search HTTP {status}");
-                return err(&call.name, format!("讀取服務錯誤 {status}"));
+            // 2. Fallback: gemini-search fetch + summarise.
+            if let Some(text) = self.gemini_fetch(&url).await {
+                return ok(&call.name, text);
             }
 
-            let data: Value = match resp.json().await {
-                Ok(v) => v,
-                Err(e) => return err(&call.name, format!("讀取結果解析失敗：{e}")),
-            };
-
-            if let Some(e) = data.get("error").and_then(|v| v.as_str()) {
-                return err(&call.name, format!("讀取錯誤：{e}"));
-            }
-
-            let content = data
-                .get("content")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_owned();
-            let truncated = data
-                .get("truncated")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-
-            if content.is_empty() {
-                return err(&call.name, format!("無法讀取頁面：{url}"));
-            }
-
-            let note = if truncated {
-                "\n\n[內容已截斷]"
-            } else {
-                ""
-            };
-            ok(&call.name, format!("{content}{note}"))
+            err(&call.name, format!("無法讀取頁面：{url}"))
         })
     }
 }
