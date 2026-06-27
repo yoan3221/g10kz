@@ -1077,19 +1077,65 @@ async fn escalate_opus(
     }
 }
 
+/// Call `provider.complete`, retrying briefly on transient upstream failures
+/// (502 / decode errors when Gemini is overloaded — "high demand"). Honors
+/// cancellation between attempts. Up to 3 attempts with short backoff.
+async fn complete_retry(
+    input: &TurnInput<'_>,
+    messages: &[Message],
+    params: &CompletionParams,
+) -> Result<(String, Usage), EngineError> {
+    let mut last_err = None;
+    for attempt in 0u8..3 {
+        if attempt > 0 {
+            let backoff = Duration::from_millis(600 * attempt as u64);
+            tokio::select! {
+                _ = tokio::time::sleep(backoff) => {}
+                _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+            }
+        }
+        let r = tokio::select! {
+            r = input.provider.complete(messages, params) => r,
+            _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+        };
+        match r {
+            Ok(v) => return Ok(v),
+            Err(e) => {
+                warn!(attempt, err = %e, "LLM complete failed; retrying on transient error");
+                last_err = Some(e);
+            }
+        }
+    }
+    Err(EngineError::Llm(last_err.expect("at least one attempt failed")))
+}
+
 async fn path_search(
     input: &TurnInput<'_>,
     display_text: &str,
 ) -> Result<(String, Usage), EngineError> {
-    // Dispatch web_search tool
-    let call = ToolCall {
-        name: "web_search".into(),
-        arguments: serde_json::json!({ "query": display_text }),
-    };
-    let search_result = tokio::select! {
-        r = input.toolbox.dispatch(call) => r,
+    // Dispatch web_search tool, retrying once on transient failure (gemini-search
+    // returns 502 when Gemini is briefly overloaded — "high demand").
+    let mut search_result = tokio::select! {
+        r = input.toolbox.dispatch(ToolCall {
+            name: "web_search".into(),
+            arguments: serde_json::json!({ "query": display_text }),
+        }) => r,
         _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
     };
+    if !search_result.success {
+        warn!("web_search failed, retrying once after backoff");
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(800)) => {}
+            _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+        }
+        search_result = tokio::select! {
+            r = input.toolbox.dispatch(ToolCall {
+                name: "web_search".into(),
+                arguments: serde_json::json!({ "query": display_text }),
+            }) => r,
+            _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
+        };
+    }
 
     // Build LLM context with search result
     let context = if search_result.success {
@@ -1112,10 +1158,7 @@ async fn path_search(
     ));
 
     let params = CompletionParams::social(&input.config.llm_model_social);
-    tokio::select! {
-        r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
-        _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
-    }
+    complete_retry(input, &messages, &params).await
 }
 
 
