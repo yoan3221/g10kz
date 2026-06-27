@@ -36,6 +36,49 @@ fn clip2000(s: &str) -> String {
     }
 }
 
+/// Extract the first usable image URL from a message.
+///
+/// Priority: uploaded file attachments first, then image/GIF embeds — this is
+/// how Tenor / Giphy GIFs (sent via the picker as `gifv` embeds) and pasted
+/// image links arrive, since they are NOT file attachments. For animated GIFs
+/// we prefer the `.gif` video URL so Gemini can sample multiple frames; we fall
+/// back to the embed's still image / thumbnail otherwise.
+fn first_image_url(msg: &DiscordMessage) -> Option<String> {
+    // 1. Direct file attachment (uploaded image or GIF).
+    if let Some(att) = msg.attachments.first() {
+        return Some(att.url.clone());
+    }
+    // 2. Image / GIF embeds (Tenor, Giphy, pasted image links).
+    for embed in &msg.embeds {
+        match embed.kind.as_deref() {
+            Some("gifv") => {
+                // Prefer an actual animated GIF so the vision model sees motion.
+                if let Some(v) = &embed.video {
+                    if v.url.contains(".gif") {
+                        return Some(v.url.clone());
+                    }
+                }
+                if let Some(img) = &embed.image {
+                    return Some(img.url.clone());
+                }
+                if let Some(t) = &embed.thumbnail {
+                    return Some(t.url.clone());
+                }
+            }
+            Some("image") => {
+                if let Some(img) = &embed.image {
+                    return Some(img.url.clone());
+                }
+                if let Some(t) = &embed.thumbnail {
+                    return Some(t.url.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 pub struct Handler {
     pub state: Arc<BotState>,
 }
@@ -113,7 +156,7 @@ impl EventHandler for Handler {
         // Resolve all mention tokens to readable names; strip the bot's own.
         let clean_text = resolve_mentions(&msg, bot_id, &ctx.cache);
 
-        if clean_text.is_empty() && msg.attachments.is_empty() {
+        if clean_text.is_empty() && first_image_url(&msg).is_none() {
             self.state.in_flight.lock().await.remove(&msg_id);
             return;
         }
@@ -172,11 +215,8 @@ impl EventHandler for Handler {
             }
         };
 
-        let (has_attachment, attachment_url) = msg
-            .attachments
-            .first()
-            .map(|a| (true, Some(a.url.clone())))
-            .unwrap_or((false, None));
+        let attachment_url = first_image_url(&msg);
+        let has_attachment = attachment_url.is_some();
 
         // ── Guild / channel name for environment-aware system prompt ──────────
         let guild_name: Option<String> = if !is_dm {
