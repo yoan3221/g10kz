@@ -29,6 +29,11 @@ pub struct ToolResult {
     pub content: String,
     /// Whether execution succeeded.
     pub success: bool,
+    /// Optional image data URLs (`data:image/...;base64,...`) produced by the
+    /// tool — e.g. a page screenshot — to feed back to a vision-capable model
+    /// as image parts in the next turn. Empty for text-only tools.
+    #[serde(default)]
+    pub images: Vec<String>,
 }
 
 // ─── Tool trait ──────────────────────────────────────────────────────────────
@@ -125,6 +130,7 @@ impl ToolBox {
                     name: call.name,
                     content,
                     success: false,
+                    images: Vec::new(),
                 }
             }
         }

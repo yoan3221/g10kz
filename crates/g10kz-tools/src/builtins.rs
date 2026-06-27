@@ -10,6 +10,15 @@ fn ok(name: &str, content: String) -> ToolResult {
         name: name.into(),
         content,
         success: true,
+        images: Vec::new(),
+    }
+}
+fn ok_img(name: &str, content: String, images: Vec<String>) -> ToolResult {
+    ToolResult {
+        name: name.into(),
+        content,
+        success: true,
+        images,
     }
 }
 fn err(name: &str, msg: String) -> ToolResult {
@@ -17,6 +26,7 @@ fn err(name: &str, msg: String) -> ToolResult {
         name: name.into(),
         content: msg,
         success: false,
+        images: Vec::new(),
     }
 }
 
@@ -425,6 +435,97 @@ impl Tool for FetchPageTool {
             }
 
             err(&call.name, format!("無法讀取頁面：{url}"))
+        })
+    }
+}
+
+// ─── ViewPageTool ───────────────────────────────────────────
+
+/// 截圖看網頁：用 stealth headless 瀏覽器對 URL 截圖，回傳圖片供視覺模型看畫面。
+pub struct ViewPageTool {
+    client: reqwest::Client,
+    browser_url: String,
+}
+
+impl ViewPageTool {
+    pub fn new() -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(45))
+            .build()
+            .unwrap();
+        let browser_url = std::env::var("BROWSER_URL")
+            .unwrap_or_else(|_| "http://localhost:8091".into());
+        Self { client, browser_url }
+    }
+}
+
+impl Default for ViewPageTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Tool for ViewPageTool {
+    fn name(&self) -> &str {
+        "view_page"
+    }
+    fn description(&self) -> &str {
+        "截圖看網頁的實際畫面（版面、圖表、JS 動態內容）。適合「這網頁長怎樣」、讀圖表。         需視覺理解畫面時用這個；只要文字用 fetch_page。參數：url（完整網址）。"
+    }
+    fn schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "要截圖的網頁完整 URL（須含 https:// 或 http://）"
+                },
+                "full_page": {
+                    "type": "boolean",
+                    "description": "是否截全頁（預設只截視窗）"
+                }
+            },
+            "required": ["url"]
+        })
+    }
+    fn call<'a>(&'a self, call: ToolCall) -> BoxFuture<'a, ToolResult> {
+        Box::pin(async move {
+            let url = match call.arguments.get("url").and_then(|v| v.as_str()) {
+                Some(u) => u.to_owned(),
+                None => return err(&call.name, "missing url".into()),
+            };
+            let full_page = call
+                .arguments
+                .get("full_page")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let endpoint = format!("{}/v1/shot", self.browser_url);
+            let body = json!({ "url": url, "full_page": full_page });
+            let resp = match self.client.post(&endpoint).json(&body).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    warn!("view_page: browser request failed: {e}");
+                    return err(&call.name, format!("截圖服務無法連線：{e}"));
+                }
+            };
+            if !resp.status().is_success() {
+                let status = resp.status();
+                warn!("view_page: browser HTTP {status}");
+                return err(&call.name, format!("截圖服務錯誤 {status}"));
+            }
+            let data: Value = match resp.json().await {
+                Ok(v) => v,
+                Err(e) => return err(&call.name, format!("截圖結果解析失敗：{e}")),
+            };
+            let image = data.get("image").and_then(|v| v.as_str()).unwrap_or("");
+            if image.is_empty() {
+                return err(&call.name, format!("無法截圖：{url}"));
+            }
+            let title = data.get("title").and_then(|v| v.as_str()).unwrap_or("");
+            let final_url = data.get("finalUrl").and_then(|v| v.as_str()).unwrap_or(&url);
+            let note = format!("已截圖：{title}（{final_url}）。以下是頁面畫面，請看圖回答。");
+            ok_img(&call.name, note, vec![image.to_owned()])
         })
     }
 }

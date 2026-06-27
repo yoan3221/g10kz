@@ -13,7 +13,7 @@ use tracing::{debug, warn};
 
 use g10kz_llm::{
     provider::Provider,
-    types::{CompletionParams, Message, Role, Usage},
+    types::{CompletionParams, Message, Part, Role, Usage},
 };
 
 use crate::tool::{ToolBox, ToolCall};
@@ -60,14 +60,27 @@ pub async fn run_tool_loop(
         // Execute
         let result = toolbox.dispatch(call.clone()).await;
 
-        // Append assistant turn (text up to the tag) + tool result injected as user turn
+        // Append assistant turn (text up to the tag) + tool result injected as user turn.
         let text_before = text_before_tool_call(&reply);
         messages.push(Message::text(Role::Assistant, text_before));
-        messages.push(Message::text(
-            Role::User,
-            format!("<tool_result name=\"{}\">\n{}\n</tool_result>\n\nContinue your answer based on the result above.",
-                result.name, result.content),
-        ));
+        let result_text = format!(
+            "<tool_result name=\"{}\">\n{}\n</tool_result>\n\nContinue your answer based on the result above.",
+            result.name, result.content
+        );
+        if result.images.is_empty() {
+            messages.push(Message::text(Role::User, result_text));
+        } else {
+            // Vision tool (e.g. view_page): feed the screenshot(s) back as image
+            // parts so a multimodal model can actually see the page.
+            let mut parts: Vec<Part> = result
+                .images
+                .iter()
+                .cloned()
+                .map(|url| Part::ImageUrl { url })
+                .collect();
+            parts.push(Part::Text { text: result_text });
+            messages.push(Message { role: Role::User, parts });
+        }
 
         if !result.success {
             warn!(tool = %result.name, "tool returned failure");

@@ -6,7 +6,7 @@ pub mod builtins;
 pub mod r#loop;
 pub mod tool;
 
-pub use builtins::{EscalateTool, FetchPageTool, TimeTool, TwStockTool, WebSearchTool};
+pub use builtins::{EscalateTool, FetchPageTool, TimeTool, TwStockTool, ViewPageTool, WebSearchTool};
 pub use r#loop::{run_tool_loop, tool_schema_snippet};
 pub use tool::{Tool, ToolBox, ToolCall, ToolResult};
 

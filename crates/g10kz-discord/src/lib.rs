@@ -20,7 +20,7 @@ use g10kz_engine::{
 use g10kz_everos::{EverosMemory, NullMemory};
 use g10kz_kernel::persona::PersonaCard;
 use g10kz_llm::OpenRouterProvider;
-use g10kz_tools::{FetchPageTool, TimeTool, ToolBox, TwStockTool, WebSearchTool};
+use g10kz_tools::{FetchPageTool, TimeTool, ToolBox, TwStockTool, ViewPageTool, WebSearchTool};
 
 use crate::handler::Handler;
 use crate::state::BotState;
@@ -60,6 +60,7 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
     toolbox.register(TwStockTool::new());
     toolbox.register(WebSearchTool::new(None));
     toolbox.register(FetchPageTool::new(None));
+    toolbox.register(ViewPageTool::new());
 
     let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
         .unwrap_or_else(|e| {
