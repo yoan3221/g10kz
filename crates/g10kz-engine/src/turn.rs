@@ -5,7 +5,6 @@
 //! |---|---|---|---|
 //! | Social  | 1 (streamed placeholder) | skip | none |
 //! | Search  | 1 | skip | web_search |
-//! | Media   | 1 | skip | media pre-proc |
 //! | Reason  | N (tool loop) + judge | yes  | all |
 //! | Command | 0 | skip | none |
 
@@ -27,7 +26,7 @@ use g10kz_llm::{
     types::{CompletionParams, Message, Part, Role, StreamItem, Usage},
     Provider,
 };
-use g10kz_tools::{media, run_tool_loop, tool_schema_snippet, ToolBox, ToolCall};
+use g10kz_tools::{run_tool_loop, tool_schema_snippet, ToolBox, ToolCall};
 
 use crate::{
     embed_router::EmbeddingRouter, prompt_guard::PromptGuardClient, stage::Stage,
@@ -417,8 +416,8 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
         }
 
         RouteDecision::Media => {
-            tracer.enter_stage(&Stage::Media);
-            path_media(&input, &display_text).await?
+            tracer.enter_stage(&Stage::Social);
+            path_social(&input, &display_text, &memory_ctx).await?
         }
 
         RouteDecision::Reason => {
@@ -810,7 +809,17 @@ fn build_social_messages(
             .iter()
             .cloned(),
     );
-    messages.push(Message::text(Role::User, input.labeled(display_text)));
+    if let Some(img_url) = &input.attachment_url {
+        messages.push(Message {
+            role: Role::User,
+            parts: vec![
+                Part::ImageUrl { url: img_url.clone() },
+                Part::Text { text: input.labeled(display_text) },
+            ],
+        });
+    } else {
+        messages.push(Message::text(Role::User, input.labeled(display_text)));
+    }
     let params = CompletionParams::social(&input.config.llm_model_social);
     (messages, params)
 }
@@ -1041,47 +1050,6 @@ async fn path_search(
     }
 }
 
-async fn path_media(
-    input: &TurnInput<'_>,
-    display_text: &str,
-) -> Result<(String, Usage), EngineError> {
-    let url = input.attachment_url.as_deref().unwrap_or("");
-    let mut messages = vec![input.system_message("")];
-    messages.extend(
-        input
-            .history_window_for(display_text, MAX_HISTORY_SOCIAL)
-            .iter()
-            .cloned(),
-    );
-
-    if !url.is_empty() {
-        match media::process_image(url).await {
-            Ok(out) => {
-                // Build a message with image parts + text
-                let mut parts = out.parts;
-                parts.push(g10kz_llm::types::Part::Text {
-                    text: input.labeled(display_text),
-                });
-                messages.push(g10kz_llm::types::Message {
-                    role: Role::User,
-                    parts,
-                });
-            }
-            Err(e) => {
-                warn!("media processing failed: {e}");
-                messages.push(Message::text(Role::User, input.labeled(display_text)));
-            }
-        }
-    } else {
-        messages.push(Message::text(Role::User, input.labeled(display_text)));
-    }
-
-    let params = CompletionParams::social(&input.config.llm_model_media);
-    tokio::select! {
-        r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm),
-        _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
-    }
-}
 
 async fn path_reason(
     input: &TurnInput<'_>,

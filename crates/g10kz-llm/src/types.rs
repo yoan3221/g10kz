@@ -85,7 +85,7 @@ impl CompletionParams {
     pub fn social(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
-            max_tokens: 280,
+            max_tokens: 2048,
             temperature: 0.9,
             cache_system_prompt: true,
         }
