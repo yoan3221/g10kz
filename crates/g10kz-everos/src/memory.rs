@@ -33,6 +33,8 @@ const CIRCUIT_RESET_SECS: u64 = 30;
 const SEARCH_TIMEOUT_MS: u64 = 3000;
 const WRITE_TIMEOUT_MS:  u64 = 5000;   // add() only; flush is fire-and-forget
 const CACHE_TTL_SECS:    u64 = 30;
+/// Flush EverOS extraction pipeline every N add_turn calls (reduces LLM calls).
+const FLUSH_EVERY: u32 = 5;
 
 // ─── MemoryEntry ───────────────────────────────────────────────────────────
 
@@ -181,10 +183,11 @@ pub struct EverosMemory {
     failures: Arc<AtomicU32>,
     last_fail_ts: Arc<AtomicU32>,
     /// Separate circuit breaker for passive observe() calls.
-    /// Keeps group-chat observation failures isolated from conversation memory.
     obs_failures: Arc<AtomicU32>,
     obs_last_fail_ts: Arc<AtomicU32>,
     cache: Arc<Mutex<HashMap<CacheKey, CacheEntry>>>,
+    /// Counts add_turn calls; flush is triggered only every FLUSH_EVERY turns.
+    flush_counter: Arc<AtomicU32>,
 }
 
 impl std::fmt::Debug for EverosMemory {
@@ -213,6 +216,7 @@ impl EverosMemory {
             obs_failures: Arc::new(AtomicU32::new(0)),
             obs_last_fail_ts: Arc::new(AtomicU32::new(0)),
             cache: Arc::new(Mutex::new(HashMap::new())),
+            flush_counter: Arc::new(AtomicU32::new(0)),
         }
     }
 
@@ -332,9 +336,18 @@ impl EverosMemory {
             }
         }
 
-        // Fire-and-forget flush — EverOS processes extraction asynchronously anyway;
-        // we don't need to wait (and waiting risks timeout when EverOS is busy).
         self.record_ok();
+
+        // Flush only every FLUSH_EVERY turns — reduces EverOS LLM pipeline calls.
+        // EverOS accumulates messages and extracts at natural boundaries anyway;
+        // explicit flush is only needed to ensure memories are available promptly.
+        let count = self.flush_counter.fetch_add(1, Ordering::Relaxed) + 1;
+        if count % FLUSH_EVERY != 0 {
+            debug!("EverOS add_turn: accumulated ({count} mod {FLUSH_EVERY}, no flush)");
+            return;
+        }
+
+        // Fire-and-forget flush every FLUSH_EVERY turns.
         let flush_client = Arc::clone(&self.write_client);
         let flush_url = self.url("/api/v1/memory/flush");
         let flush_body = FlushReq {
@@ -348,7 +361,7 @@ impl EverosMemory {
                 Ok(r) if !r.status().is_success() => {
                     debug!("EverOS flush HTTP {} (non-fatal)", r.status());
                 }
-                Ok(_) => debug!("EverOS flush ok"),
+                Ok(_) => debug!("EverOS flush ok (every {FLUSH_EVERY} turns)"),
             }
         });
     }
