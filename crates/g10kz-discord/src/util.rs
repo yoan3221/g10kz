@@ -103,6 +103,11 @@ pub fn spawn_typing_task(
 /// on the same line (`word`) have their backticks removed so Discord doesn't
 /// render them as monospace code — the bot should use **bold** for emphasis.
 /// Unmatched lone backticks are left as-is.
+///
+/// Complements (does not duplicate) `g10kz_kernel::sanitize::format_output`'s
+/// `strip_lone_backtick`: that one removes *odd, unpaired* backticks during
+/// engine-side sanitisation; this one removes *matched single-backtick pairs*
+/// on Social/Search replies so inline code never renders as monospace.
 pub fn sanitize_backticks(text: &str) -> String {
     // Split on ``` to find code-block boundaries.
     // Even-indexed segments are outside code blocks; odd-indexed are inside.

@@ -238,6 +238,10 @@ impl EmbeddingRouter {
     /// - `None`         — centroids not ready, server down, or below threshold
     pub async fn refine(&self, text: &str) -> Option<RouteDecision> {
         // ── Keyword fast-path: explicit search/query commands bypass embedding ──
+        // Layered with route.rs SEARCH_TRIGGERS (not duplicated): route.rs routes
+        // explicit/recency phrases to Search up-front; the operational/how-to terms
+        // below (怎麼用/設定/教學…) are intentionally kept *out* of route.rs to avoid
+        // over-triggering Search, and only upgrade here after route() falls to Social.
         let lower = text.to_lowercase();
         let search_keywords: &[&str] = &[
             // 明確查詢指令

@@ -439,25 +439,10 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
         }
     };
 
-    // ── Persist (background EverOS write) ────────────────────────────────────
+    // ── Persist ──────────────────────────────────────────────────────────────
+    // The conversation turn is persisted to EverOS by the Discord handler after
+    // run_turn returns — it owns the Arc<EverosMemory>. Nothing to do here.
     tracer.enter_stage(&Stage::Persist);
-    if !restricted {
-        let memory = input.memory as *const dyn Memory;
-        let uid = input.user_id;
-        let text_clone = display_text.clone();
-        let reply_clone = reply.clone();
-        // SAFETY: NullMemory and EverosMemory are 'static + Send + Sync.
-        // We spawn a detached task; the memory object outlives this function
-        // only if owned by the caller (which the Discord gateway ensures).
-        // For safety in tests, we use NullMemory which is a no-op.
-        // A proper solution would use an Arc<dyn Memory> instead of &dyn Memory.
-        // TODO(P7): migrate TurnInput to Arc<dyn Memory>.
-        let _ = uid;
-        let _ = text_clone;
-        let _ = reply_clone;
-        let _ = memory;
-        // Placeholder — actual background write wired in P7 with Arc<dyn Memory>.
-    }
 
     tracer.trace.prompt_tokens = usage.prompt_tokens;
     tracer.trace.completion_tokens = usage.completion_tokens;
@@ -534,7 +519,6 @@ const MAX_HISTORY_REASON: usize = 12; //  6 full turns (opus is expensive)
 const FORMAT_PRIMER_USER: &str = "（示範）你好";
 const FORMAT_PRIMER_ASST: &str = "> 微微側頭，眼神瞬間閃過去(⁄ ⁄•⁄ω⁄•⁄ ⁄)\n…誰稀罕你打招呼。\n> 鼓起腮頰\n哼！-# 怎麼有點開心...(♡ω♡ )";
 
-const ESCALATE_NOTE: &str = "\n\n[升級] 需深推理/查資料/寫程式/長篇→首行只輸出[[ESCALATE]]停止，閒聊照常。規格/數據/型號/日期無把握寧可[[ESCALATE]]或說不知道，別亂編。問即時新聞/近期事件→首行只輸出[[SEARCH: 關鍵詞]]停止。";
 
 /// Social path system extra: escalate sentinel + inner-monologue instruction.
 /// The <think>...</think> block is stripped from output before delivery.
@@ -583,7 +567,10 @@ async fn search_and_reply(
         String::new()
     };
 
-    let mut messages = vec![input.system_message(ESCALATE_NOTE)];
+    // Terminal reply after searching — plain persona prompt (no escalate/search
+    // sentinel notes; we already searched and must not re-trigger). Same prompt
+    // shape as path_search for consistency.
+    let mut messages = vec![input.system_message("")];
     messages.push(Message::text(Role::User, FORMAT_PRIMER_USER));
     messages.push(Message::text(Role::Assistant, FORMAT_PRIMER_ASST));
     messages.extend(
@@ -597,38 +584,7 @@ async fn search_and_reply(
         input.labeled(&format!("{context}請根據以上搜尋結果回覆：{display_text}")),
     ));
     let params = CompletionParams::social(&input.config.llm_model_social);
-
-    match sink {
-        None => tokio::select! {
-            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm).map(|(t, u)| (strip_thinking(&t), u)),
-            _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
-        },
-        Some(sink) => {
-            let child = input.cancel.child_token();
-            let mut stream = input
-                .provider
-                .complete_stream(&messages, &params, child.clone());
-            let mut buf = String::new();
-            let mut usage = Usage::default();
-            loop {
-                let item = tokio::select! {
-                    it = stream.next() => it,
-                    _ = input.cancel.cancelled() => { child.cancel(); return Err(EngineError::Cancelled); }
-                };
-                let Some(item) = item else { break };
-                match item.map_err(EngineError::Llm)? {
-                    StreamItem::Token(t) => {
-                        buf.push_str(&t);
-                        let _ = sink.try_send(buf.clone());
-                    }
-                    StreamItem::Done(u) => {
-                        usage = u;
-                    }
-                }
-            }
-            Ok((buf, usage))
-        }
-    }
+    stream_terminal(input, &messages, &params, sink).await
 }
 
 /// Strip `<think>...</think>` blocks produced by the inner-monologue
@@ -904,10 +860,7 @@ async fn path_social(
     // Non-streaming: cheap model first, escalate on sentinel.
     let (messages, params) = build_social_messages(input, display_text, memory_ctx).await;
 
-    let (raw, usage) = tokio::select! {
-        r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm)?,
-        _ = input.cancel.cancelled() => return Err(EngineError::Cancelled),
-    };
+    let (raw, usage) = complete_retry(input, &messages, &params).await?;
     let reply = strip_thinking(&raw);
     if wants_escalation(&reply) {
         debug!("social self-escalated to reason model (non-streaming)");
@@ -1040,19 +993,66 @@ async fn escalate_opus(
     );
     messages.push(Message::text(Role::User, input.labeled(display_text)));
     let params = CompletionParams::reason(&input.config.llm_model_reason);
+    stream_terminal(input, &messages, &params, sink).await
+}
 
+/// Heuristic: is this LLM error worth retrying? Network errors, 5xx, 429,
+/// decode/timeout are transient (retry helps). Permanent 4xx client errors and
+/// context-window overflow are not — retrying just burns time for the same result.
+fn is_transient_llm_err(e: &anyhow::Error) -> bool {
+    let s = e.to_string();
+    const PERMANENT: &[&str] = &[
+        "HTTP 400", "HTTP 401", "HTTP 403", "HTTP 404", "HTTP 413", "HTTP 422",
+        "context window",
+    ];
+    !PERMANENT.iter().any(|p| s.contains(p))
+}
+
+/// Scrub any leftover `[[ESCALATE]]` / `[[SEARCH: ...]]` sentinel text from a
+/// terminal reply so it can never reach the user. Fast no-op when absent.
+fn strip_sentinels(s: &str) -> String {
+    if !s.contains("[[") {
+        return s.to_owned();
+    }
+    let mut out = s.to_owned();
+    for tag in ["[[SEARCH:", "[[ESCALATE"] {
+        while let Some(start) = out.find(tag) {
+            if let Some(rel) = out[start..].find("]]") {
+                out.replace_range(start..start + rel + 2, "");
+            } else {
+                out.truncate(start); // unterminated — drop to end
+                break;
+            }
+        }
+    }
+    out.trim().to_owned()
+}
+
+/// Consume a *terminal* completion (escalated answer or post-search synthesis).
+/// These paths never re-trigger escalate/search sentinels, so we only need to
+/// strip `<think>` blocks — done incrementally via `ThinkStripper` (O(n) total,
+/// not O(n^2) like calling `strip_thinking` on the whole buffer each token) —
+/// and scrub any stray sentinel text from the final reply. The non-streaming
+/// branch routes through `complete_retry` so escalated/search replies also get
+/// transient-error retries.
+async fn stream_terminal(
+    input: &TurnInput<'_>,
+    messages: &[Message],
+    params: &CompletionParams,
+    sink: Option<tokio::sync::mpsc::Sender<String>>,
+) -> Result<(String, Usage), EngineError> {
     match sink {
-        None => tokio::select! {
-            r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm).map(|(t, u)| (strip_thinking(&t), u)),
-            _ = input.cancel.cancelled() => Err(EngineError::Cancelled),
-        },
+        None => {
+            let (raw, usage) = complete_retry(input, messages, params).await?;
+            Ok((strip_sentinels(&strip_thinking(&raw)), usage))
+        }
         Some(sink) => {
             let child = input.cancel.child_token();
             let mut stream = input
                 .provider
-                .complete_stream(&messages, &params, child.clone());
-            let mut buf = String::new();
+                .complete_stream(messages, params, child.clone());
             let mut usage = Usage::default();
+            let mut stripper = ThinkStripper::new();
             loop {
                 let item = tokio::select! {
                     it = stream.next() => it,
@@ -1061,10 +1061,10 @@ async fn escalate_opus(
                 let Some(item) = item else { break };
                 match item.map_err(EngineError::Llm)? {
                     StreamItem::Token(t) => {
-                        buf.push_str(&t);
-                        let visible = strip_thinking(&buf);
-                        if !visible.is_empty() {
-                            let _ = sink.try_send(visible);
+                        stripper.push(&t);
+                        let v = stripper.visible();
+                        if !v.is_empty() {
+                            let _ = sink.try_send(v.to_owned());
                         }
                     }
                     StreamItem::Done(u) => {
@@ -1072,7 +1072,8 @@ async fn escalate_opus(
                     }
                 }
             }
-            Ok((strip_thinking(&buf), usage))
+            stripper.finish();
+            Ok((strip_sentinels(stripper.visible()), usage))
         }
     }
 }
@@ -1101,6 +1102,10 @@ async fn complete_retry(
         match r {
             Ok(v) => return Ok(v),
             Err(e) => {
+                if !is_transient_llm_err(&e) {
+                    warn!(err = %e, "LLM complete failed (permanent); not retrying");
+                    return Err(EngineError::Llm(e));
+                }
                 warn!(attempt, err = %e, "LLM complete failed; retrying on transient error");
                 last_err = Some(e);
             }
