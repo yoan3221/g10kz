@@ -125,7 +125,9 @@ impl OpenRouterProvider {
             return Err(LlmError::Request("circuit breaker open".into()).into());
         }
 
-        let body = build_request(messages, params, None);
+        // Force non-streaming: some gateways (e.g. OmniRoute) default gemma-4
+        // to SSE, which breaks `resp.json()` with "error decoding response body".
+        let body = build_request(messages, params, Some(serde_json::json!({ "stream": false })));
         let url = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
 
         let mut last_err: anyhow::Error = anyhow::anyhow!("no attempts made");
