@@ -68,14 +68,10 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
             PersonaCard::stub()
         });
 
-    let embed_router = EmbeddingRouter::new(
-        &config.cf_account_id,
-        &config.embed_model,
-        &config.cf_ai_token,
-    );
+    let embed_router = EmbeddingRouter::new(&config.embed_server_url);
     if !config.embed_server_url.is_empty() {
         embed_router.spawn_warmup();
-        info!(model = %config.embed_model, "embedding router warmup spawned");
+        info!(url = %config.embed_server_url, "embedding router warmup spawned");
     }
 
     if config.everos_url.is_empty() {

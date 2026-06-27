@@ -1,7 +1,7 @@
-//! Semantic route refinement via Cloudflare Workers AI embeddings.
+//! Semantic route refinement via local llama-embed server.
 //!
-//! Uses `@cf/qwen/qwen3-embedding-0.6b` via the CF AI REST API.
-//! CF request format: `{"text": [...]}` → response: `{"result":{"data":[[...]]}}``
+//! Uses the OpenAI-compatible `/v1/embeddings` endpoint on the local
+//! llama.cpp embedding server (default `http://localhost:8082`).
 //!
 //! # Two HTTP clients
 //! - `warmup_client` (60 s): builds per-class centroids at startup
@@ -89,29 +89,25 @@ const REASON_EXAMPLES: &[&str] = &[
     "compare React and Vue for a large application",
 ];
 
-// ─── HTTP types (Cloudflare Workers AI /ai/run/{model}) ──────────────────────
+// ─── HTTP types (OpenAI-compatible /v1/embeddings) ────────────────────────────
 
-/// Batch request — CF format: `{"text": ["str1", "str2", ...]}`
+/// Request — OpenAI format: `{"model": "embed", "input": ["str1", ...]}`
 #[derive(Serialize)]
-struct CfBatchRequest<'a> {
-    text: &'a [&'a str],
+struct EmbedRequest<'a> {
+    model: &'a str,
+    input: &'a [&'a str],
 }
 
-/// Single request — CF format: `{"text": "str"}`
-#[derive(Serialize)]
-struct CfSingleRequest<'a> {
-    text: &'a str,
-}
-
-/// CF response: `{"result":{"data":[[f32, ...], ...]}, "success": true}`
+/// One embedding object in the response.
 #[derive(Deserialize)]
-struct CfResult {
-    data: Vec<Vec<f32>>,
+struct EmbedObject {
+    embedding: Vec<f32>,
 }
 
+/// OpenAI /v1/embeddings response: `{"data": [{embedding: [...]}]}`
 #[derive(Deserialize)]
-struct CfEmbedResponse {
-    result: CfResult,
+struct EmbedResponse {
+    data: Vec<EmbedObject>,
 }
 
 // ─── Centroids ────────────────────────────────────────────────────────────────
@@ -127,21 +123,21 @@ struct Centroids {
 pub struct EmbeddingRouter {
     client: reqwest::Client,
     warmup_client: reqwest::Client,
-    /// Full CF API URL: `https://api.cloudflare.com/client/v4/accounts/{id}/ai/run/{model}`
-    cf_url: String,
-    cf_token: String,
+    /// Full URL to /v1/embeddings, e.g. `http://localhost:8082/v1/embeddings`
+    embed_url: String,
     centroids: Arc<RwLock<Option<Centroids>>>,
 }
 
 impl EmbeddingRouter {
-    /// Create a new router pointed at `embed_base`
-    /// (e.g. `"http://localhost:8082"` for llama-server).
-    /// `account_id` — Cloudflare account ID.
-    /// `model`      — e.g. `@cf/qwen/qwen3-embedding-0.6b`.
-    /// `token`      — Cloudflare API token with Workers AI permission.
-    pub fn new(account_id: &str, model: &str, token: &str) -> Self {
-        let cf_url =
-            format!("https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}");
+    /// Create a new router pointed at `base_url`
+    /// (e.g. `"http://localhost:8082"`).
+    /// Passing an empty string disables the router (refine always returns None).
+    pub fn new(base_url: &str) -> Self {
+        let embed_url = if base_url.is_empty() {
+            String::new()
+        } else {
+            format!("{}/v1/embeddings", base_url.trim_end_matches('/'))
+        };
         Self {
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(8))
@@ -151,8 +147,7 @@ impl EmbeddingRouter {
                 .timeout(std::time::Duration::from_secs(60))
                 .build()
                 .unwrap(),
-            cf_url,
-            cf_token: token.to_owned(),
+            embed_url,
             centroids: Arc::new(RwLock::new(None)),
         }
     }
@@ -177,7 +172,7 @@ impl EmbeddingRouter {
     }
 
     async fn compute_centroids(&self) -> anyhow::Result<Centroids> {
-        // Two batch requests total: one per class (24 examples → 2 round-trips).
+        // Two batch requests total: one per class (2 round-trips).
         let search = self.batch_centroid(SEARCH_EXAMPLES).await?;
         let reason = self.batch_centroid(REASON_EXAMPLES).await?;
         Ok(Centroids { search, reason })
@@ -185,25 +180,25 @@ impl EmbeddingRouter {
 
     /// Embed all `examples` in one batch request, average into a centroid.
     async fn batch_centroid(&self, examples: &[&str]) -> anyhow::Result<Vec<f32>> {
+        anyhow::ensure!(!self.embed_url.is_empty(), "embed_url not configured");
         let resp = self
             .warmup_client
-            .post(&self.cf_url)
-            .bearer_auth(&self.cf_token)
-            .json(&CfBatchRequest { text: examples })
+            .post(&self.embed_url)
+            .json(&EmbedRequest { model: "embed", input: examples })
             .send()
             .await?
             .error_for_status()?
-            .json::<CfEmbedResponse>()
+            .json::<EmbedResponse>()
             .await?;
 
-        let vecs = &resp.result.data;
+        let vecs = &resp.data;
         let n = vecs.len();
-        anyhow::ensure!(n > 0, "empty CF batch embedding response");
+        anyhow::ensure!(n > 0, "empty batch embedding response");
 
-        let dim = vecs[0].len();
+        let dim = vecs[0].embedding.len();
         let mut sum = vec![0.0_f32; dim];
-        for vec in vecs {
-            for (a, b) in sum.iter_mut().zip(vec.iter()) {
+        for obj in vecs {
+            for (a, b) in sum.iter_mut().zip(obj.embedding.iter()) {
                 *a += b;
             }
         }
@@ -212,22 +207,23 @@ impl EmbeddingRouter {
 
     /// Embed a single string using the short-timeout client (model warm).
     async fn embed_one(&self, text: &str) -> anyhow::Result<Vec<f32>> {
+        anyhow::ensure!(!self.embed_url.is_empty(), "embed_url not configured");
+        let input = [text];
         let resp = self
             .client
-            .post(&self.cf_url)
-            .bearer_auth(&self.cf_token)
-            .json(&CfSingleRequest { text })
+            .post(&self.embed_url)
+            .json(&EmbedRequest { model: "embed", input: &input })
             .send()
             .await?
             .error_for_status()?
-            .json::<CfEmbedResponse>()
+            .json::<EmbedResponse>()
             .await?;
 
-        resp.result
-            .data
+        resp.data
             .into_iter()
             .next()
-            .ok_or_else(|| anyhow::anyhow!("empty CF embedding response"))
+            .map(|o| o.embedding)
+            .ok_or_else(|| anyhow::anyhow!("empty embedding response"))
     }
 
     /// Try to upgrade a `Social` route decision.
@@ -235,54 +231,27 @@ impl EmbeddingRouter {
     /// Returns:
     /// - `Some(Search)` — closer to search intent
     /// - `Some(Reason)` — closer to reasoning intent
-    /// - `None`         — centroids not ready, server down, or below threshold
+    /// - `None`         — disabled, centroids not ready, server down, or below threshold
     pub async fn refine(&self, text: &str) -> Option<RouteDecision> {
+        if self.embed_url.is_empty() {
+            return None;
+        }
+
         // ── Keyword fast-path: explicit search/query commands bypass embedding ──
-        // Layered with route.rs SEARCH_TRIGGERS (not duplicated): route.rs routes
-        // explicit/recency phrases to Search up-front; the operational/how-to terms
-        // below (怎麼用/設定/教學…) are intentionally kept *out* of route.rs to avoid
-        // over-triggering Search, and only upgrade here after route() falls to Social.
         let lower = text.to_lowercase();
         let search_keywords: &[&str] = &[
             // 明確查詢指令
-            "查詢",
-            "搜一下",
-            "搜搜看",
-            "幫我找",
-            "幫我查",
-            "幫我搜",
-            "查一查",
-            "找一下",
-            "查看看",
-            "去查",
-            "查查",
-            // 操作/教學類（複合詞才觸發，避免誤判）
-            "怎麼用",
-            "怎麼開通",
-            "怎麼設定",
-            "怎麼安裝",
-            "怎麼啟用",
-            "如何使用",
-            "如何開通",
-            "如何設定",
-            "如何安裝",
-            "怎麼申請",
-            "怎麼訂閱",
-            "如何申請",
-            "教學",
-            "使用方法",
-            "操作步驟",
+            "查詢", "搜一下", "搜搜看", "幫我找", "幫我查", "幫我搜",
+            "查一查", "找一下", "查看看", "去查", "查查",
+            // 操作/教學類
+            "怎麼用", "怎麼開通", "怎麼設定", "怎麼安裝", "怎麼啟用",
+            "如何使用", "如何開通", "如何設定", "如何安裝",
+            "怎麼申請", "怎麼訂閱", "如何申請",
+            "教學", "使用方法", "操作步驟",
             // 英文
-            "search for",
-            "look up",
-            "find me",
-            "google",
-            "how to use",
-            "how do i",
-            "how to set up",
-            "how to install",
-            "tutorial for",
-            "guide for",
+            "search for", "look up", "find me", "google",
+            "how to use", "how do i", "how to set up", "how to install",
+            "tutorial for", "guide for",
         ];
         if search_keywords.iter().any(|kw| lower.contains(kw)) {
             debug!("embed_router: keyword fast-path → Search");
@@ -354,13 +323,27 @@ mod tests {
     }
 
     #[test]
-    fn new_does_not_panic() {
-        let _ = EmbeddingRouter::new("test-account", "@cf/qwen/qwen3-embedding-0.6b", "");
+    fn new_empty_disables_router() {
+        let r = EmbeddingRouter::new("");
+        assert!(r.embed_url.is_empty());
+    }
+
+    #[test]
+    fn new_appends_path() {
+        let r = EmbeddingRouter::new("http://localhost:8082");
+        assert_eq!(r.embed_url, "http://localhost:8082/v1/embeddings");
     }
 
     #[tokio::test]
     async fn refine_none_before_warmup() {
-        let r = EmbeddingRouter::new("test-account", "@cf/qwen/qwen3-embedding-0.6b", "");
-        assert!(r.refine("hello").await.is_none());
+        let r = EmbeddingRouter::new("http://localhost:8082");
+        // centroids not built → None (even for keyword-free text)
+        assert!(r.refine("describe quantum entanglement").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn refine_none_when_disabled() {
+        let r = EmbeddingRouter::new("");
+        assert!(r.refine("搜一下最新新聞").await.is_none());
     }
 }
