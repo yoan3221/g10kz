@@ -44,6 +44,22 @@ fn clip2000(s: &str) -> String {
 /// we prefer the `.gif` video URL so Gemini can sample multiple frames; we fall
 /// back to the embed's still image / thumbnail otherwise.
 fn first_image_url(msg: &DiscordMessage) -> Option<String> {
+    // Image attached to / embedded in the message itself.
+    if let Some(u) = image_url_in(msg) {
+        return Some(u);
+    }
+    // Otherwise look at the message this one replies to — users often @mention
+    // the bot in a reply to someone else's image/GIF instead of re-posting it.
+    if let Some(rm) = &msg.referenced_message {
+        if let Some(u) = image_url_in(rm) {
+            return Some(u);
+        }
+    }
+    None
+}
+
+/// Image URL carried directly by a single message (attachment or embed).
+fn image_url_in(msg: &DiscordMessage) -> Option<String> {
     // 1. Direct file attachment (uploaded image or GIF).
     if let Some(att) = msg.attachments.first() {
         return Some(att.url.clone());
