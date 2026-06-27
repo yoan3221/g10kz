@@ -27,6 +27,7 @@ use g10kz_llm::{
     Provider,
 };
 use g10kz_tools::{run_tool_loop, tool_schema_snippet, ToolBox, ToolCall};
+use base64::Engine as _;
 
 use crate::{
     embed_router::EmbeddingRouter, prompt_guard::PromptGuardClient, stage::Stage,
@@ -753,7 +754,7 @@ fn think_tag_suffix_prefix(s: &str) -> usize {
 ///
 /// Both the blocking and the streaming code paths use identical message
 /// construction logic; this helper keeps them in sync automatically.
-fn build_social_messages(
+async fn build_social_messages(
     input: &TurnInput<'_>,
     display_text: &str,
     memory_ctx: &[g10kz_everos::MemoryEntry],
@@ -810,10 +811,14 @@ fn build_social_messages(
             .cloned(),
     );
     if let Some(img_url) = &input.attachment_url {
+        let data_url = fetch_image_data_url(img_url).await.unwrap_or_else(|e| {
+            warn!(url = %img_url, err = %e, "image fetch failed, falling back to URL");
+            img_url.clone()
+        });
         messages.push(Message {
             role: Role::User,
             parts: vec![
-                Part::ImageUrl { url: img_url.clone() },
+                Part::ImageUrl { url: data_url },
                 Part::Text { text: input.labeled(display_text) },
             ],
         });
@@ -822,6 +827,42 @@ fn build_social_messages(
     }
     let params = CompletionParams::social(&input.config.llm_model_social);
     (messages, params)
+}
+
+/// Download `url` as bytes and re-encode as a base64 data URL so Gemini can
+/// process it (Gemini rejects plain HTTPS URLs for inline images).
+async fn fetch_image_data_url(url: &str) -> anyhow::Result<String> {
+    let resp = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()?
+        .get(url)
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        anyhow::bail!("image download HTTP {}", resp.status());
+    }
+    let bytes = resp.bytes().await?;
+    // Cap at 8 MB — Gemini inline data limit is 20 MB but large images waste tokens
+    if bytes.len() > 8 * 1024 * 1024 {
+        anyhow::bail!("image too large ({} bytes)", bytes.len());
+    }
+    let mime = guess_image_mime(&bytes);
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:{};base64,{}", mime, b64))
+}
+
+fn guess_image_mime(bytes: &[u8]) -> &'static str {
+    if bytes.starts_with(b"\x89PNG") {
+        "image/png"
+    } else if bytes.starts_with(b"\xff\xd8\xff") {
+        "image/jpeg"
+    } else if bytes.starts_with(b"GIF8") {
+        "image/gif"
+    } else if bytes.len() > 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else {
+        "image/jpeg"
+    }
 }
 
 async fn path_social(
@@ -834,7 +875,7 @@ async fn path_social(
     }
 
     // Non-streaming: cheap model first, escalate on sentinel.
-    let (messages, params) = build_social_messages(input, display_text, memory_ctx);
+    let (messages, params) = build_social_messages(input, display_text, memory_ctx).await;
 
     let (raw, usage) = tokio::select! {
         r = input.provider.complete(&messages, &params) => r.map_err(EngineError::Llm)?,
@@ -863,7 +904,7 @@ async fn path_social_streaming(
 ) -> Result<(String, Usage), EngineError> {
     let sink = input.stream_sink.clone().expect("stream_sink present");
 
-    let (messages, params) = build_social_messages(input, display_text, memory_ctx);
+    let (messages, params) = build_social_messages(input, display_text, memory_ctx).await;
 
     let child = input.cancel.child_token();
     let mut stream = input
