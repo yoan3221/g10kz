@@ -47,7 +47,16 @@ pub fn build_request(
         body["temperature"] = serde_json::json!(params.temperature);
     }
 
-    // Merge any extra fields (e.g. Fusion plugin, tools array).
+    // Merge params-level extra body (e.g. reasoning_effort from CompletionParams).
+    if let Some(extra) = &params.extra_body {
+        if let (Some(map), Some(extra_map)) = (body.as_object_mut(), extra.as_object()) {
+            for (k, v) in extra_map {
+                map.insert(k.clone(), v.clone());
+            }
+        }
+    }
+
+    // Merge caller-level extra fields (e.g. Fusion plugin, tools array); can override above.
     if let Some(extra) = extra_fields {
         if let (Some(map), Some(extra_map)) = (body.as_object_mut(), extra.as_object()) {
             for (k, v) in extra_map {
@@ -292,6 +301,7 @@ mod tests {
             max_tokens: 1234,
             temperature: 0.75,
             cache_system_prompt: false,
+            extra_body: None,
         };
         let body = build_request(&msgs, &params, None);
         assert_eq!(body["model"], "openai/gpt-4o");

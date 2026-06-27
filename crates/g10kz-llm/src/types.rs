@@ -78,6 +78,10 @@ pub struct CompletionParams {
     /// Whether to mark the system prompt as a prefix-cache candidate.
     /// Translated to provider-specific cache-control headers in P3.
     pub cache_system_prompt: bool,
+    /// Optional provider-specific fields merged verbatim into the request body
+    /// (e.g. `{"reasoning_effort": "none"}` to suppress thinking on flash models).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_body: Option<serde_json::Value>,
 }
 
 impl CompletionParams {
@@ -88,6 +92,8 @@ impl CompletionParams {
             max_tokens: 2048,
             temperature: 0.9,
             cache_system_prompt: true,
+            // Suppress thinking on flash/lite models; pure roleplay doesn't need it.
+            extra_body: Some(serde_json::json!({"reasoning_effort": "none"})),
         }
     }
 
@@ -98,6 +104,7 @@ impl CompletionParams {
             max_tokens: 1500,
             temperature: 0.4,
             cache_system_prompt: true,
+            extra_body: None, // keep full thinking for analysis / tool-use
         }
     }
 
@@ -108,6 +115,7 @@ impl CompletionParams {
             max_tokens: 800,
             temperature: 0.3,
             cache_system_prompt: true,
+            extra_body: Some(serde_json::json!({"reasoning_effort": "none"})),
         }
     }
 }
