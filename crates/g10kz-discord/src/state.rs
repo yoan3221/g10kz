@@ -65,6 +65,8 @@ pub struct BotState {
     pub personality_states: Mutex<HashMap<u64, PersonalityState>>,
     /// Direct EverosMemory handle for add_turn writes (Some when EVEROS_URL is set).
     pub everos: Option<Arc<EverosMemory>>,
+    /// Unix-second timestamp of last observe() call per user — rate-limits passive writes.
+    pub observe_last: Mutex<HashMap<u64, u64>>,
 }
 
 impl BotState {
@@ -93,6 +95,7 @@ impl BotState {
             last_seen: Mutex::new(HashMap::new()),
             personality_states: Mutex::new(HashMap::new()),
             everos: everos.map(Arc::new),
+            observe_last: Mutex::new(HashMap::new()),
         })
     }
 }

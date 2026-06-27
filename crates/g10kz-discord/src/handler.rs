@@ -148,12 +148,23 @@ impl EventHandler for Handler {
                 // 讓她「記得」群裡發生的事。只 add 不 flush，跳過過短噪音。
                 if let Some(everos) = self.state.everos.clone() {
                     let observed = resolve_mentions(&msg, bot_id, &ctx.cache);
-                    if observed.chars().count() >= 4 {
+                    // Only observe messages with meaningful content (≥20 chars) and
+                    // rate-limit to one observation per user per 5 minutes to avoid
+                    // flooding EverOS with trivial passive messages.
+                    const OBSERVE_COOLDOWN_SECS: u64 = 300;
+                    if observed.chars().count() >= 20 {
                         let uid = msg.author.id.get();
-                        let session = format!("g10kz-{uid}");
-                        tokio::spawn(async move {
-                            everos.observe(uid, &session, &observed).await;
-                        });
+                        let now_secs = now_unix();
+                        let mut last_map = self.state.observe_last.lock().await;
+                        let last = last_map.get(&uid).copied().unwrap_or(0);
+                        if now_secs.saturating_sub(last) >= OBSERVE_COOLDOWN_SECS {
+                            last_map.insert(uid, now_secs);
+                            drop(last_map);
+                            let session = format!("g10kz-{uid}");
+                            tokio::spawn(async move {
+                                everos.observe(uid, &session, &observed).await;
+                            });
+                        }
                     }
                 }
                 return;
@@ -365,15 +376,21 @@ impl EventHandler for Handler {
                         .update(activated);
                 }
 
-                // EverOS: persist the conversation turn in background
-                if let Some(everos) = self.state.everos.clone() {
-                    let uid = msg.author.id.get();
-                    let session = format!("g10kz-{uid}");
-                    let user_text = clean_text.clone();
-                    let bot_reply = output.reply.clone();
-                    tokio::spawn(async move {
-                        everos.add_turn(uid, &session, &user_text, &bot_reply).await;
-                    });
+                // EverOS: persist the conversation turn in background.
+                // Skip for Search path (task-based, not personal context) and skip
+                // trivially short exchanges that carry no long-term memory value.
+                let worth_storing = !matches!(output.path, RouteDecision::Search)
+                    && clean_text.chars().count() + output.reply.chars().count() >= 50;
+                if worth_storing {
+                    if let Some(everos) = self.state.everos.clone() {
+                        let uid = msg.author.id.get();
+                        let session = format!("g10kz-{uid}");
+                        let user_text = clean_text.clone();
+                        let bot_reply = output.reply.clone();
+                        tokio::spawn(async move {
+                            everos.add_turn(uid, &session, &user_text, &bot_reply).await;
+                        });
+                    }
                 }
 
                 // Sanitize backtick misuse on conversational paths:

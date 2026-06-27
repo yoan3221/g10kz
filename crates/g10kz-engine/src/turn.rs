@@ -378,8 +378,14 @@ pub async fn run_turn(input: TurnInput<'_>) -> Result<TurnOutput, EngineError> {
 
     // ── Gather (memory — Social + Reason paths) ─────────────────────────────
     tracer.enter_stage(&Stage::Gather);
+    // Only hit EverOS when the message is long enough to carry meaningful context.
+    // Pure chitchat (<12 chars: "哈", "ok", "lol" …) has no retrieval value and
+    // skipping it saves an embedding round-trip + potential qwen3 extraction.
     let memory_ctx =
-        if matches!(decision, RouteDecision::Social | RouteDecision::Reason) && !restricted {
+        if matches!(decision, RouteDecision::Social | RouteDecision::Reason)
+            && !restricted
+            && display_text.chars().count() >= 12
+        {
             let limit = if matches!(decision, RouteDecision::Social) {
                 6
             } else {
