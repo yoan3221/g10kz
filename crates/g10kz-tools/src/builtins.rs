@@ -192,22 +192,90 @@ impl Tool for TwStockTool {
 
 // ─── WebSearchTool ───────────────────────────────────────────────────────────
 
-/// 網路搜尋：委託 gemini-search 微服務（Gemini API + Google Search grounding）
+/// 網路搜尋：優先用 stealth headless 瀏覽器爬 DuckDuckGo（browser /v1/search，
+/// 無 API 限流），失敗時回退到 gemini-search（Gemini Google Search grounding）。
 pub struct WebSearchTool {
     client: reqwest::Client,
+    browser_url: String,
     search_url: String,
 }
 
 impl WebSearchTool {
     pub fn new(search_url: Option<String>) -> Self {
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(20))
+            .timeout(std::time::Duration::from_secs(45))
             .build()
             .unwrap();
+        let browser_url = std::env::var("BROWSER_URL")
+            .unwrap_or_else(|_| "http://localhost:8091".into());
         let search_url = search_url
             .or_else(|| std::env::var("GEMINI_SEARCH_URL").ok())
             .unwrap_or_else(|| "http://localhost:8090".into());
-        Self { client, search_url }
+        Self { client, browser_url, search_url }
+    }
+
+    /// Scrape DuckDuckGo via the stealth browser. Returns formatted markdown
+    /// (title + snippet + source per result) or `None` on failure/no results.
+    async fn browser_search(&self, query: &str) -> Option<String> {
+        let endpoint = format!("{}/v1/search", self.browser_url);
+        let body = json!({ "query": query, "max_results": 6 });
+        let resp = self.client.post(&endpoint).json(&body).send().await.ok()?;
+        if !resp.status().is_success() {
+            warn!("web_search: browser HTTP {}", resp.status());
+            return None;
+        }
+        let data: Value = resp.json().await.ok()?;
+        let results = data.get("results").and_then(|v| v.as_array())?;
+        if results.is_empty() {
+            return None;
+        }
+        let mut out = format!("## 搜尋：{query}\n\n");
+        for (i, r) in results.iter().enumerate().take(6) {
+            let title = r.get("title").and_then(|v| v.as_str()).unwrap_or("(無標題)");
+            let url = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
+            let snippet = r.get("snippet").and_then(|v| v.as_str()).unwrap_or("");
+            out.push_str(&format!("{n}. **{title}**\n", n = i + 1));
+            if !snippet.is_empty() {
+                out.push_str(&format!("{snippet}\n"));
+            }
+            if !url.is_empty() {
+                out.push_str(&format!("來源：<{url}>\n"));
+            }
+            out.push('\n');
+        }
+        Some(out.trim().to_string())
+    }
+
+    /// Fallback: gemini-search Google Search grounding (summary + sources).
+    async fn gemini_search(&self, query: &str) -> Option<String> {
+        let endpoint = format!("{}/v1/search", self.search_url);
+        let body = json!({ "query": query, "max_results": 5 });
+        let resp = self.client.post(&endpoint).json(&body).send().await.ok()?;
+        if !resp.status().is_success() {
+            warn!("web_search: gemini-search HTTP {}", resp.status());
+            return None;
+        }
+        let data: Value = resp.json().await.ok()?;
+        let summary = data.get("summary").and_then(|v| v.as_str()).unwrap_or("");
+        let results = data.get("results").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+        if summary.is_empty() && results.is_empty() {
+            return None;
+        }
+        let mut output = format!("## 搜尋：{query}\n\n");
+        if !summary.is_empty() {
+            let quoted = summary.lines().map(|l| format!("> {l}")).collect::<Vec<_>>().join("\n");
+            output.push_str(&quoted);
+            output.push_str("\n\n");
+        }
+        if !results.is_empty() {
+            output.push_str("**來源：**\n");
+            for (i, r) in results.iter().enumerate().take(5) {
+                let title = r.get("title").and_then(|v| v.as_str()).unwrap_or("(無標題)");
+                let url = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
+                output.push_str(&format!("-# [{i_n}] [{title}](<{url}>)\n", i_n = i + 1));
+            }
+        }
+        Some(output.trim().to_string())
     }
 }
 
@@ -222,7 +290,7 @@ impl Tool for WebSearchTool {
         "web_search"
     }
     fn description(&self) -> &str {
-        "搜尋網路最新資訊。由 Gemini Google Search grounding 驅動，結果附帶來源連結。參數：query（搜尋詞）。"
+        "搜尋網路最新資訊，回傳多個結果的標題、摘要與來源連結。參數：query（搜尋詞）。"
     }
     fn schema(&self) -> Value {
         json!({
@@ -244,76 +312,21 @@ impl Tool for WebSearchTool {
                 None => return err(&call.name, "missing query".into()),
             };
 
-            let endpoint = format!("{}/v1/search", self.search_url);
-            let body = json!({ "query": query, "max_results": 5 });
+            // 1. Stealth browser scraping DuckDuckGo (no API rate limits).
+            if let Some(text) = self.browser_search(&query).await {
+                return ok(&call.name, text);
+            }
+            warn!("web_search: browser search failed, falling back to gemini-search");
 
-            let resp = match self.client.post(&endpoint).json(&body).send().await {
-                Ok(r) => r,
-                Err(e) => {
-                    warn!("web_search: gemini-search request failed: {e}");
-                    return err(&call.name, format!("搜尋服務無法連線：{e}"));
-                }
-            };
-
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                warn!("web_search: gemini-search HTTP {status}: {text}");
-                return err(&call.name, format!("搜尋服務錯誤 {status}"));
+            // 2. Fallback: gemini-search Google Search grounding.
+            if let Some(text) = self.gemini_search(&query).await {
+                return ok(&call.name, text);
             }
 
-            let data: Value = match resp.json().await {
-                Ok(v) => v,
-                Err(e) => return err(&call.name, format!("搜尋結果解析失敗：{e}")),
-            };
-
-            if let Some(e) = data.get("error").and_then(|v| v.as_str()) {
-                return err(&call.name, format!("搜尋錯誤：{e}"));
-            }
-
-            let summary = data
-                .get("summary")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_owned();
-            let results = data
-                .get("results")
-                .and_then(|v| v.as_array())
-                .cloned()
-                .unwrap_or_default();
-
-            if summary.is_empty() && results.is_empty() {
-                return ok(
-                    &call.name,
-                    format!("找不到「{query}」的相關結果，請換個搜尋詞試試。"),
-                );
-            }
-
-            let mut output = format!("## 搜尋：{query}\n\n");
-
-            if !summary.is_empty() {
-                let quoted = summary
-                    .lines()
-                    .map(|l| format!("> {l}"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                output.push_str(&quoted);
-                output.push_str("\n\n");
-            }
-
-            if !results.is_empty() {
-                output.push_str("**來源：**\n");
-                for (i, r) in results.iter().enumerate().take(5) {
-                    let title = r
-                        .get("title")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("(無標題)");
-                    let url = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
-                    output.push_str(&format!("-# [{i_n}] [{title}](<{url}>)\n", i_n = i + 1));
-                }
-            }
-
-            ok(&call.name, output.trim().to_string())
+            ok(
+                &call.name,
+                format!("找不到「{query}」的相關結果，請換個搜尋詞試試。"),
+            )
         })
     }
 }
