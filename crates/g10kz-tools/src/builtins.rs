@@ -192,26 +192,22 @@ impl Tool for TwStockTool {
 
 // ─── WebSearchTool ───────────────────────────────────────────────────────────
 
-/// 網路搜尋：優先用 stealth headless 瀏覽器爬 DuckDuckGo（browser /v1/search，
-/// 無 API 限流），失敗時回退到 gemini-search（Gemini Google Search grounding）。
+/// 網路搜尋：用 stealth headless 瀏覽器爬 DuckDuckGo（browser /v1/search），
+/// 不依賴任何外部 API。
 pub struct WebSearchTool {
     client: reqwest::Client,
     browser_url: String,
-    search_url: String,
 }
 
 impl WebSearchTool {
-    pub fn new(search_url: Option<String>) -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(45))
             .build()
             .unwrap();
         let browser_url = std::env::var("BROWSER_URL")
             .unwrap_or_else(|_| "http://localhost:8091".into());
-        let search_url = search_url
-            .or_else(|| std::env::var("GEMINI_SEARCH_URL").ok())
-            .unwrap_or_else(|| "http://localhost:8090".into());
-        Self { client, browser_url, search_url }
+        Self { client, browser_url }
     }
 
     /// Scrape DuckDuckGo via the stealth browser. Returns formatted markdown
@@ -246,42 +242,11 @@ impl WebSearchTool {
         Some(out.trim().to_string())
     }
 
-    /// Fallback: gemini-search Google Search grounding (summary + sources).
-    async fn gemini_search(&self, query: &str) -> Option<String> {
-        let endpoint = format!("{}/v1/search", self.search_url);
-        let body = json!({ "query": query, "max_results": 5 });
-        let resp = self.client.post(&endpoint).json(&body).send().await.ok()?;
-        if !resp.status().is_success() {
-            warn!("web_search: gemini-search HTTP {}", resp.status());
-            return None;
-        }
-        let data: Value = resp.json().await.ok()?;
-        let summary = data.get("summary").and_then(|v| v.as_str()).unwrap_or("");
-        let results = data.get("results").and_then(|v| v.as_array()).cloned().unwrap_or_default();
-        if summary.is_empty() && results.is_empty() {
-            return None;
-        }
-        let mut output = format!("## 搜尋：{query}\n\n");
-        if !summary.is_empty() {
-            let quoted = summary.lines().map(|l| format!("> {l}")).collect::<Vec<_>>().join("\n");
-            output.push_str(&quoted);
-            output.push_str("\n\n");
-        }
-        if !results.is_empty() {
-            output.push_str("**來源：**\n");
-            for (i, r) in results.iter().enumerate().take(5) {
-                let title = r.get("title").and_then(|v| v.as_str()).unwrap_or("(無標題)");
-                let url = r.get("url").and_then(|v| v.as_str()).unwrap_or("");
-                output.push_str(&format!("-# [{i_n}] [{title}](<{url}>)\n", i_n = i + 1));
-            }
-        }
-        Some(output.trim().to_string())
-    }
 }
 
 impl Default for WebSearchTool {
     fn default() -> Self {
-        Self::new(None)
+        Self::new()
     }
 }
 
@@ -312,17 +277,11 @@ impl Tool for WebSearchTool {
                 None => return err(&call.name, "missing query".into()),
             };
 
-            // 1. Stealth browser scraping DuckDuckGo (no API rate limits).
+            // Stealth browser scraping DuckDuckGo (no external API dependency).
             if let Some(text) = self.browser_search(&query).await {
                 return ok(&call.name, text);
             }
-            warn!("web_search: browser search failed, falling back to gemini-search");
-
-            // 2. Fallback: gemini-search Google Search grounding.
-            if let Some(text) = self.gemini_search(&query).await {
-                return ok(&call.name, text);
-            }
-
+            warn!("web_search: browser search failed for query: {query}");
             ok(
                 &call.name,
                 format!("找不到「{query}」的相關結果，請換個搜尋詞試試。"),
@@ -333,26 +292,22 @@ impl Tool for WebSearchTool {
 
 // ─── FetchPageTool ───────────────────────────────────────────────────────────
 
-/// 讀取網頁內容：優先用 stealth headless 瀏覽器（browser 微服務 /v1/render，
-/// 真實 JS 渲染 + 反偵測），失敗時回退到 gemini-search /v1/fetch。
+/// 讀取網頁內容：用 stealth headless 瀏覽器（browser 微服務 /v1/render，
+/// 真實 JS 渲染 + 反偵測），不依賴任何外部 API。
 pub struct FetchPageTool {
     client: reqwest::Client,
     browser_url: String,
-    search_url: String,
 }
 
 impl FetchPageTool {
-    pub fn new(search_url: Option<String>) -> Self {
+    pub fn new() -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(45))
             .build()
             .unwrap();
         let browser_url = std::env::var("BROWSER_URL")
             .unwrap_or_else(|_| "http://localhost:8091".into());
-        let search_url = search_url
-            .or_else(|| std::env::var("GEMINI_SEARCH_URL").ok())
-            .unwrap_or_else(|| "http://localhost:8090".into());
-        Self { client, browser_url, search_url }
+        Self { client, browser_url }
     }
 
     /// Render a page via the stealth headless browser. Returns the cleaned
@@ -383,29 +338,11 @@ impl FetchPageTool {
         Some(out)
     }
 
-    /// Fallback: ask gemini-search to fetch + summarise the URL.
-    async fn gemini_fetch(&self, url: &str) -> Option<String> {
-        let endpoint = format!("{}/v1/fetch", self.search_url);
-        let body = json!({ "url": url, "max_chars": 4000 });
-        let resp = self.client.post(&endpoint).json(&body).send().await.ok()?;
-        if !resp.status().is_success() {
-            warn!("fetch_page: gemini-search HTTP {}", resp.status());
-            return None;
-        }
-        let data: Value = resp.json().await.ok()?;
-        let content = data.get("content").and_then(|v| v.as_str()).unwrap_or("");
-        if content.trim().is_empty() {
-            return None;
-        }
-        let truncated = data.get("truncated").and_then(|v| v.as_bool()).unwrap_or(false);
-        let note = if truncated { "\n\n[內容已截斷]" } else { "" };
-        Some(format!("{content}{note}"))
-    }
 }
 
 impl Default for FetchPageTool {
     fn default() -> Self {
-        Self::new(None)
+        Self::new()
     }
 }
 
@@ -436,17 +373,11 @@ impl Tool for FetchPageTool {
                 None => return err(&call.name, "missing url".into()),
             };
 
-            // 1. Stealth headless browser (real JS rendering + anti-detection).
+            // Stealth headless browser (real JS rendering + anti-detection, no external API).
             if let Some(text) = self.browser_render(&url).await {
                 return ok(&call.name, text);
             }
-            warn!("fetch_page: browser render failed, falling back to gemini-search");
-
-            // 2. Fallback: gemini-search fetch + summarise.
-            if let Some(text) = self.gemini_fetch(&url).await {
-                return ok(&call.name, text);
-            }
-
+            warn!("fetch_page: browser render failed for url: {url}");
             err(&call.name, format!("無法讀取頁面：{url}"))
         })
     }
@@ -597,7 +528,7 @@ mod tests {
             name: "web_search".into(),
             arguments: json!({}),
         };
-        assert!(!WebSearchTool::new(None).call(call).await.success);
+        assert!(!WebSearchTool::new().call(call).await.success);
     }
 
     #[tokio::test]
@@ -606,6 +537,6 @@ mod tests {
             name: "fetch_page".into(),
             arguments: json!({}),
         };
-        assert!(!FetchPageTool::new(None).call(call).await.success);
+        assert!(!FetchPageTool::new().call(call).await.success);
     }
 }

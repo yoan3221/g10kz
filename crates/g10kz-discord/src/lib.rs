@@ -58,8 +58,8 @@ pub fn build_state(config: &Config) -> Arc<BotState> {
     let mut toolbox = ToolBox::new();
     toolbox.register(TimeTool);
     toolbox.register(TwStockTool::new());
-    toolbox.register(WebSearchTool::new(None));
-    toolbox.register(FetchPageTool::new(None));
+    toolbox.register(WebSearchTool::new());
+    toolbox.register(FetchPageTool::new());
     toolbox.register(ViewPageTool::new());
 
     let persona = PersonaCard::load(std::path::Path::new(&config.persona_card_path))
