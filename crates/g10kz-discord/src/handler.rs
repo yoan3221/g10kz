@@ -297,24 +297,43 @@ impl EventHandler for Handler {
         let stream_consumer = tokio::spawn(async move {
             let mut placeholder: Option<DiscordMessage> = None;
             let mut last_edit = Instant::now();
-            while let Some(snap) = stream_rx.recv().await {
-                let content = clip2000(&snap);
-                if content.is_empty() {
-                    continue;
-                }
-                match placeholder.as_mut() {
-                    None => {
-                        if let Ok(m) = channel_id.say(&stream_http, content).await {
-                            placeholder = Some(m);
-                            last_edit = Instant::now();
+            let mut thinking_shown = false;
+            // Wait up to 8 s for first visible token; if nothing arrives the model
+            // is in its thinking phase — post a placeholder so the user knows we're alive.
+            const THINKING_WAIT: Duration = Duration::from_secs(8);
+            loop {
+                match tokio::time::timeout(THINKING_WAIT, stream_rx.recv()).await {
+                    Ok(Some(snap)) => {
+                        let content = clip2000(&snap);
+                        if content.is_empty() {
+                            continue;
+                        }
+                        match placeholder.as_mut() {
+                            None => {
+                                if let Ok(m) = channel_id.say(&stream_http, content).await {
+                                    placeholder = Some(m);
+                                    last_edit = Instant::now();
+                                }
+                            }
+                            Some(m) => {
+                                if last_edit.elapsed() >= STREAM_EDIT_INTERVAL {
+                                    let _ = m
+                                        .edit(&stream_http, EditMessage::new().content(content))
+                                        .await;
+                                    last_edit = Instant::now();
+                                }
+                            }
                         }
                     }
-                    Some(m) => {
-                        if last_edit.elapsed() >= STREAM_EDIT_INTERVAL {
-                            let _ = m
-                                .edit(&stream_http, EditMessage::new().content(content))
-                                .await;
-                            last_edit = Instant::now();
+                    Ok(None) => break, // sender dropped → turn complete
+                    Err(_) => {
+                        // 8 s elapsed with no visible output → model is thinking.
+                        if placeholder.is_none() && !thinking_shown {
+                            if let Ok(m) = channel_id.say(&stream_http, "思考中⋯").await {
+                                placeholder = Some(m);
+                                thinking_shown = true;
+                                last_edit = Instant::now();
+                            }
                         }
                     }
                 }

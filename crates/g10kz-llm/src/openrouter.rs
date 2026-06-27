@@ -53,7 +53,7 @@ pub struct OpenRouterProvider {
 impl OpenRouterProvider {
     /// Create a new provider.
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
-        Self::new_with_timeout(base_url, api_key, Duration::from_secs(120))
+        Self::new_with_timeout(base_url, api_key, Duration::from_secs(300))
     }
 
     /// Create a provider with an explicit HTTP timeout.
