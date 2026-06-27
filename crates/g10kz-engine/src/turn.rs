@@ -810,16 +810,33 @@ async fn build_social_messages(
             .iter()
             .cloned(),
     );
-    if let Some(img_url) = &input.attachment_url {
-        let data_url = fetch_image_data_url(img_url).await.unwrap_or_else(|e| {
-            warn!(url = %img_url, err = %e, "image fetch failed, falling back to URL");
-            img_url.clone()
-        });
+    // Resolve any attached/replied image to a base64 data URL. On failure we
+    // send text only rather than a raw URL, which Gemini rejects.
+    let image_data_url = match &input.attachment_url {
+        Some(img_url) => match fetch_image_data_url(img_url).await {
+            Ok(data_url) => Some(data_url),
+            Err(e) => {
+                warn!(url = %img_url, err = %e, "image fetch failed, sending text only");
+                None
+            }
+        },
+        None => None,
+    };
+    if let Some(data_url) = image_data_url {
+        // When the user only @mentions the bot with an image and no question,
+        // steer the model to actually look at the picture/GIF instead of
+        // free-associating with chat history (the [歸屬] bystander rule would
+        // otherwise make it comment on others rather than the image).
+        let caption = if display_text.trim().is_empty() {
+            "（傳了這張圖片/GIF 給你看，先看清楚畫面內容是什麼，再用你的風格回應它）"
+        } else {
+            display_text
+        };
         messages.push(Message {
             role: Role::User,
             parts: vec![
                 Part::ImageUrl { url: data_url },
-                Part::Text { text: input.labeled(display_text) },
+                Part::Text { text: input.labeled(caption) },
             ],
         });
     } else {
@@ -846,22 +863,32 @@ async fn fetch_image_data_url(url: &str) -> anyhow::Result<String> {
     if bytes.len() > 8 * 1024 * 1024 {
         anyhow::bail!("image too large ({} bytes)", bytes.len());
     }
-    let mime = guess_image_mime(&bytes);
+    let mime = match detect_image_mime(&bytes) {
+        Some(m) => m,
+        None => anyhow::bail!(
+            "downloaded content is not a recognized image (first bytes: {:02x?})",
+            &bytes[..bytes.len().min(8)]
+        ),
+    };
+    tracing::info!(bytes = bytes.len(), mime, url, "vision image fetched");
     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
     Ok(format!("data:{};base64,{}", mime, b64))
 }
 
-fn guess_image_mime(bytes: &[u8]) -> &'static str {
+/// Detect image MIME from magic bytes. Returns `None` for non-image content
+/// (e.g. an HTML error page) so the caller can avoid sending garbage to the
+/// vision model.
+fn detect_image_mime(bytes: &[u8]) -> Option<&'static str> {
     if bytes.starts_with(b"\x89PNG") {
-        "image/png"
+        Some("image/png")
     } else if bytes.starts_with(b"\xff\xd8\xff") {
-        "image/jpeg"
+        Some("image/jpeg")
     } else if bytes.starts_with(b"GIF8") {
-        "image/gif"
+        Some("image/gif")
     } else if bytes.len() > 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP" {
-        "image/webp"
+        Some("image/webp")
     } else {
-        "image/jpeg"
+        None
     }
 }
 
