@@ -34,7 +34,7 @@ const SEARCH_TIMEOUT_MS: u64 = 3000;
 const WRITE_TIMEOUT_MS:  u64 = 5000;   // add() only; flush is fire-and-forget
 const CACHE_TTL_SECS:    u64 = 30;
 /// Flush EverOS extraction pipeline every N add_turn calls (reduces LLM calls).
-const FLUSH_EVERY: u32 = 5;
+const FLUSH_EVERY: u32 = 10;
 
 // ─── MemoryEntry ───────────────────────────────────────────────────────────
 
