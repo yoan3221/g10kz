@@ -443,9 +443,9 @@ boundary detection  →  episode extraction
 ## 部署拓樸
 
 ```
-REDACTED（主機）
+<BOT-SERVER-IP>（主機）
 ├─ g10kz-bot       Docker host network，:—
-│                   ← LLM 直連 vLLM :8000 on REDACTED
+│                   ← LLM 直連 vLLM :8000 on <GPU-SERVER-IP>
 │                   ← EverOS :8000 / embed :8082 / guard :8083 / browser :8091
 ├─ everos           Docker，:8000   語意記憶 sidecar
 │                   └─ LLM：本地 gemma4 via OmniRoute :20128
@@ -455,12 +455,12 @@ REDACTED（主機）
 ├─ browser          Docker，:8091   Playwright stealth 瀏覽器服務
 │                   └─ /v1/search（DuckDuckGo）/ /v1/render（任意頁面）
 ├─ new-api          Docker，:20128  OpenAI 相容 LLM 閘道（OmniRoute）
-│                   └─ 路由 → REDACTED:8000（本地 vLLM，gemma4）
+│                   └─ 路由 → <GPU-SERVER-IP>:8000（本地 vLLM，gemma4）
 ├─ cloudflared      Docker，CF Tunnel → api.g8kz.top → new-api:20128
 ├─ postgres         Docker，:5432   new-api 持久化
 └─ redis            Docker，:6379   new-api 快取
 
-REDACTED（GPU 主機）
+<GPU-SERVER-IP>（GPU 主機）
 └─ vLLM             :8000   gemma-4 abliterated AWQ（本地推理）
                             model ID：gemma4
 ```

@@ -22,3 +22,6 @@ everos_data/
 
 # large pre-built binaries
 bin/
+
+# compiled bot binary (never commit; use bin/ for Docker build context)
+/g10kz-bot

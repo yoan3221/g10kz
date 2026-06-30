@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 在 .127 本地建置並部署 g10kz-bot
-# 用法：ssh g8kz@REDACTED bash build_and_deploy.sh
+# 用法：bash build_and_deploy.sh  # run on the bot server
 set -e
 
 SRC_DIR="$HOME/g10kz-src"
