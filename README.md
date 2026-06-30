@@ -1,320 +1,383 @@
-<a id="readme-top"></a>
-
-[![Stars][stars-shield]][stars-url]
-[![Forks][forks-shield]][forks-url]
-[![Issues][issues-shield]][issues-url]
-[![License][license-shield]][license-url]
-[![CI][ci-shield]][ci-url]
-
-<br />
 <div align="center">
-  <h2>g10kz</h2>
-  <p>傲嬌 AI Discord 機器人 — 以 Rust 構建，具備長期記憶、多模型推理、人格自適應、被動觀察與即時搜索能力</p>
-  <p>
-    <a href="https://github.com/yoan3221/g10kz/issues/new?labels=bug">Report Bug</a>
-    &middot;
-    <a href="https://github.com/yoan3221/g10kz/issues/new?labels=enhancement">Request Feature</a>
-  </p>
+
+# g10kz
+
+**Rust 實作的 AI Discord Bot — 傲嬌角色、長期記憶、多路由推理、本地優先**
+
+[![Stars](https://img.shields.io/github/stars/yoan3221/g10kz.svg?style=for-the-badge)](https://github.com/yoan3221/g10kz/stargazers)
+[![Forks](https://img.shields.io/github/forks/yoan3221/g10kz.svg?style=for-the-badge)](https://github.com/yoan3221/g10kz/network/members)
+[![License](https://img.shields.io/github/license/yoan3221/g10kz.svg?style=for-the-badge)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/yoan3221/g10kz/ci.yml?style=for-the-badge&label=CI)](https://github.com/yoan3221/g10kz/actions)
+
 </div>
 
 ---
 
-<details>
-  <summary>目錄</summary>
-  <ol>
-    <li><a href="#關於此專案">關於此專案</a></li>
-    <li><a href="#功能詳解">功能詳解</a></li>
-    <li><a href="#技術棧">技術棧</a></li>
-    <li><a href="#快速開始">快速開始</a></li>
-    <li><a href="#設定">設定</a></li>
-    <li><a href="#slash-commands">Slash Commands</a></li>
-    <li><a href="#角色卡">角色卡</a></li>
-    <li><a href="#架構">架構</a></li>
-    <li><a href="#部署拓樸">部署拓樸</a></li>
-    <li><a href="#使用的開源技術">使用的開源技術</a></li>
-    <li><a href="#開發注意事項">開發注意事項</a></li>
-    <li><a href="#license">License</a></li>
-  </ol>
-</details>
+g10kz 是一個以 **Rust + Tokio** 非同步架構構建的 Discord AI bot，對外呈現的是一個 18 歲傲嬌少女的角色，對內是一套具備路由推理、向量記憶、人格自適應、即時搜索能力的推理引擎。
+
+設計出發點只有一個：讓 bot 真的「記得你」、「會思考」、「懂時事」——而不只是每次對話都從零開始的問答機器。
 
 ---
 
-## 關於此專案
+## 目錄
 
-g10kz 是由 g8kz 創造的 18 歲原創角色「傲嬌 AI」，在 Discord 上以繁體中文與使用者自然互動。她表面嘴硬、愛逞強，內心其實超容易害羞、黏人。
-
-整個 bot 以 **Rust + Tokio** 非同步架構構建，musl 靜態編譯成無依賴 binary，搭配 Docker Compose 部署。核心設計目標：
-
-- **低延遲串流輸出**：SSE 漸進回覆，Discord 訊息實時更新
-- **長期記憶**：EverOS 向量記憶 sidecar，跨會話保留使用者資料
-- **被動學習**：旁觀群組對話也寫入長期記憶，不只記得直接對話
-- **可熱抽換人格**：SillyTavern V2 JSON 或 OKF Markdown bundle，零重啟切換角色
-- **完全本地推理**：bot、embedding、記憶提取全走本地 vLLM，零外部 LLM API 費用
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+- [它能做什麼](#它能做什麼)
+- [它怎麼運作](#它怎麼運作)
+  - [五路由引擎](#五路由引擎)
+  - [長期記憶](#長期記憶)
+  - [人格系統](#人格系統)
+  - [網路搜索](#網路搜索)
+  - [安全防護](#安全防護)
+- [部署](#部署)
+  - [需求](#需求)
+  - [最簡部署（OpenRouter）](#最簡部署openrouter)
+  - [全功能本地部署](#全功能本地部署)
+  - [編譯 binary](#編譯-binary)
+- [設定參考](#設定參考)
+- [角色卡格式](#角色卡格式)
+- [Slash Commands](#slash-commands)
+- [Crate 架構](#crate-架構)
+- [License](#license)
 
 ---
 
-## 功能詳解
+## 它能做什麼
+
+- **記得你說過的事** — 跨會話保留使用者記憶，再次見面時知道你之前聊過什麼。
+- **旁聽群組對話** — 沒被 @ 的訊息也悄悄記進長期記憶，像是真的在群裡生活。
+- **知道今天發生了什麼** — 偵測到時效性問題自動搜索 DuckDuckGo，整合結果回答。
+- **認真的問題認真回答** — 複雜推理走多 drafter + judge 的 Fusion 路徑，不用同一個模型包辦一切。
+- **可換角色** — 支援 SillyTavern V2 JSON 與 OKF Markdown bundle，零重啟熱切換人格。
+- **對不同的人有不同的態度** — JPAF 框架 per-user 追蹤 8 個榮格認知函式，互動風格隨使用者個性調整。
+- **不會被 jailbreak** — ML Prompt Guard 2（22M ONNX）每則訊息分類，注入攻擊直接擋在入口。
+
+---
+
+## 它怎麼運作
+
+### 五路由引擎
+
+每則訊息進來，`route()` 函式依優先順序決定走哪條路徑：
+
+```
+訊息
+ │
+ ├─ 1. 斜線指令    → 0 次 LLM 呼叫，直接執行
+ ├─ 2. 附件        → 抓取圖片/影片 URL → Reason 路徑處理
+ ├─ 3. 搜索觸發    → 呼叫 stealth 瀏覽器 → 彙整結果回覆
+ ├─ 4. 複雜推理    → Fusion：N 個 drafter 並行 → 共識過濾 → judge 合成
+ └─ 5. 一般對話    → Social 串流，有需要時升級
+```
+
+**Fusion 多模型推理**（Reason 路徑）
+
+```
+[drafter A] ─┐
+[drafter B] ─┼──→ Jaccard 語義共識 ──→ judge 合成最終回覆
+[drafter C] ─┘
+
+drafter 少於 2 個或全部失敗 → 自動退化為單模型
+```
+
+不同路徑可以配不同的模型，讓日常閒聊走便宜快速的模型，複雜問題走昂貴精準的模型。
+
+**自動升級哨符**
+
+- Social 路徑如果模型輸出 `[[SEARCH: 關鍵詞]]`，engine 攔截後呼叫搜尋工具再彙整回覆，不需要預先判斷要不要搜索。
+- 模型輸出 `[[ESCALATE]]` 時，engine 自動切換更強的模型重跑當輪。
+
+---
+
+### 長期記憶
+
+記憶系統使用 [EverOS](https://github.com/EverMind-AI/EverOS)，一個本地向量記憶 sidecar。
+
+**寫入（三個時機）**
+
+```
+一般對話 ─→ 每輪 /add 累積訊息 ─→ 每 N 輪 /flush 觸發提取
+                                        ↓
+                             boundary detection → episode extraction
+                             （「這段對話發生了什麼事」寫進向量庫）
+
+旁觀模式 ─→ 群組中未 @ bot 的訊息 → 僅 /add，自然積累
+                                        ↓
+                             EverOS 依話題邊界自行切割
+
+直接呼叫 ─→ observe() ────────────────────────────────────────▶
+```
+
+**讀取（每輪開始前）**
+
+```
+使用者訊息 ─→ BM25 + 向量混合搜索 ─→ 相關記憶 top-6 注入 system prompt
+```
+
+**容錯**：EverOS 掛掉時自動切換 `NullMemory`，bot 繼續正常回話，只記 WARN 日誌。
+
+---
 
 ### 人格系統
 
-**SillyTavern V2 / OKF 角色卡**
+**角色卡格式**
 
-支援兩種角色卡格式，熱切換無需重啟 bot：
+支援兩種格式，透過 `PERSONA_CARD_PATH` 指向目錄（OKF）或 `.json` 檔（SillyTavern）：
 
-- **OKF Markdown bundle**（推薦）：`index.md` 含 YAML frontmatter + 角色設定；`examples.md` 存對話範例；`lore/` 目錄放 Lorebook 條目
-- **SillyTavern V2 JSON**：標準 chara_card_v2 格式，讀取 `system_prompt`、`first_mes`、`mes_example`
+| 格式 | 說明 |
+|---|---|
+| OKF bundle（目錄） | `index.md` 角色設定、`examples.md` 對話範例、`lore/` Lorebook 條目 |
+| SillyTavern V2 JSON | 標準 chara_card_v2，讀取 `system_prompt`、`first_mes`、`mes_example` |
+
+**BM25 範例精選**
+
+啟動時對 `examples.md` 建立 BM25 + CJK 分詞索引。每輪根據使用者訊息查詢 top-2 最相關範例注入 system prompt，保留示範效果又節省 token。
+
+**Lorebook 觸發注入**
+
+`lore/` 下的 Markdown 檔案在 YAML frontmatter 列出 `trigger_words`，使用者訊息命中觸發詞時，該條目自動插入 context。
 
 **JPAF 人格自適應框架**
 
-追蹤 8 個榮格認知函式（Fe / Ti / Ne / Si / Fi / Te / Se / Ni），per-user 獨立建模。每次互動後根據訊息特徵 bump 或 decay 分數，最終將 modifier 字串注入 system prompt，讓角色對不同人產生不同的互動風格。
-
-**Lorebook / World Info**
-
-在 `lore/` 目錄放置 Markdown 檔案，YAML frontmatter 中列出 `trigger_words`。當使用者訊息包含觸發詞時，對應 lore entry 的內容自動注入 system 上下文。
-
-**BM25 範例精選注入**
-
-啟動時對 `examples.md` 中所有對話對建立 BM25 索引（含 CJK 分詞）。每輪根據使用者訊息查詢 top-2 最相關範例注入 system prompt，既保持示範效果又節省 token。
-
----
-
-### 對話能力
-
-**五路由引擎**
-
-每則訊息通過 `route()` 函式自動分流到最適合的路徑：
-
-| 優先 | 觸發條件 | 路徑 | LLM 呼叫 |
-|---|---|---|---|
-| 1 | 已知指令前綴 | Command | 0 次 |
-| 2 | 有附件（圖片 / 影片 / 音訊 / PDF） | Media | Reason 路徑 |
-| 3 | 搜尋觸發詞或時效性問題 | Search | 1 次 + 工具 |
-| 4 | 複雜度訊號（長文 / 多問號 / 程式碼 / 分析詞） | Reason | N drafter + judge |
-| 5 | 其餘閒聊 | Social | 1 次（串流） |
-
-Social 路徑另有語意升級機制：embedding router 對訊息做語意相似度比較，必要時自動升級為 Search 或 Reason 路徑。若模型輸出 `[[ESCALATE]]` 哨符，engine 自動以更強模型重跑該輪。
-
-**Fusion 多模型（Reason 路徑）**
-
-```
-[drafter A] ──┐
-[drafter B] ──┼──→ Jaccard 語義共識過濾 ──→ judge 合成最終回覆
-[drafter C] ──┘
-
-drafter < 2 或全部失敗 → 自動退化為單模型
-```
-
-**動態歷史視窗**
-
-根據訊息特徵動態決定歷史長度：
-
-| 條件 | 歷史長度 |
-|---|---|
-| 包含延續詞（然後 / 所以 / 那個 / 剛才…） | 滿窗 |
-| 訊息 ≤ 6 字的短句 | 6 條 |
-| 訊息 7–40 字 | 10 條 |
-| 訊息 > 40 字 | 8 條 |
+追蹤每個使用者的 8 個榮格認知函式（Fe / Ti / Ne / Si / Fi / Te / Se / Ni），每次互動後 bump 或 decay 分數，將 modifier 字串注入 system prompt，讓角色對不同人產生不同的互動風格——話少的人她會主動多說兩句，話嘮的人她會拿架子少回應。
 
 **條件式內心獨白**
 
-僅當情緒有起伏（被誇 / 被嗆 / 告白 / 尷尬）才在 `<think>…</think>` 私下想一句真心話，輸出前自動剝離，對方看不見。平淡閒聊直接答，節省 output token。
-
-**搜尋哨符 `[[SEARCH:]]`（最高優先）**
-
-詢問即時資訊時，模型第一個字元輸出 `[[SEARCH: 關鍵詞]]`，engine 偵測後呼叫 stealth 瀏覽器搜尋 DuckDuckGo，結果整合進回覆。此條規則凌駕 `[內心]` 指令，解決憑記憶幻覺回答新聞的問題。
+只有在情緒有明顯起伏（被誇、被嗆、告白、尷尬）時，才在 `<think>…</think>` 私下想一句真心話，輸出前自動剝離，使用者看不見。平淡對話直接答，不浪費 output token。
 
 ---
 
-### 長期記憶（EverOS）
+### 網路搜索
 
-**主動寫入**：每 10 輪對話呼叫一次 `POST /memory/flush`，觸發 EverOS 內部提取管線（boundary detection → episode extraction）。期間每輪仍呼叫 `POST /memory/add` 累積訊息。
+搜索後端是 Playwright stealth 瀏覽器微服務（`:8091`），爬取 DuckDuckGo 結果，完全不依賴任何外部搜索 API key。
 
-**被動觀察**：群組中非 @bot 的訊息（≥ 4 字）呼叫 `observe()`，只 `POST /memory/add` 不 flush，讓 EverOS 累積至自然邊界後提取。
+觸發方式有兩條：
 
-**搜索召回**：每輪開始前 `POST /memory/search`（BM25 + 向量混合），Social 路徑召回最多 6 條、Reason 路徑最多 8 條，注入 system prompt。
-
-**容錯降級**：EverOS 掛掉時自動切換到 `NullMemory`，bot 正常運作，只記 WARN 日誌。
-
-**Embedding 後端**：本地 llama-embed 服務（`:8082`），OpenAI 相容 `/v1/embeddings`，1024 維向量。
+1. **路由層偵測**：`route()` 分析訊息包含搜索觸發詞（「最近」「今天」「誰是」「多少錢」等）→ 直接走 Search 路徑
+2. **LLM 自發觸發**：Social 路徑中模型認為需要資料時，第一個輸出 `[[SEARCH: 關鍵詞]]` → engine 攔截 → 呼叫工具 → 重組回覆
 
 ---
 
-### 網路工具
+### 安全防護
 
-**Stealth 瀏覽器服務**：Playwright 微服務（`:8091`），路由 `/v1/search`（DuckDuckGo 爬取）與 `/v1/render`（任意頁面渲染）。完全不依賴外部搜尋 API。
+**ML Prompt Guard**：每則訊息先過 Llama Prompt Guard 2（22M 參數 ONNX，CPU 推理），INJECTION / JAILBREAK 分類直接拒絕，不進 LLM。
 
-**搜索觸發方式**：
+**Owner 認證**：以不可偽造的 Discord snowflake ID 識別 bot 創造者，owner 享有完整信任；其他人嘗試偽冒時 bot 低調防冒充。
 
-1. **Search 路由**：`route()` 偵測搜尋觸發詞 → 直接走 Search 路徑
-2. **`[[SEARCH:]]` 哨符**：Social 路徑中模型輸出哨符 → engine 攔截 → 呼叫工具 → 重組回覆
-
----
-
-### 安全與防護
-
-**ML Prompt Guard**：Llama Prompt Guard 2（22M ONNX，CPU 推理，`:8083`）。每則訊息經 ML 分類後決定是否阻擋，INJECTION / JAILBREAK 直接拒絕，不進入 LLM。
-
-**Owner 特殊身分**：以不可偽造的 Discord snowflake ID 識別創造者，owner 享有完整信任與親近感；其他人嘗試偽冒時角色低調防冒充。
-
-**黑名單機制**：`BLACKLISTED_USERS` 逗號分隔的雪花 ID，黑名單使用者的訊息直接丟棄。
+**黑名單**：`BLACKLISTED_USERS` 設定的雪花 ID，訊息進來直接丟棄。
 
 ---
 
-### 輸出格式化
-
-**動作描述自動轉換**：`*動作*` / `_動作_` 格式自動轉換為 Discord blockquote（`> 動作`）
-
-**顏文字自由生成**：LLM 根據情緒自由創作顏文字，每次不重複，直接融入台詞
-
-**孤立反引號修正**：自動移除造成 Discord inline-code 爆版的孤立反引號
-
-**自動分段**：回覆超過 2000 字時自動切分為多則訊息
-
-**SSE 串流漸進編輯**：Social / Search / Media 路徑使用 SSE 串流，Discord 訊息實時更新
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-## 技術棧
-
-[![Rust][rust-shield]][rust-url]
-[![Tokio][tokio-shield]][tokio-url]
-[![Docker][docker-shield]][docker-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-## 快速開始
+## 部署
 
 ### 需求
 
 - Docker + Docker Compose
-- Discord Bot Token（需啟用 `MESSAGE_CONTENT` 與 `GUILD_MEMBERS` Intent）
-- OpenAI 相容 LLM API（OpenRouter / vLLM / new-api / 其他）
-- （選用）EverOS 長期記憶 sidecar + embedding server
+- Discord Bot（需啟用 `MESSAGE_CONTENT` 和 `GUILD_MEMBERS` Intent）
+- 任意 OpenAI 相容 LLM API（OpenRouter / vLLM / new-api / ollama / 等等）
 
-### 安裝
+**選用服務**（提升功能，沒有也能跑）：
 
-1. Clone 專案
-   ```sh
-   git clone https://github.com/yoan3221/g10kz.git
-   cd g10kz
-   ```
-
-2. 複製環境變數範本
-   ```sh
-   cp .env.example .env
-   ```
-
-3. 填入設定（見[設定](#設定)）並啟動
-   ```sh
-   docker compose up -d --build
-   docker logs g10kz-bot -f
-   ```
-
-### 快速更新部署
-
-```sh
-# 在 bot 主機上（x86_64-unknown-linux-musl target 需已裝好）
-source ~/.cargo/env
-cargo build -p g10kz-bot --release --target x86_64-unknown-linux-musl
-cp target/x86_64-unknown-linux-musl/release/g10kz-bot ~/g10kz/bin/g10kz-bot
-cd ~/g10kz && docker compose down && docker compose build && docker compose up -d
-```
-
-### 本地測試（不需要 Discord）
-
-```sh
-LLM_PROVIDER=mock cargo run -p g10kz-bot -- once "你好，自我介紹一下"
-```
-
-> `once` 模式使用內建 stub persona，角色卡僅在 daemon 模式生效。
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+| 服務 | 功能 | 預設埠 |
+|---|---|---|
+| [EverOS](https://github.com/EverMind-AI/EverOS) | 長期記憶 | 8000 |
+| 任意 OpenAI 相容 embedding server | 語意路由 + 記憶搜索 | 8082 |
+| Prompt Guard 服務 | 注入偵測 | 8083 |
+| Playwright stealth 瀏覽器服務 | 網路搜索 | 8091 |
 
 ---
 
-## 設定
+### 最簡部署（OpenRouter）
 
-`.env.example` 複製為 `.env`，**不要 commit `.env`**。
+這是最快能跑起來的方式，不需要任何本地 AI 服務。
+
+**1. 準備 Discord Bot**
+
+到 [Discord Developer Portal](https://discord.com/developers/applications) 建立 Application → Bot，開啟 `MESSAGE_CONTENT` 和 `GUILD_MEMBERS` Privileged Gateway Intents，複製 Bot Token。
+
+**2. Clone 專案**
+
+```bash
+git clone https://github.com/yoan3221/g10kz.git
+cd g10kz
+```
+
+**3. 建立 .env**
+
+```bash
+cp .env.example .env
+```
+
+編輯 `.env`，至少填入：
 
 ```env
-# ── Discord ──────────────────────────────────────────
-DISCORD_TOKEN=          # Bot Token（Discord Developer Portal 取得）
-OWNER_USER_ID=          # 創造者的 Discord 雪花 ID
+DISCORD_TOKEN=你的 Bot Token
+OWNER_USER_ID=你的 Discord 使用者 ID（右鍵複製 ID）
 
-# ── LLM ─────────────────────────────────────────────
 LLM_PROVIDER=openrouter
-LLM_BASE_URL=https://openrouter.ai/api/v1   # 或本地 vLLM / new-api URL
-LLM_API_KEY=
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=你的 OpenRouter API Key
 
-LLM_MODEL_SOCIAL=google/gemma-3-27b-it      # 日常對話 / Social / Search / Media
-LLM_MODEL_REASON=google/gemma-3-27b-it      # 深度推理（Reason 工具迴圈）
-LLM_MODEL_JUDGE=google/gemma-3-27b-it       # Fusion judge 合成
-LLM_MODEL_MEDIA=google/gemma-3-27b-it       # 附件 / 圖片視覺處理（需支援 multimodal）
-
-# Fusion drafter 列表（逗號分隔，≥2 才啟用 Fusion；留空退化為單模型）
-LLM_FUSION_DRAFTERS=
-
-# ── 記憶 ─────────────────────────────────────────────
-EVEROS_URL=http://localhost:8000   # EverOS sidecar；留空則用 NullMemory
-
-# ── Embedding（語意路由 embed_router 用）────────────
-EMBED_SERVER_URL=http://localhost:8082   # OpenAI 相容 embedding server
-EMBED_MODEL=embed                        # 模型 ID
-
-# ── 瀏覽器服務 ──────────────────────────────────────
-BROWSER_URL=http://localhost:8091        # Playwright stealth 服務；留空則停用
-
-# ── 角色卡 ───────────────────────────────────────────
-PERSONA_CARD_PATH=./persona/okf          # 目錄 → OKF bundle；.json 檔 → SillyTavern V2
-
-# ── 安全 ─────────────────────────────────────────────
-PROMPT_GUARD_URL=http://localhost:8083   # ML Prompt Guard；留空則跳過
-BLACKLISTED_USERS=                       # 逗號分隔的雪花 ID
-
-# ── 群組行為 ──────────────────────────────────────────
-LURK_CHANNELS=                           # 逗號分隔的頻道 ID，啟用 lurk 模式
-LURK_REPLY_PROBABILITY=0.05              # [0.0, 1.0]，lurk 頻道隨機回覆機率
-PROACTIVE_INACTIVE_SECS=86400            # 靜默多久後主動發話（秒）
-
-# ── 其他 ─────────────────────────────────────────────
-REQUEST_TIMEOUT_SECS=120
-RUST_LOG=g10kz=info,warn
+LLM_MODEL_SOCIAL=google/gemma-3-27b-it
+LLM_MODEL_REASON=google/gemma-3-27b-it
+LLM_MODEL_JUDGE=google/gemma-3-27b-it
 ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**4. 準備 binary + 啟動**
+
+> bot 需要預先編譯好的 musl 靜態 binary（見[編譯 binary](#編譯-binary)），放到 `bin/g10kz-bot`。
+
+```bash
+mkdir -p bin
+# 把編譯好的 binary 放到 bin/g10kz-bot
+docker compose build
+docker compose up -d
+docker compose logs -f
+```
+
+到 Discord 邀請 bot 進伺服器後輸入任何訊息，正常應該能看到回覆。
 
 ---
 
-## Slash Commands
+### 全功能本地部署
 
-| 指令 | 說明 |
+想要長期記憶、搜索、prompt guard 全開，需要額外跑幾個服務：
+
+**EverOS（長期記憶）**
+
+```bash
+git clone https://github.com/EverMind-AI/EverOS everos
+cd everos
+# 設定 EverOS 的 LLM 和 embedding 來源（參考 EverOS 文件）
+docker compose up -d
+```
+
+在 g10kz 的 `.env` 加上：
+
+```env
+EVEROS_URL=http://localhost:8000
+```
+
+**Stealth 瀏覽器服務（網路搜索）**
+
+```bash
+# 搜尋自建 Playwright stealth 服務，或用任何實作了下列 API 的服務：
+# POST /v1/search   body: {"query": "..."} → 回傳搜索摘要
+# POST /v1/render   body: {"url": "..."}   → 回傳頁面 markdown
+```
+
+在 g10kz 的 `.env` 加上：
+
+```env
+BROWSER_URL=http://localhost:8091
+```
+
+**Embedding Server（語意路由）**
+
+任意 OpenAI 相容 `/v1/embeddings` 端點，推薦用 [llama.cpp server](https://github.com/ggml-org/llama.cpp)、[ollama](https://ollama.com/) 或 vLLM 跑本地模型。
+
+```env
+EMBED_SERVER_URL=http://localhost:8082
+EMBED_MODEL=你的模型 ID
+```
+
+---
+
+### 編譯 binary
+
+bot 使用 `x86_64-unknown-linux-musl` target 靜態編譯，不依賴 libc，可直接在任何 x86_64 Linux 上執行。
+
+**安裝 musl target**
+
+```bash
+# 安裝 Rust（如果沒有）
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 加入 musl target
+rustup target add x86_64-unknown-linux-musl
+
+# Debian/Ubuntu 需要 musl linker
+sudo apt-get install musl-tools
+```
+
+**編譯**
+
+```bash
+cargo build -p g10kz-bot --release --target x86_64-unknown-linux-musl
+cp target/x86_64-unknown-linux-musl/release/g10kz-bot bin/g10kz-bot
+```
+
+**一鍵編譯 + 部署**（在 bot 主機上執行）
+
+```bash
+bash build_and_deploy.sh
+```
+
+> **注意**：更新 `.env` 後必須 `docker compose down && docker compose up -d`，`docker compose restart` 不會重新讀取 env_file。
+
+---
+
+## 設定參考
+
+完整設定透過 `.env` 注入，詳見 `.env.example`。
+
+**必填**
+
+| 變數 | 說明 |
 |---|---|
-| `/search <query>` | 強制觸發網路搜索並回傳結果 |
-| `/reset` | 清除目前頻道的對話歷史 |
-| `/stop` | 中斷當前正在生成的回覆 |
-| `/persona` | 顯示目前載入的角色卡名稱與摘要 |
-| `/help` | 顯示所有可用指令清單 |
+| `DISCORD_TOKEN` | Discord Bot Token |
+| `OWNER_USER_ID` | 你的 Discord 雪花 ID（決定 owner 特殊身分） |
+| `LLM_BASE_URL` | OpenAI 相容 LLM API 端點 |
+| `LLM_API_KEY` | LLM API Key |
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**LLM 模型（可各別設定不同模型）**
+
+| 變數 | 用途 | 建議 |
+|---|---|---|
+| `LLM_MODEL_SOCIAL` | 日常對話、串流回覆 | 快速便宜的模型 |
+| `LLM_MODEL_REASON` | 深度推理、工具呼叫迴圈 | 強力模型 |
+| `LLM_MODEL_JUDGE` | Fusion judge 合成最終回覆 | 邏輯強的模型 |
+| `LLM_MODEL_MEDIA` | 圖片/附件處理 | 支援 multimodal 的模型 |
+| `LLM_FUSION_DRAFTERS` | 逗號分隔的 drafter 列表 | 填 2 個以上才啟用 Fusion |
+
+**人格**
+
+| 變數 | 說明 |
+|---|---|
+| `PERSONA_CARD_PATH` | 指向 OKF bundle 目錄或 SillyTavern V2 `.json` 檔；留空用內建 stub |
+
+**選用服務**
+
+| 變數 | 說明 |
+|---|---|
+| `EVEROS_URL` | EverOS 記憶服務 URL；留空停用記憶（NullMemory） |
+| `EMBED_SERVER_URL` | OpenAI 相容 embedding server URL |
+| `EMBED_MODEL` | Embedding 模型 ID |
+| `BROWSER_URL` | Stealth 瀏覽器服務 URL；留空停用搜索 |
+| `PROMPT_GUARD_URL` | Prompt Guard 服務 URL；留空跳過 ML 防護 |
+
+**群組行為**
+
+| 變數 | 預設 | 說明 |
+|---|---|---|
+| `LURK_CHANNELS` | 空 | 逗號分隔的頻道 ID，啟用旁觀模式 |
+| `LURK_REPLY_PROBABILITY` | `0.0` | 旁觀頻道隨機插嘴機率 `[0.0, 1.0]` |
+| `PROACTIVE_INACTIVE_SECS` | `86400` | 靜默多久後主動發話（秒） |
+| `BLACKLISTED_USERS` | 空 | 逗號分隔雪花 ID，直接封鎖 |
 
 ---
 
-## 角色卡
+## 角色卡格式
 
 ### OKF Bundle（推薦）
 
+建立一個目錄，`PERSONA_CARD_PATH` 指向它：
+
 ```
-persona/okf/
-  index.md          # YAML frontmatter + 角色設定正文
-  examples.md       # 對話範例（BM25 top-2 每輪注入）
-  lore/             # Lorebook 條目（可選）
-    world.md        # trigger_words: 詞1, 詞2
+persona/my-character/
+├── index.md        # 角色設定主體
+├── examples.md     # 對話範例（BM25 索引，每輪注入 top-2）
+└── lore/           # Lorebook（可選）
+    └── world.md    # 包含 trigger_words 的世界觀條目
 ```
 
 `index.md` 格式：
@@ -324,198 +387,93 @@ persona/okf/
 type: Character
 title: 角色名稱
 ---
-你是一個……（角色設定）
+
+你是……（角色設定正文）
 ```
 
-`examples.md` 格式：
+`examples.md` 格式（`{{user}}` / `{{char}}` 為固定佔位符）：
 
 ```markdown
 ---
 type: Dialogue Examples
 ---
-{{user}}: 使用者說的話
-{{char}}: 角色回覆
 
-{{user}}: 另一個情境
-{{char}}: 回覆
+{{user}}: 你好啊
+{{char}}: 哼，誰跟你好了……（但臉有點紅）
+
+{{user}}: 你在想什麼？
+{{char}}: 才、才沒有在想什麼！你少多管閒事！
 ```
 
-### SillyTavern V2 JSON（相容）
+`lore/` 下的條目格式：
+
+```markdown
+---
+trigger_words: 學校, 班級, 同學
+---
+
+她就讀某高中二年級，班上有……
+```
+
+### SillyTavern V2 JSON
+
+`PERSONA_CARD_PATH` 指向 `.json` 檔：
 
 ```json
 {
   "spec": "chara_card_v2",
   "data": {
     "name": "角色名",
-    "system_prompt": "你是...",
+    "system_prompt": "你是……",
     "first_mes": "第一句話",
-    "mes_example": "<START>\n{{user}}: ...\n{{char}}: ...\n<END>"
+    "mes_example": "<START>\n{{user}}: …\n{{char}}: …\n<END>"
   }
 }
 ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ---
 
-## 架構
+## Slash Commands
 
-### Crate 分層
-
-```
-L5  g10kz-bot      主 binary；daemon（長跑）與 once（單次測試）兩種模式
-L4  g10kz-discord  Serenity 0.12 閘道；過濾訊息、附件抽取、slash commands、observe() 旁觀寫入
-L3  g10kz-engine   一回合狀態機；串接所有 L0–L2 組件，實作 5 條路徑執行邏輯
-L2  g10kz-everos   EverOS HTTP 客戶端；add_turn / observe / flush / search，失敗自動降級
-L2  g10kz-tools    ToolBox 介面 + 工具實作（WebSearch / FetchPage / TwStock / Time / Escalate）
-L1  g10kz-llm      OpenAI 相容 HTTP 客戶端；SSE 串流；FusionProvider；MockProvider
-L1  g10kz-kernel   路由 / guard / JPAF / sanitize / persona 載入（OKF bundle 或 JSON）
-L0  g10kz-config   型別化設定，無任何外部依賴
-```
-
-依賴方向嚴格由下往上，無反向耦合。
-
-### 一回合處理管線
-
-```
-[discord] 訊息進入
-    │
-    ▼
-[kernel]  pre_guard()
-          ├─ owner 直通
-          ├─ 黑名單丟棄
-          └─ ML Prompt Guard（ONNX CPU）→ INJECTION 拒絕
-    │
-    ▼
-[kernel]  normalize_input() → display text
-    │
-    ▼
-[everos]  search(display_text)   BM25+向量混合；失敗靜默
-    │
-    ▼
-[engine]  system_message() 組裝
-          ├─ 靜態部分（角色卡 / BM25 範例 / 格式說明 / 工具 schema）
-          └─ 動態部分（guild 名稱 / JPAF modifier / EverOS 召回 / lore）
-    │
-    ▼
-[engine]  embed_router.refine()  語意升級 Social → Search/Reason（可選）
-    │
-    ▼
-[kernel]  route()
-    │
-    ├─ Social  → haiku 串流 → [[SEARCH:]] 哨符→工具 / [[ESCALATE]]→升級
-    ├─ Search  → WebSearchTool → haiku 整合結果
-    ├─ Reason  → FusionProvider（N drafter + Jaccard + judge）+ 工具迴圈
-    ├─ Media   → 附件 URL 抓取 → Reason 路徑
-    └─ Command → 0 LLM 呼叫
-    │
-    ▼
-[kernel]  sanitize_output()
-          strip_thinking / strip_artefact / actions_to_blockquote / 分段
-    │
-    ▼
-[everos]  add_turn()   累積訊息（每 10 輪 flush 一次）
-    │
-    ▼
-[kernel]  JPAF::update()   bump/decay 認知函式分數
-```
-
-### EverOS 記憶整合
-
-| 端點 | 時機 | 備註 |
-|---|---|---|
-| `POST /api/v1/memory/search` | 每輪開始前 | BM25+向量；失敗靜默 |
-| `POST /api/v1/memory/add` | 每輪（add_turn） / observe() | 旁觀：僅 user 角色 |
-| `POST /api/v1/memory/flush` | 每 10 輪 add_turn | 觸發 boundary detection + episode extraction |
-
-EverOS 啟用策略（其他全部停用以節省 LLM 消耗）：
-
-```
-boundary detection  →  episode extraction
-                              ↓
-                    (atomic_facts / foresight / profile 已停用)
-```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-## 部署拓樸
-
-```
-<BOT-SERVER-IP>（主機）
-├─ g10kz-bot       Docker host network，:—
-│                   ← LLM 直連 vLLM :8000 on <GPU-SERVER-IP>
-│                   ← EverOS :8000 / embed :8082 / guard :8083 / browser :8091
-├─ everos           Docker，:8000   語意記憶 sidecar
-│                   └─ LLM：本地 gemma4 via OmniRoute :20128
-│                   └─ Embedding：llama-embed :8082
-├─ llama-embed      Docker，:8082   本地 embedding server（OpenAI 相容）
-├─ prompt-guard     Docker，:8083   Llama Prompt Guard 2（ONNX CPU）
-├─ browser          Docker，:8091   Playwright stealth 瀏覽器服務
-│                   └─ /v1/search（DuckDuckGo）/ /v1/render（任意頁面）
-├─ new-api          Docker，:20128  OpenAI 相容 LLM 閘道（OmniRoute）
-│                   └─ 路由 → <GPU-SERVER-IP>:8000（本地 vLLM，gemma4）
-├─ cloudflared      Docker，CF Tunnel → api.g8kz.top → new-api:20128
-├─ postgres         Docker，:5432   new-api 持久化
-└─ redis            Docker，:6379   new-api 快取
-
-<GPU-SERVER-IP>（GPU 主機）
-└─ vLLM             :8000   gemma-4 abliterated AWQ（本地推理）
-                            model ID：gemma4
-```
-
-g10kz-bot 以 host network 執行，直接用 `localhost` 存取所有服務；vLLM 以直連 IP 存取。
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-## 使用的開源技術
-
-| 項目 | 用途 |
+| 指令 | 說明 |
 |---|---|
-| [Serenity](https://github.com/serenity-rs/serenity) | Rust Discord 閘道 / 事件處理 |
-| [EverOS](https://github.com/EverMind-AI/EverOS) | 向量化長期記憶 sidecar（episode / atomic facts / profile） |
-| [SillyTavern](https://github.com/SillyTavern/SillyTavern) | V2 角色卡格式規範 |
-| [discord.js](https://discord.js.org/) | Discord API 參考（Serenity 補充） |
-| [Playwright](https://playwright.dev/) | Stealth 瀏覽器服務（搜尋 / 頁面渲染） |
-| [Llama Prompt Guard 2](https://huggingface.co/meta-llama/Prompt-Guard-2-22M) | 提示注入偵測（22M ONNX，CPU 推理） |
-| [Tokio](https://github.com/tokio-rs/tokio) | Rust 非同步運行時 |
-| [reqwest](https://github.com/seanmonstar/reqwest) | HTTP 客戶端 |
-| [serde / serde_json](https://github.com/serde-rs/serde) | JSON 序列化 |
-| [tracing](https://github.com/tokio-rs/tracing) | 結構化日誌 |
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+| `/search <query>` | 強制觸發網路搜索 |
+| `/reset` | 清除此頻道對話歷史 |
+| `/stop` | 中斷正在生成的回覆 |
+| `/persona` | 顯示目前載入的角色卡 |
+| `/help` | 顯示所有指令 |
 
 ---
 
-## 開發注意事項
+## Crate 架構
 
-**Rust 字串**：中文直接用字面 UTF-8，絕不使用 `\u{XXXX}` 轉義。
+專案以嚴格分層的 workspace 組織，依賴方向只從上往下：
 
-**編譯 musl binary**：
-
-```sh
-source ~/.cargo/env
-cargo build -p g10kz-bot --release --target x86_64-unknown-linux-musl
+```
+g10kz-bot        主 binary（daemon / once 兩個執行模式）
+    │
+g10kz-discord    Serenity 閘道：過濾、附件抽取、slash commands、旁觀寫入
+    │
+g10kz-engine     一回合狀態機：串接所有組件，實作 5 路由邏輯
+    │
+g10kz-everos     EverOS HTTP 客戶端：add_turn / observe / flush / search
+g10kz-tools      工具箱：WebSearch / FetchPage / TwStock / Time / Escalate
+    │
+g10kz-llm        OpenAI 相容 HTTP 客戶端：SSE 串流 / Fusion / Mock
+g10kz-kernel     路由 / guard / JPAF / sanitize / 角色卡載入
+    │
+g10kz-config     型別化設定，無任何內部依賴
 ```
 
-**部署流程**（禁止用 `restart`，不會讀取新 env_file）：
+每個 crate 只知道它下面那層的存在，沒有反向依賴。`g10kz-llm` 設計為 provider-agnostic，`LLM_PROVIDER=mock` 時完全不發任何網路請求，方便本地測試。
 
-```sh
-cp target/.../g10kz-bot ~/g10kz/bin/g10kz-bot
-cd ~/g10kz
-docker compose down
-docker compose build
-docker compose up -d
+**本地測試（不需要 Discord）**
+
+```bash
+cargo run -p g10kz-bot -- once "你好，自我介紹一下"
 ```
 
-**`.env` 絕不 commit**：已在 `.gitignore` 排除。所有 credentials 只存在 `.env`。
-
-**EverOS 設定熱載入**：`~/.everos/ome.toml` 修改後約 2 秒自動生效，無需重啟。
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+> `once` 模式使用內建 stub persona，`PERSONA_CARD_PATH` 設定在此模式下不生效。
 
 ---
 
@@ -523,24 +481,3 @@ docker compose up -d
 
 [AGPL-3.0](LICENSE) © 2026 g8kz
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
----
-
-<!-- SHIELDS -->
-[stars-shield]: https://img.shields.io/github/stars/yoan3221/g10kz.svg?style=for-the-badge
-[stars-url]: https://github.com/yoan3221/g10kz/stargazers
-[forks-shield]: https://img.shields.io/github/forks/yoan3221/g10kz.svg?style=for-the-badge
-[forks-url]: https://github.com/yoan3221/g10kz/network/members
-[issues-shield]: https://img.shields.io/github/issues/yoan3221/g10kz.svg?style=for-the-badge
-[issues-url]: https://github.com/yoan3221/g10kz/issues
-[license-shield]: https://img.shields.io/github/license/yoan3221/g10kz.svg?style=for-the-badge
-[license-url]: https://github.com/yoan3221/g10kz/blob/main/LICENSE
-[ci-shield]: https://img.shields.io/github/actions/workflow/status/yoan3221/g10kz/ci.yml?style=for-the-badge&label=CI
-[ci-url]: https://github.com/yoan3221/g10kz/actions/workflows/ci.yml
-[rust-shield]: https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white
-[rust-url]: https://www.rust-lang.org/
-[tokio-shield]: https://img.shields.io/badge/Tokio-000000?style=for-the-badge&logo=tokio&logoColor=white
-[tokio-url]: https://tokio.rs/
-[docker-shield]: https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white
-[docker-url]: https://www.docker.com/
